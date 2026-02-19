@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "fastapi[standard]>=0.129.0",
+    "sqlmodel>=0.0.34",
     "taskipy>=1.14.1",
 ]
 
@@ -23,5 +24,5 @@ test = [
 ]
 
 [tool.taskipy.tasks]
-start = "uvicorn main:app --reload"
+start = "uvicorn src.main:app --reload"
 test = "pytest --cov=app tests/"
