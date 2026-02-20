@@ -1,7 +1,9 @@
-from datetime import timedelta,datetime
+from datetime import datetime, timedelta
 from typing import Any, Union
-from jose import jwt
+
+from jose import JWTError, jwt
 from passlib.context import CryptContext
+
 from src.apps.core.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -14,7 +16,11 @@ def create_access_token(subject: Union[str, Any], expires_delta: timedelta | Non
     else:
         expire = datetime.now() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
-    to_encode = {"exp": expire, "sub": str(subject)}
+    to_encode = {
+        "exp": expire,
+        "sub": str(subject),
+        "type": "access"           # ← added type claim
+    }
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
@@ -24,9 +30,25 @@ def create_refresh_token(subject: Union[str, Any], expires_delta: timedelta | No
     else:
         expire = datetime.now() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
 
-    to_encode = {"exp": expire, "sub": str(subject)}
+    to_encode = {
+        "exp": expire,
+        "sub": str(subject),
+        "type": "refresh"          # ← added type claim
+    }
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
+
+def verify_token(token: str, token_type: str | None = None) -> dict:
+    """
+    Decode and verify a JWT token.
+    If token_type is provided, checks that the 'type' claim matches.
+    Raises jwt.JWTError if the token is invalid, expired, or has wrong type.
+    Returns the payload dictionary on success.
+    """
+    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+    if token_type and payload.get("type") != token_type:
+        raise JWTError(f"Invalid token type, expected {token_type}")
+    return payload
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
