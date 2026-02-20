@@ -31,6 +31,10 @@ class UserUpdate(SQLModel):
     last_name: Optional[str] = None
     phone: Optional[str] = None
 
+class LoginRequest(SQLModel):
+    username: str
+    password: str
+
 class ResetPasswordRequest(SQLModel):
     email: EmailStr
 
