@@ -3,29 +3,103 @@ from datetime import datetime
 from sqlmodel import Field, SQLModel, Relationship
 
 class UserBase(SQLModel):
-    email: str = Field(unique=True, index=True, max_length=255)
-    is_active: bool = Field(default=True)
-    is_superuser: bool = Field(default=False)
-    is_confirmed: bool = Field(default=False)
-    otp_enabled: bool = Field(default=False)
-    otp_verified: bool = Field(default=False)
-    otp_base32: str = Field(default="", max_length=255)
-    otp_auth_url: str = Field(default="", max_length=255)
+    username: str = Field(
+        unique=True,
+        index=True,
+        max_length=50,
+        description="Unique username for the user"
+    )
+    email: str = Field(
+        unique=True,
+        index=True,
+        max_length=255,
+        regex=r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$',
+        description="User's email address"
+    )
+    is_active: bool = Field(
+        default=True,
+        description="Indicates whether the user account is active"
+    )
+    is_superuser: bool = Field(
+        default=False,
+        description="Indicates whether the user has superuser privileges"
+    )
+    is_confirmed: bool = Field(
+        default=False,
+        description="Indicates whether the user's email is confirmed"
+    )
+    otp_enabled: bool = Field(
+        default=False,
+        description="Indicates whether OTP is enabled for the user"
+    )
+    otp_verified: bool = Field(
+        default=False,
+        description="Indicates whether OTP is verified for the user"
+    )
+    otp_base32: str = Field(
+        default="",
+        max_length=255,
+        description="Base32 encoded OTP secret key for the user"
+    )
+    otp_auth_url: str = Field(
+        default="",
+        max_length=255,
+        description="OTP authentication URL for the user"
+    )
 
 class User(UserBase, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    hashed_password: str = Field(max_length=255)
-    created_at: datetime = Field(default_factory=datetime.now)
+    id: Optional[int] = Field(
+        default=None,
+        primary_key=True
+    )
+    hashed_password: str = Field(
+        max_length=255,
+        description="Hashed password for the user"
+    )
+    created_at: datetime = Field(
+        default_factory=datetime.now,
+        description="Timestamp when the user was created"
+    )
     
     # Relationships
     profile: Optional["UserProfile"] = Relationship(back_populates="user")
 
 
 class UserProfileBase(SQLModel):
-    first_name: str = Field(default="", max_length=40)
-    last_name: str = Field(default="", max_length=40)
+    first_name: str = Field(
+        default="",
+        max_length=40,
+        description="User's first name"
+    )
+    last_name: str = Field(
+        default="",
+        max_length=40,
+        description="User's last name"
+    )
+    phone: str = Field(
+        default="",
+        max_length=20,
+        regex=r'^\+?[1-9]\d{1,14}$',
+        description="User's phone number"
+    )
+    image_url: str = Field(
+        default="",
+        max_length=255,
+        description="URL to the user's profile image"
+    )
+    bio: str = Field(
+        default="",
+        max_length=500,
+        description="Short biography or description of the user"
+    )
 
 class UserProfile(UserProfileBase, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: Optional[int] = Field(default=None, foreign_key="user.id")
+    id: Optional[int] = Field(
+        default=None,
+        primary_key=True
+    )
+    user_id: Optional[int] = Field(
+        default=None,
+        foreign_key="user.id"
+    )
     user: Optional[User] = Relationship(back_populates="profile")
