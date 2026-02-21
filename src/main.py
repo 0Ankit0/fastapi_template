@@ -1,5 +1,18 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from src.apps.core.config import settings
+from src.apps.core.handler import rate_limit_exceeded_handler
+from src.apps.core.middleware import SecurityHeadersMiddleware
+from src.apps.iam.api.urls import api_router
+
+# Rate limiter
+limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
 
 app = FastAPI(
     title="fastapi_template",
@@ -20,9 +33,33 @@ app = FastAPI(
     }
 )
 
+# Add rate limiter to app state and register exception handler
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler) 
+
+# Security headers middleware
+app.add_middleware(SecurityHeadersMiddleware)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Trusted host middleware (prevent host header attacks)
+if not settings.DEBUG:
+    app.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=["localhost", "127.0.0.1", settings.SERVER_HOST.replace("http://", "").replace("https://", "")]
+    )
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-
+app.include_router(api_router, prefix=settings.API_V1_STR)
 @app.get("/")
-def read_root():
+@limiter.limit("10/minute")
+async def read_root(request: Request):
     return {"Hello": "World"}
