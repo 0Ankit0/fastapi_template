@@ -60,7 +60,7 @@ class EmailService:
     async def send_welcome_email(user) -> None:
         await EmailService.send_email(
             subject="Welcome to Our Service!",
-            recipients=[NameEmail(name=user.name, email=user.email)],
+            recipients=[NameEmail(name=user.username, email=user.email)],
             template_name="welcome",
             context={"user": {"email":user.email, "first_name": getattr(user, 'first_name', '')}}
         )
@@ -70,7 +70,7 @@ class EmailService:
         reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
         await EmailService.send_email(
             subject="Reset Your Password",
-            recipients=[NameEmail(name=user.name, email=user.email)],
+            recipients=[NameEmail(name=user.username, email=user.email)],
             template_name="password_reset",
             context={"user": {"email":user.email, "first_name": getattr(user, 'first_name', '')}, "reset_url": reset_url}
         )
@@ -80,7 +80,7 @@ class EmailService:
         verification_url = f"{settings.FRONTEND_URL}/verify-email?token={token}"
         await EmailService.send_email(
             subject="Verify Your Email Address",
-            recipients=[NameEmail(name=getattr(user, 'first_name', ''), email=user.email)],
+            recipients=[NameEmail(name=user.username, email=user.email)],
             template_name="email_verification",
             context={"user": {"email": user.email, "first_name": getattr(user, 'first_name', '')}, "verification_url": verification_url}
         )

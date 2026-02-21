@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = "password"
     POSTGRES_DB: str = "mydatabase"
     DATABASE_URL: str | None = None
+    SYNC_DATABASE_URL: str | None = None
 
     @field_validator("DATABASE_URL", mode="before")
     def assemble_db_connection(cls, v: str | None, info: ValidationInfo) -> str:
@@ -54,6 +55,17 @@ class Settings(BaseSettings):
             return f"sqlite+aiosqlite:///./{data.get('POSTGRES_DB')}.db"
         else:
             return f"postgresql+asyncpg://{data.get('POSTGRES_USER')}:{data.get('POSTGRES_PASSWORD')}@{data.get('POSTGRES_SERVER')}/{data.get('POSTGRES_DB')}"
+        
+    @field_validator("SYNC_DATABASE_URL", mode="before")
+    def assemble_sync_db_connection(cls, v: str | None, info: ValidationInfo) -> str:
+        if isinstance(v, str):
+            return v
+        data = info.data
+        debug: bool = data.get("DEBUG") or True
+        if debug:
+            return f"sqlite:///./{data.get('POSTGRES_DB')}.db"
+        else:
+            return f"postgresql://{data.get('POSTGRES_USER')}:{data.get('POSTGRES_PASSWORD')}@{data.get('POSTGRES_SERVER')}/{data.get('POSTGRES_DB')}"
     
     # Email settings
     EMAIL_ENABLED: bool = False

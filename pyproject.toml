@@ -19,6 +19,9 @@ dependencies = [
     "pillow>=11.0.0",
     "aiosqlite>=0.20.0",
     "asyncpg>=0.30.0",
+    "greenlet>=3.3.1",
+    "alembic>=1.18.4",
+    "bcrypt>=4.0.0,<5.0.0",
 ]
 
 [dependency-groups]
@@ -37,3 +40,5 @@ test = [
 [tool.taskipy.tasks]
 start = "uvicorn src.main:app --reload"
 test = "pytest --cov=app tests/"
+initial-migrate = 'alembic revision --autogenerate -m "init"'
+migrate = "alembic upgrade head"
