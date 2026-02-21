@@ -74,3 +74,13 @@ class EmailService:
             template_name="password_reset",
             context={"user": {"email":user.email, "first_name": getattr(user, 'first_name', '')}, "reset_url": reset_url}
         )
+
+    @staticmethod
+    async def send_verification_email(user, token: str) -> None:
+        verification_url = f"{settings.FRONTEND_URL}/verify-email?token={token}"
+        await EmailService.send_email(
+            subject="Verify Your Email Address",
+            recipients=[NameEmail(name=getattr(user, 'first_name', ''), email=user.email)],
+            template_name="email_verification",
+            context={"user": {"email": user.email, "first_name": getattr(user, 'first_name', '')}, "verification_url": verification_url}
+        )
