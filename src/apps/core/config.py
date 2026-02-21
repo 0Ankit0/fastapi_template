@@ -12,6 +12,16 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_COOKIE: str = "refresh_token"
 
     SECURE_COOKIES: bool = False
+    
+    # Account security settings
+    MAX_LOGIN_ATTEMPTS: int = 5
+    ACCOUNT_LOCKOUT_DURATION_MINUTES: int = 30
+    REQUIRE_EMAIL_VERIFICATION: bool = False
+    PASSWORD_MIN_LENGTH: int = 8
+    PASSWORD_REQUIRE_UPPERCASE: bool = True
+    PASSWORD_REQUIRE_LOWERCASE: bool = True
+    PASSWORD_REQUIRE_DIGIT: bool = True
+    PASSWORD_REQUIRE_SPECIAL: bool = False
 
     # Debug settings for environment
     DEBUG: bool = True

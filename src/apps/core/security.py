@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Union
 
 from jose import JWTError, jwt
@@ -12,9 +12,9 @@ ALGORITHM = "HS256"
 
 def create_access_token(subject: Union[str, Any], expires_delta: timedelta | None = None) -> str:
     if expires_delta:
-        expire = datetime.now() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.now() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
     to_encode = {
         "exp": expire,
@@ -26,14 +26,47 @@ def create_access_token(subject: Union[str, Any], expires_delta: timedelta | Non
 
 def create_refresh_token(subject: Union[str, Any], expires_delta: timedelta | None = None) -> str:
     if expires_delta:
-        expire = datetime.now() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.now() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+        expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
 
     to_encode = {
         "exp": expire,
         "sub": str(subject),
         "type": "refresh"          # ← added type claim
+    }
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def create_password_reset_token(subject: Union[str, Any]) -> str:
+    """Create a password reset token valid for 1 hour"""
+    expire = datetime.now(timezone.utc) + timedelta(hours=1)
+    to_encode = {
+        "exp": expire,
+        "sub": str(subject),
+        "type": "password_reset"
+    }
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def create_email_verification_token(subject: Union[str, Any]) -> str:
+    """Create an email verification token valid for 24 hours"""
+    expire = datetime.now(timezone.utc) + timedelta(hours=24)
+    to_encode = {
+        "exp": expire,
+        "sub": str(subject),
+        "type": "email_verification"
+    }
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def create_temp_auth_token(subject: Union[str, Any]) -> str:
+    """Create a temporary auth token for OTP validation, valid for 5 minutes"""
+    expire = datetime.now(timezone.utc) + timedelta(minutes=5)
+    to_encode = {
+        "exp": expire,
+        "sub": str(subject),
+        "type": "temp_auth"
     }
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
