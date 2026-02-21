@@ -1,6 +1,6 @@
-from typing import Optional,List
+from typing import Optional, List
 from sqlmodel import SQLModel
-from pydantic import EmailStr, EmailStr, field_serializer,field_validator
+from pydantic import EmailStr, field_serializer, field_validator, ValidationInfo
 from ..utils.hashid import encode_id
 
 class UserBase(SQLModel):
@@ -16,9 +16,21 @@ class UserCreate(UserBase):
     password: str
     confirm_password: str
 
+    @field_validator("password")
+    def validate_password_strength(cls, value):
+        if len(value) < 8:
+            raise ValueError("Password must be at least 8 characters long")
+        if not any(c.isupper() for c in value):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not any(c.islower() for c in value):
+            raise ValueError("Password must contain at least one lowercase letter")
+        if not any(c.isdigit() for c in value):
+            raise ValueError("Password must contain at least one digit")
+        return value
+
     @field_validator("confirm_password")
-    def validate_confirm_password(cls, value, values):
-        if "password" in values and value != values["password"]:
+    def validate_confirm_password(cls, value, info: ValidationInfo):
+        if "password" in info.data and value != info.data["password"]:
             raise ValueError("Passwords do not match")
         return value
 
@@ -44,10 +56,39 @@ class ResetPasswordConfirm(SQLModel):
     confirm_password: str
 
     @field_validator("confirm_password")
-    def validate_confirm_password(cls, value, values):
-        if "new_password" in values and value != values["new_password"]:
+    def validate_confirm_password(cls, value, info: ValidationInfo):
+        if "new_password" in info.data and value != info.data["new_password"]:
             raise ValueError("Passwords do not match")
         return value
+
+class ChangePasswordRequest(SQLModel):
+    current_password: str
+    new_password: str
+    confirm_password: str
+    
+    @field_validator("confirm_password")
+    def validate_confirm_password(cls, value, info: ValidationInfo):
+        if "new_password" in info.data and value != info.data["new_password"]:
+            raise ValueError("Passwords do not match")
+        return value
+    
+    @field_validator("new_password")
+    def validate_password_strength(cls, value):
+        if len(value) < 8:
+            raise ValueError("Password must be at least 8 characters long")
+        if not any(c.isupper() for c in value):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not any(c.islower() for c in value):
+            raise ValueError("Password must contain at least one lowercase letter")
+        if not any(c.isdigit() for c in value):
+            raise ValueError("Password must contain at least one digit")
+        return value
+
+class VerifyOTPRequest(SQLModel):
+    otp_code: str
+
+class DisableOTPRequest(SQLModel):
+    password: str
     
 class UserResponse(UserBase):
     id: str
