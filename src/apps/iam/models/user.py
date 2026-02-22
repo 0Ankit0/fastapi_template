@@ -1,6 +1,11 @@
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from datetime import datetime
 from sqlmodel import Field, SQLModel, Relationship
+
+if TYPE_CHECKING:
+    from .login_attempt import LoginAttempt
+    from .ip_access_control import IPAccessControl
+    from .token_tracking import TokenTracking
 
 class UserBase(SQLModel):
     username: str = Field(
@@ -63,6 +68,9 @@ class User(UserBase, table=True):
     
     # Relationships
     profile: Optional["UserProfile"] = Relationship(back_populates="user")
+    login_attempts: list["LoginAttempt"] = Relationship(back_populates="user")
+    ip_access_controls: list["IPAccessControl"] = Relationship(back_populates="user")
+    tokens: list["TokenTracking"] = Relationship(back_populates="user")
 
 
 class UserProfileBase(SQLModel):
@@ -102,4 +110,6 @@ class UserProfile(UserProfileBase, table=True):
         default=None,
         foreign_key="user.id"
     )
+
+    # Relationships
     user: Optional[User] = Relationship(back_populates="profile")
