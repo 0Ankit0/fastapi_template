@@ -8,7 +8,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from src.apps.core.config import settings
 from src.apps.core.handler import rate_limit_exceeded_handler
-from src.apps.core.middleware import SecurityHeadersMiddleware
+from src.apps.core.middleware import SecurityHeadersMiddleware, IPAccessControlMiddleware
 from src.apps.iam.api.urls import api_router
 
 # Rate limiter
@@ -39,6 +39,9 @@ app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 # Security headers middleware
 app.add_middleware(SecurityHeadersMiddleware)
+
+# IP access control middleware
+app.add_middleware(IPAccessControlMiddleware)
 
 # CORS middleware
 app.add_middleware(
