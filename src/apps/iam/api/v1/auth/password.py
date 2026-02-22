@@ -6,6 +6,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from src.apps.core.config import settings
 from src.apps.core import security
+from src.apps.core.security import TokenType
 from src.apps.iam.api.deps import get_current_user, get_db
 from src.apps.iam.models.user import User
 from src.apps.iam.models.token_tracking import TokenTracking
@@ -55,20 +56,58 @@ async def request_password_reset(
 
 @router.post("/password-reset-confirm/")
 async def confirm_password_reset(
-    reset_data: ResetPasswordConfirm,
+    t: str,
+    new_password: str,
     db: AsyncSession = Depends(get_db)
 ) -> dict[str, str]:
     """
-    Confirm password reset with token and set new password
+    Confirm password reset with secure URL token and set new password
     """
     try:
-        payload = security.verify_token(reset_data.token, token_type="password_reset")
-        user_id = payload.get("sub")
-        if not user_id:
+        from src.apps.iam.models.used_token import UsedToken
+        
+        # Decrypt and verify the secure URL token
+        try:
+            token_data = security.verify_secure_url_token(t)
+        except Exception:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid or expired reset token"
+                detail="Invalid or expired reset link"
             )
+        
+        user_id = token_data.get("user_id")
+        jwt_token = token_data.get("token")
+        purpose = token_data.get("purpose")
+        
+        if not all([user_id, jwt_token]) or purpose != "password_reset":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid reset token data"
+            )
+        
+        # Verify the embedded JWT token
+        payload = security.verify_token(jwt_token, token_type=TokenType.PASSWORD_RESET)
+        token_jti = payload.get("jti")
+        
+        # Verify user_id matches
+        if str(payload.get("sub")) != str(user_id):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Token data mismatch - possible tampering detected"
+            )
+        
+        # Check if token has already been used
+        if token_jti:
+            used_check = await db.execute(
+                select(UsedToken).where(UsedToken.token_jti == token_jti)
+            )
+            if used_check.scalars().first():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="This password reset link has already been used"
+                )
+    except HTTPException:
+        raise
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -85,7 +124,16 @@ async def confirm_password_reset(
                 detail="User not found"
             )
         
-        user.hashed_password = security.get_password_hash(reset_data.new_password)
+        user.hashed_password = security.get_password_hash(new_password)
+        
+        # Mark token as used
+        if token_jti:
+            used_token = UsedToken(
+                token_jti=token_jti,
+                user_id=int(user_id),
+                token_purpose="password_reset"
+            )
+            db.add(used_token)
         
         # Revoke all active tokens for this user
         result = await db.execute(

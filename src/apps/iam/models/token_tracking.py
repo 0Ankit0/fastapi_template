@@ -1,6 +1,7 @@
 from typing import Optional, TYPE_CHECKING
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
+from src.apps.core.security import TokenType
 
 if TYPE_CHECKING:
     from .user import User
@@ -13,8 +14,7 @@ class TokenTrackingBase(SQLModel):
         unique=True,
         description="JWT ID (JTI) - unique identifier for the token"
     )
-    token_type: str = Field(
-        max_length=20,
+    token_type: TokenType = Field(
         description="Type of token: access, refresh"
     )
     ip_address: str = Field(
@@ -48,6 +48,9 @@ class TokenTrackingBase(SQLModel):
 
 
 class TokenTracking(TokenTrackingBase, table=True):
+    """
+    Model to track issued tokens for users, including their status and metadata.
+    """
     id: int = Field(
         default=None,
         primary_key=True,

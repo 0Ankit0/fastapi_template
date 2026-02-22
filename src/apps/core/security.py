@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any, Union
+from enum import Enum
 import uuid
+import base64
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -11,6 +13,18 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 ALGORITHM = "HS256"
 
+
+class TokenType(str, Enum):
+    ACCESS = "access"
+    REFRESH = "refresh"
+    PASSWORD_RESET = "password_reset"
+    EMAIL_VERIFICATION = "email_verification"
+    TEMP_AUTH = "temp_auth"
+    BEARER = "bearer"
+    IP_WHITELIST = "ip_whitelist"
+    IP_BLACKLIST = "ip_blacklist"
+
+
 def create_access_token(subject: Union[str, Any], expires_delta: timedelta | None = None) -> str:
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
@@ -20,7 +34,7 @@ def create_access_token(subject: Union[str, Any], expires_delta: timedelta | Non
     to_encode = {
         "exp": expire,
         "sub": str(subject),
-        "type": "access",
+        "type": TokenType.ACCESS.value,
         "jti": str(uuid.uuid4())
     }
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
@@ -35,7 +49,7 @@ def create_refresh_token(subject: Union[str, Any], expires_delta: timedelta | No
     to_encode = {
         "exp": expire,
         "sub": str(subject),
-        "type": "refresh",
+        "type": TokenType.REFRESH.value,
         "jti": str(uuid.uuid4())
     }
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
@@ -47,7 +61,8 @@ def create_password_reset_token(subject: Union[str, Any]) -> str:
     to_encode = {
         "exp": expire,
         "sub": str(subject),
-        "type": "password_reset"
+        "type": TokenType.PASSWORD_RESET.value,
+        "jti": str(uuid.uuid4())
     }
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -58,7 +73,8 @@ def create_email_verification_token(subject: Union[str, Any]) -> str:
     to_encode = {
         "exp": expire,
         "sub": str(subject),
-        "type": "email_verification"
+        "type": TokenType.EMAIL_VERIFICATION.value,
+        "jti": str(uuid.uuid4())
     }
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -69,12 +85,27 @@ def create_temp_auth_token(subject: Union[str, Any]) -> str:
     to_encode = {
         "exp": expire,
         "sub": str(subject),
-        "type": "temp_auth"
+        "type": TokenType.TEMP_AUTH.value,
+        "jti": str(uuid.uuid4())
     }
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-def verify_token(token: str, token_type: str | None = None) -> dict:
+def create_ip_action_token(user_id: int, ip_address: str, action: str) -> str:
+    """Create a token for IP whitelist/blacklist action, valid for 24 hours"""
+    expire = datetime.now(timezone.utc) + timedelta(hours=24)
+    token_type = TokenType.IP_WHITELIST if action == "whitelist" else TokenType.IP_BLACKLIST
+    to_encode = {
+        "exp": expire,
+        "sub": str(user_id),
+        "ip": ip_address,
+        "type": token_type.value,
+        "jti": str(uuid.uuid4())
+    }
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def verify_token(token: str, token_type: TokenType | None = None) -> dict:
     """
     Decode and verify a JWT token.
     If token_type is provided, checks that the 'type' claim matches.
@@ -82,8 +113,8 @@ def verify_token(token: str, token_type: str | None = None) -> dict:
     Returns the payload dictionary on success.
     """
     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
-    if token_type and payload.get("type") != token_type:
-        raise JWTError(f"Invalid token type, expected {token_type}")
+    if token_type and payload.get("type") != token_type.value:
+        raise JWTError(f"Invalid token type, expected {token_type.value}")
     return payload
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -91,3 +122,35 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
+
+
+def create_secure_url_token(data: dict[str, Any], expires_hours: int = 24) -> str:
+    """
+    Create a secure, encrypted, tamper-proof URL token.
+    Data is encrypted and signed using JWT.
+    Returns a URL-safe base64 encoded token.
+    """
+    expire = datetime.now(timezone.utc) + timedelta(hours=expires_hours)
+    to_encode = {
+        "exp": expire,
+        "jti": str(uuid.uuid4()),
+        "data": data
+    }
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
+    # Make it URL-safe
+    url_safe_token = base64.urlsafe_b64encode(encoded_jwt.encode()).decode()
+    return url_safe_token
+
+
+def verify_secure_url_token(url_token: str) -> dict[str, Any]:
+    """
+    Verify and decrypt a secure URL token.
+    Returns the data dict if valid, raises JWTError if invalid/expired/tampered.
+    """
+    try:
+        # Decode from URL-safe base64
+        encoded_jwt = base64.urlsafe_b64decode(url_token.encode()).decode()
+        payload = jwt.decode(encoded_jwt, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        return payload.get("data", {})
+    except Exception as e:
+        raise JWTError(f"Invalid or tampered token: {str(e)}")

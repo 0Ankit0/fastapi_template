@@ -29,6 +29,10 @@ class BaseLoginAttempt(SQLModel):
     )
 
 class LoginAttempt(BaseLoginAttempt, table=True):
+    """
+    Model to track login attempts for users, including metadata about the attempt and whether it was successful. 
+    This can be used for security monitoring, brute-force attack prevention, and user behavior analysis.
+    """
     id: int = Field(
         default=None, 
         primary_key=True,

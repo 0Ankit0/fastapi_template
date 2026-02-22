@@ -67,7 +67,14 @@ class EmailService:
 
     @staticmethod
     async def send_password_reset_email(user, token:str) -> None:
-        reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
+        # Create secure URL token with embedded user_id
+        from src.apps.core import security
+        secure_token = security.create_secure_url_token({
+            "user_id": user.id,
+            "token": token,
+            "purpose": "password_reset"
+        }, expires_hours=1)
+        reset_url = f"{settings.FRONTEND_URL}/reset-password?t={secure_token}"
         await EmailService.send_email(
             subject="Reset Your Password",
             recipients=[NameEmail(name=user.username, email=user.email)],
@@ -77,10 +84,53 @@ class EmailService:
 
     @staticmethod
     async def send_verification_email(user, token: str) -> None:
-        verification_url = f"{settings.FRONTEND_URL}/verify-email?token={token}"
+        # Create secure URL token with embedded user_id
+        from src.apps.core import security
+        secure_token = security.create_secure_url_token({
+            "user_id": user.id,
+            "token": token,
+            "purpose": "email_verification"
+        }, expires_hours=24)
+        verification_url = f"{settings.FRONTEND_URL}/verify-email?t={secure_token}"
         await EmailService.send_email(
             subject="Verify Your Email Address",
             recipients=[NameEmail(name=user.username, email=user.email)],
             template_name="email_verification",
             context={"user": {"email": user.email, "first_name": getattr(user, 'first_name', '')}, "verification_url": verification_url}
+        )
+
+    @staticmethod
+    async def send_new_ip_notification(user, ip_address: str, whitelist_token: str, blacklist_token: str) -> None:
+        """Send notification email when a new IP attempts to access the account"""
+        from src.apps.core import security
+        
+        # Create secure URL tokens with embedded data
+        whitelist_secure = security.create_secure_url_token({
+            "user_id": user.id,
+            "ip_address": ip_address,
+            "token": whitelist_token,
+            "action": "whitelist",
+            "purpose": "ip_action"
+        }, expires_hours=24)
+        
+        blacklist_secure = security.create_secure_url_token({
+            "user_id": user.id,
+            "ip_address": ip_address,
+            "token": blacklist_token,
+            "action": "blacklist",
+            "purpose": "ip_action"
+        }, expires_hours=24)
+        
+        whitelist_url = f"{settings.FRONTEND_URL}/api/v1/ip-access/verify?t={whitelist_secure}"
+        blacklist_url = f"{settings.FRONTEND_URL}/api/v1/ip-access/verify?t={blacklist_secure}"
+        await EmailService.send_email(
+            subject="New IP Address Login Attempt",
+            recipients=[NameEmail(name=user.username, email=user.email)],
+            template_name="new_ip_notification",
+            context={
+                "user": {"email": user.email, "first_name": getattr(user, 'first_name', '')},
+                "ip_address": ip_address,
+                "whitelist_url": whitelist_url,
+                "blacklist_url": blacklist_url
+            }
         )

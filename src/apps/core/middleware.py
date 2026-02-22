@@ -2,10 +2,11 @@ from fastapi import Request, HTTPException, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from sqlmodel import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.apps.iam.models.ip_access_control import IPAccessControl
+from src.apps.iam.models.ip_access_control import IPAccessControl, IpAccessStatus
 from src.apps.iam.models.user import User
 from src.apps.iam.models.token_tracking import TokenTracking
 from src.apps.core import security
+from src.apps.core.security import TokenType
 from src.db.session import get_session
 from datetime import datetime
 
@@ -37,16 +38,10 @@ class IPAccessControlMiddleware(BaseHTTPMiddleware):
         "/docs",
         "/redoc",
         "/openapi.json",
-        "/api/v1/auth/login",
-        "/api/v1/auth/signup",
-        "/api/v1/auth/password-reset-request",
-        "/api/v1/auth/password-reset-confirm",
-        "/api/v1/ip-access",
-        "/api/v1/tokens"
     ]
     
     async def dispatch(self, request: Request, call_next):
-        # Skip middleware for excluded paths
+        # Skip middleware for excluded paths (docs only)
         if any(request.url.path.startswith(path) for path in self.EXCLUDED_PATHS):
             return await call_next(request)
         
@@ -68,7 +63,7 @@ class IPAccessControlMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
         
         try:
-            user = security.verify_token(token, token_type="access")
+            user = security.verify_token(token, token_type=TokenType.ACCESS)
             user_id = user.get("sub")
             if not user or not user_id:
                 return await call_next(request)
@@ -86,17 +81,17 @@ class IPAccessControlMiddleware(BaseHTTPMiddleware):
                     ip_control = result.scalars().first()
                     
                     if ip_control:
-                        if ip_control.status == "blacklisted":
+                        if ip_control.status == IpAccessStatus.BLACKLISTED:
                             raise HTTPException(
                                 status_code=status.HTTP_403_FORBIDDEN,
                                 detail="Your IP address has been blacklisted"
                             )
-                        elif ip_control.status == "whitelisted":
+                        elif ip_control.status == IpAccessStatus.WHITELISTED:
                             # Update last seen
                             ip_control.last_seen = datetime.now()
                             await db.commit()
                             return await call_next(request)
-                        elif ip_control.status == "pending":
+                        elif ip_control.status == IpAccessStatus.PENDING:
                             raise HTTPException(
                                 status_code=status.HTTP_403_FORBIDDEN,
                                 detail="Access from this IP is pending approval. Please check your email or notifications."
@@ -106,7 +101,7 @@ class IPAccessControlMiddleware(BaseHTTPMiddleware):
                         new_ip_control = IPAccessControl(
                             user_id=int(user_id),
                             ip_address=ip_address,
-                            status="pending",
+                            status=IpAccessStatus.PENDING,
                             reason="New IP detected",
                             last_seen=datetime.now()
                         )
@@ -117,11 +112,16 @@ class IPAccessControlMiddleware(BaseHTTPMiddleware):
                         user_result = await db.execute(
                             select(User).where(User.id == int(user_id))
                         )
-                        user = user_result.scalars().first()
+                        user_obj = user_result.scalars().first()
                         
-                        # TODO: Send notification to user about new IP access attempt
-                        # from src.apps.iam.services.email import EmailService
-                        # await EmailService.send_new_ip_notification(user, ip_address)
+                        if user_obj:
+                            # Generate tokens for whitelist/blacklist actions
+                            whitelist_token = security.create_ip_action_token(int(user_id), ip_address, "whitelist")
+                            blacklist_token = security.create_ip_action_token(int(user_id), ip_address, "blacklist")
+                            
+                            # Send notification to user about new IP access attempt
+                            from src.apps.iam.services.email import EmailService
+                            await EmailService.send_new_ip_notification(user_obj, ip_address, whitelist_token, blacklist_token)
                         
                         raise HTTPException(
                             status_code=status.HTTP_403_FORBIDDEN,

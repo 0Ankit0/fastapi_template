@@ -7,9 +7,11 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from src.apps.core.config import settings
 from src.apps.core import security
+from src.apps.core.security import TokenType
 from src.apps.iam.api.deps import get_current_user, get_db
 from src.apps.iam.models.user import User, UserProfile
 from src.apps.iam.models.token_tracking import TokenTracking
+from src.apps.iam.models.ip_access_control import IPAccessControl, IpAccessStatus
 from src.apps.iam.schemas.token import Token
 from src.apps.iam.schemas.user import UserCreate
 
@@ -29,7 +31,22 @@ async def signup(
     """
     Create a new user account
     """
+    ip_address = request.client.host if request.client else "unknown"
+    
     try:
+        # Check if this IP is globally blacklisted for any existing user
+        blacklist_check = await db.execute(
+            select(IPAccessControl).where(
+                IPAccessControl.ip_address == ip_address,
+                IPAccessControl.status == IpAccessStatus.BLACKLISTED
+            )
+        )
+        if blacklist_check.scalars().first():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your IP address has been blacklisted"
+            )
+        
         result = await db.execute(
             select(User).where(User.username == login_data.username)
         )
@@ -58,11 +75,21 @@ async def signup(
         db.add(new_user)
         db.add(user_profile)
         await db.commit()
+        
+        # Whitelist the current IP address on signup
+        ip_control = IPAccessControl(
+            user_id=new_user.id,
+            ip_address=ip_address,
+            status=IpAccessStatus.WHITELISTED,
+            reason="Initial signup IP",
+            last_seen=datetime.now()
+        )
+        db.add(ip_control)
+        await db.commit()
 
         from src.apps.iam.services.email import EmailService
         await EmailService.send_welcome_email(new_user)
         
-        ip_address = request.client.host if request.client else "unknown"
         user_agent = request.headers.get("user-agent", "unknown")
         
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -80,7 +107,7 @@ async def signup(
         access_token_tracking = TokenTracking(
             user_id=new_user.id,
             token_jti=access_payload["jti"],
-            token_type="access",
+            token_type=TokenType.ACCESS,
             ip_address=ip_address,
             user_agent=user_agent,
             expires_at=datetime.fromtimestamp(access_payload["exp"], tz=timezone.utc)
@@ -91,7 +118,7 @@ async def signup(
         refresh_token_tracking = TokenTracking(
             user_id=new_user.id,
             token_jti=refresh_payload["jti"],
-            token_type="refresh",
+            token_type=TokenType.REFRESH,
             ip_address=ip_address,
             user_agent=user_agent,
             expires_at=datetime.fromtimestamp(refresh_payload["exp"], tz=timezone.utc)
@@ -113,7 +140,7 @@ async def signup(
         return Token(
             access=access_token,
             refresh=refresh_token,
-            token_type="bearer"
+            token_type=TokenType.BEARER.value
         )
     except HTTPException:
         raise
@@ -127,20 +154,58 @@ async def signup(
 
 @router.post("/verify-email/")
 async def verify_email(
-    token: str,
+    t: str,
     db: AsyncSession = Depends(get_db)
 ) -> dict[str, str]:
     """
-    Verify user email with token sent via email
+    Verify user email with secure token sent via email
     """
     try:
-        payload = security.verify_token(token, token_type="email_verification")
-        user_id = payload.get("sub")
-        if not user_id:
+        from src.apps.iam.models.used_token import UsedToken
+        
+        # Decrypt and verify the secure URL token
+        try:
+            token_data = security.verify_secure_url_token(t)
+        except Exception:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid or expired verification token"
+                detail="Invalid or expired verification link"
             )
+        
+        user_id = token_data.get("user_id")
+        jwt_token = token_data.get("token")
+        purpose = token_data.get("purpose")
+        
+        if not all([user_id, jwt_token]) or purpose != "email_verification":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid verification token data"
+            )
+        
+        
+        # Verify the embedded JWT token
+        payload = security.verify_token(str(jwt_token), token_type=TokenType.EMAIL_VERIFICATION)
+        token_jti = payload.get("jti")
+        
+        # Verify user_id matches
+        if str(payload.get("sub")) != str(user_id):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Token data mismatch - possible tampering detected"
+            )
+        
+        # Check if token has already been used
+        if token_jti:
+            used_check = await db.execute(
+                select(UsedToken).where(UsedToken.token_jti == token_jti)
+            )
+            if used_check.scalars().first():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="This verification link has already been used"
+                )
+    except HTTPException:
+        raise
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -148,6 +213,11 @@ async def verify_email(
         )
     
     try:
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid token data"
+            )
         result = await db.execute(select(User).where(User.id == int(user_id)))
         user = result.scalars().first()
         
@@ -158,6 +228,16 @@ async def verify_email(
             )
         
         user.is_confirmed = True
+        
+        # Mark token as used
+        if token_jti:
+            used_token = UsedToken(
+                token_jti=token_jti,
+                user_id=int(user_id),
+                token_purpose="email_verification"
+            )
+            db.add(used_token)
+        
         await db.commit()
         
         return {"message": "Email verified successfully"}

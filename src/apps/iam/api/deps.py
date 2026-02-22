@@ -4,7 +4,7 @@ from sqlmodel import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.apps.iam.models.user import User
 from src.apps.iam.models.token_tracking import TokenTracking
-from src.apps.iam.models.ip_access_control import IPAccessControl
+from src.apps.iam.models.ip_access_control import IPAccessControl, IpAccessStatus
 from src.db.session import get_session
 from pydantic import ValidationError
 from jose import JWTError, jwt
@@ -82,7 +82,7 @@ async def get_current_user(
                 select(IPAccessControl).where(
                     IPAccessControl.user_id == int(token_data.sub),
                     IPAccessControl.ip_address == current_ip,
-                    IPAccessControl.status == "whitelisted"
+                    IPAccessControl.status == IpAccessStatus.WHITELISTED
                 )
             )
             if not ip_result.scalars().first():

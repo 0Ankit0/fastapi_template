@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import Literal
 from sqlmodel import SQLModel
 from pydantic import field_serializer
+from ..models.ip_access_control import IpAccessStatus
 from ..utils.hashid import encode_id
 
 
@@ -9,7 +9,7 @@ class IPAccessControlResponse(SQLModel):
     id: str
     user_id: str
     ip_address: str
-    status: Literal["pending", "whitelisted", "blacklisted"]
+    status: IpAccessStatus
     reason: str
     last_seen: datetime
     created_at: datetime
@@ -20,5 +20,5 @@ class IPAccessControlResponse(SQLModel):
 
 
 class IPAccessControlUpdate(SQLModel):
-    status: Literal["whitelisted", "blacklisted"]
+    status: IpAccessStatus
     reason: str = ""

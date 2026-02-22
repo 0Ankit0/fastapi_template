@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from jose import jwt
 from src.apps.core.config import settings
 from src.apps.core import security
+from src.apps.core.security import TokenType
 from src.apps.iam.api.deps import get_db
 from src.apps.iam.models.user import User
 from src.apps.iam.models.token_tracking import TokenTracking
@@ -34,7 +35,7 @@ async def refresh_token(
                 detail="Refresh token missing"
             )
         
-        user_id = security.verify_token(refresh_token, token_type="refresh")
+        user_id = security.verify_token(refresh_token, token_type=TokenType.REFRESH)
         if not user_id:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -93,7 +94,7 @@ async def refresh_token(
         access_token_tracking = TokenTracking(
             user_id=user.id,
             token_jti=access_payload["jti"],
-            token_type="access",
+            token_type=TokenType.ACCESS,
             ip_address=ip_address,
             user_agent=user_agent,
             expires_at=datetime.fromtimestamp(access_payload["exp"], tz=timezone.utc)
@@ -103,7 +104,7 @@ async def refresh_token(
         refresh_token_tracking = TokenTracking(
             user_id=user.id,
             token_jti=new_refresh_payload["jti"],
-            token_type="refresh",
+            token_type=TokenType.REFRESH,
             ip_address=ip_address,
             user_agent=user_agent,
             expires_at=datetime.fromtimestamp(new_refresh_payload["exp"], tz=timezone.utc)
@@ -133,7 +134,7 @@ async def refresh_token(
         return Token(
             access=access_token,
             refresh=new_refresh_token,
-            token_type="bearer"
+            token_type=TokenType.BEARER.value
         )
     except HTTPException:
         raise

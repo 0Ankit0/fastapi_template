@@ -9,6 +9,7 @@ from io import BytesIO
 import base64
 from src.apps.core.config import settings
 from src.apps.core import security
+from src.apps.core.security import TokenType
 from src.apps.iam.api.deps import get_current_user, get_db
 from src.apps.iam.models.user import User
 from src.apps.iam.models.login_attempt import LoginAttempt
@@ -177,7 +178,7 @@ async def validate_otp_login(
             )
         
         try:
-            payload = security.verify_token(temp_token, token_type="temp_auth")
+            payload = security.verify_token(temp_token, token_type=TokenType.TEMP_AUTH)
             user_id = payload.get("sub")
             if not user_id:
                 raise HTTPException(
@@ -246,7 +247,7 @@ async def validate_otp_login(
         access_token_tracking = TokenTracking(
             user_id=user.id,
             token_jti=access_payload["jti"],
-            token_type="access",
+            token_type=TokenType.ACCESS,
             ip_address=ip_address,
             user_agent=user_agent,
             expires_at=datetime.fromtimestamp(access_payload["exp"], tz=timezone.utc)
@@ -257,7 +258,7 @@ async def validate_otp_login(
         refresh_token_tracking = TokenTracking(
             user_id=user.id,
             token_jti=refresh_payload["jti"],
-            token_type="refresh",
+            token_type=TokenType.REFRESH,
             ip_address=ip_address,
             user_agent=user_agent,
             expires_at=datetime.fromtimestamp(refresh_payload["exp"], tz=timezone.utc)
@@ -268,7 +269,7 @@ async def validate_otp_login(
         return Token(
             access=access_token,
             refresh=refresh_token,
-            token_type="bearer"
+            token_type=TokenType.BEARER.value
         )
     except HTTPException:
         raise

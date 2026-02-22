@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone
 from src.apps.iam.api.deps import get_current_user, get_db
 from src.apps.iam.models.user import User
-from src.apps.iam.models.ip_access_control import IPAccessControl
+from src.apps.iam.models.ip_access_control import IPAccessControl, IpAccessStatus
 from src.apps.iam.models.token_tracking import TokenTracking
 from src.apps.iam.schemas.ip_access_control import IPAccessControlResponse, IPAccessControlUpdate
 
@@ -97,7 +97,7 @@ async def update_ip_access_control(
         ip_control.reason = update_data.reason
         
         # If blacklisting, revoke all tokens from this IP
-        if update_data.status == "blacklisted":
+        if update_data.status == IpAccessStatus.BLACKLISTED:
             token_result = await db.execute(
                 select(TokenTracking).where(
                     TokenTracking.user_id == current_user.id, 
@@ -126,20 +126,107 @@ async def update_ip_access_control(
         )
 
 
-@router.delete("/{ip_id}")
-async def delete_ip_access_control(
-    ip_id: int,
-    current_user: User = Depends(get_current_user),
+# @router.delete("/{ip_id}")
+# async def delete_ip_access_control(
+#     ip_id: int,
+#     current_user: User = Depends(get_current_user),
+#     db: AsyncSession = Depends(get_db)
+# ) -> dict[str, str]:
+#     """
+#     Delete IP access control entry
+#     """
+#     try:
+#         result = await db.execute(
+#             select(IPAccessControl).where(
+#                 IPAccessControl.id == ip_id, 
+#                 IPAccessControl.user_id == current_user.id 
+#             )
+#         )
+#         ip_control = result.scalars().first()
+        
+#         if not ip_control:
+#             raise HTTPException(
+#                 status_code=status.HTTP_404_NOT_FOUND,
+#                 detail="IP access control entry not found"
+#             )
+        
+#         await db.delete(ip_control)
+#         await db.commit()
+        
+#         return {"message": "IP access control entry deleted successfully"}
+#     except HTTPException:
+#         raise
+#     except Exception:
+#         await db.rollback()
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail="An error occurred deleting IP access control"
+#         )
+
+
+@router.get("/verify")
+async def verify_ip_action(
+    t: str,
     db: AsyncSession = Depends(get_db)
 ) -> dict[str, str]:
     """
-    Delete IP access control entry
+    Verify IP whitelist/blacklist action from email link
     """
     try:
+        from src.apps.core import security
+        from src.apps.core.security import TokenType
+        from src.apps.iam.models.used_token import UsedToken
+        
+        # Decrypt and verify the secure URL token
+        try:
+            token_data = security.verify_secure_url_token(t)
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired verification link"
+            )
+        
+        # Extract embedded data
+        user_id = token_data.get("user_id")
+        ip_address = token_data.get("ip_address")
+        action = token_data.get("action")
+        jwt_token = token_data.get("token")
+        
+        if not all([user_id, ip_address, action, jwt_token]):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid verification token data"
+            )
+        assert user_id is not None, "user_id must be present in token data"
+        
+        # Verify the embedded JWT token
+        expected_type = TokenType.IP_WHITELIST if action == "whitelist" else TokenType.IP_BLACKLIST
+        payload = security.verify_token(str(jwt_token), token_type=expected_type)
+        token_jti = payload.get("jti")
+        
+        # Verify user_id and ip_address match
+        if str(payload.get("sub")) != str(user_id) or payload.get("ip") != ip_address:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Token data mismatch - possible tampering detected"
+            )
+        
+        # Check if token has already been used
+        if token_jti:
+            used_check = await db.execute(
+                select(UsedToken).where(UsedToken.token_jti == token_jti)
+            )
+            if used_check.scalars().first():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="This verification link has already been used"
+                )
+        
+        # Find the IP access control entry
         result = await db.execute(
             select(IPAccessControl).where(
-                IPAccessControl.id == ip_id, 
-                IPAccessControl.user_id == current_user.id 
+                IPAccessControl.user_id == int(user_id),
+                IPAccessControl.ip_address == ip_address
             )
         )
         ip_control = result.scalars().first()
@@ -150,15 +237,48 @@ async def delete_ip_access_control(
                 detail="IP access control entry not found"
             )
         
-        await db.delete(ip_control)
+        # Update status based on action
+        if action == "whitelist":
+            ip_control.status = IpAccessStatus.WHITELISTED
+            ip_control.reason = "User verified via email"
+            message = "IP address has been whitelisted successfully. You can now access your account from this IP."
+        else:
+            ip_control.status = IpAccessStatus.BLACKLISTED
+            ip_control.reason = "User reported unauthorized access"
+            message = "IP address has been blacklisted. If this was a mistake, please contact support."
+            
+            # Revoke all tokens from this IP
+            token_result = await db.execute(
+                select(TokenTracking).where(
+                    TokenTracking.user_id == int(user_id),
+                    TokenTracking.ip_address == ip_address,
+                    TokenTracking.is_active
+                )
+            )
+            tokens = token_result.scalars().all()
+            
+            for token_tracking in tokens:
+                token_tracking.is_active = False
+                token_tracking.revoked_at = datetime.now(timezone.utc)
+                token_tracking.revoke_reason = f"IP {ip_address} blacklisted by user"
+        
+        # Mark token as used to prevent reuse
+        if token_jti:
+            used_token = UsedToken(
+                token_jti=token_jti,
+                user_id=int(user_id),
+                token_purpose="ip_action"
+            )
+            db.add(used_token)
+        
         await db.commit()
         
-        return {"message": "IP access control entry deleted successfully"}
+        return {"message": message}
     except HTTPException:
         raise
     except Exception:
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred deleting IP access control"
+            detail="An error occurred processing IP verification"
         )
