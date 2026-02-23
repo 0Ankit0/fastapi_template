@@ -1,6 +1,6 @@
 from typing import Sequence
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import select, desc
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlmodel import select, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone
 from src.apps.iam.api.deps import get_current_user, get_db
@@ -8,25 +8,61 @@ from src.apps.iam.models.user import User
 from src.apps.iam.models.ip_access_control import IPAccessControl, IpAccessStatus
 from src.apps.iam.models.token_tracking import TokenTracking
 from src.apps.iam.schemas.ip_access_control import IPAccessControlResponse, IPAccessControlUpdate
+from src.apps.core.schemas import PaginatedResponse
+from src.apps.core.cache import RedisCache
 
 router = APIRouter()
 
 
-@router.get("/", response_model=list[IPAccessControlResponse])
+@router.get("/", response_model=PaginatedResponse[IPAccessControlResponse])
 async def list_ip_access_controls(
+    skip: int = Query(default=0, ge=0, description="Number of items to skip"),
+    limit: int = Query(default=10, ge=1, le=100, description="Number of items to return"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
-) -> Sequence[IPAccessControl]:
+):
     """
-    Get all IP access control entries for the current user
+    Get all IP access control entries for the current user with pagination
     """
     try:
+        cache_key = f"ip_access:{current_user.id}:{skip}:{limit}"
+        
+        # Try cache
+        cached = await RedisCache.get(cache_key)
+        if cached:
+            return cached
+        
+        # Get total count
+        count_result = await db.execute(
+            select(func.count(IPAccessControl.id)).where( # type: ignore
+                IPAccessControl.user_id == current_user.id
+            )
+        )
+        total = count_result.scalar_one()
+        
+        # Get paginated data
         result = await db.execute(
             select(IPAccessControl).where(
                 IPAccessControl.user_id == current_user.id 
             ).order_by(desc(IPAccessControl.last_seen))
+            .offset(skip)
+            .limit(limit)
         )
-        return result.scalars().all()
+        items = result.scalars().all()
+        items_response = [IPAccessControlResponse.model_validate(item) for item in items]
+
+        # Create response
+        response = PaginatedResponse[IPAccessControlResponse].create(
+            items=items_response,
+            total=total,
+            skip=skip,
+            limit=limit
+        )
+        
+        # Cache for 5 minutes
+        await RedisCache.set(cache_key, response.model_dump(), ttl=300)
+        
+        return response
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -44,6 +80,13 @@ async def get_ip_access_control(
     Get specific IP access control entry
     """
     try:
+        cache_key = f"ip_access:{current_user.id}:{ip_id}"
+        
+        # Try cache
+        cached = await RedisCache.get(cache_key)
+        if cached:
+            return IPAccessControl(**cached)
+        
         result = await db.execute(
             select(IPAccessControl).where(
                 IPAccessControl.id == ip_id, 
@@ -57,6 +100,9 @@ async def get_ip_access_control(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="IP access control entry not found"
             )
+        
+        # Cache for 10 minutes
+        await RedisCache.set(cache_key, ip_control.model_dump(), ttl=600)
         
         return ip_control
     except HTTPException:
@@ -95,6 +141,10 @@ async def update_ip_access_control(
         
         ip_control.status = update_data.status
         ip_control.reason = update_data.reason
+        
+        # Invalidate caches
+        await RedisCache.delete(f"ip_access:{current_user.id}:{ip_id}")
+        await RedisCache.clear_pattern(f"ip_access:{current_user.id}:*")
         
         # If blacklisting, revoke all tokens from this IP
         if update_data.status == IpAccessStatus.BLACKLISTED:
