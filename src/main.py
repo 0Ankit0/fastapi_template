@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer
@@ -10,11 +11,30 @@ from src.apps.core.config import settings
 from src.apps.core.handler import rate_limit_exceeded_handler
 from src.apps.core.middleware import SecurityHeadersMiddleware, IPAccessControlMiddleware
 from src.apps.iam.api.urls import api_router
+from src.db.session import engine
+from src.apps.iam.casbin_enforcer import CasbinEnforcer
+from src.apps.core.cache import RedisCache
 
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize Casbin enforcer and Redis cache on startup"""
+    enforcer = await CasbinEnforcer.get_enforcer(engine)
+    app.state.casbin_enforcer = enforcer
+    
+    # Initialize Redis cache in production
+    if not settings.DEBUG:
+        await RedisCache.get_client()
+    
+    yield
+    
+    # Cleanup Redis connection on shutdown
+    await RedisCache.close()
+
 app = FastAPI(
+    lifespan=lifespan,
     title="fastapi_template",
     description="A template for FastAPI applications",
     version="0.1.0",
