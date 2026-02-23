@@ -24,85 +24,74 @@ class EmailService:
         NOTE: This requires SMTP settings in env (e.g. SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD)
         for now, we'll log if the settings are missing.
         """
-        if not settings.EMAIL_ENABLED:
-            logger.info(f"Mock Sending Email: Subject: {subject}, Recipients: {recipients}, Template: {template_name}, Context: {context}")
-            return
+        # Use Celery for background task processing
+        from src.apps.core.tasks import send_email_task
         
-        # Create email configuration
-        conf = ConnectionConfig(
-            MAIL_USERNAME=settings.EMAIL_HOST_USER,
-            MAIL_PASSWORD=settings.EMAIL_HOST_PASSWORD,
-            MAIL_FROM=settings.EMAIL_FROM_ADDRESS,
-            MAIL_PORT=int(settings.EMAIL_PORT),
-            MAIL_SERVER=settings.EMAIL_HOST,
-            MAIL_STARTTLS=True,
-            MAIL_SSL_TLS=False,
-            USE_CREDENTIALS=True,
-            VALIDATE_CERTS=True,
-            TEMPLATE_FOLDER=TEMPLATE_DIR
-        )
-
-        message = MessageSchema(
-            subject=subject,
-            recipients=recipients,
-            template_body=context,
-            subtype=MessageType.html
-        )
-
-        fm = FastMail(conf)
-        try:
-            await fm.send_message(message, template_name=f"emails/{template_name}.html")
-            logger.info(f"Email sent successfully: Subject: {subject}, Recipients: {recipients}")
-        except Exception as e:
-            logger.error(f"Failed to send email: {e}")
+        # Convert NameEmail objects to dict for serialization
+        recipients_dict = [{"name": r.name, "email": r.email} for r in recipients]
+        
+        # Queue email task in background
+        send_email_task.delay(subject, recipients_dict, template_name, context)
+        logger.info(f"Email task queued: Subject: {subject}, Recipients: {recipients_dict}")
 
     @staticmethod
     async def send_welcome_email(user) -> None:
-        await EmailService.send_email(
-            subject="Welcome to Our Service!",
-            recipients=[NameEmail(name=user.username, email=user.email)],
-            template_name="welcome",
-            context={"user": {"email":user.email, "first_name": getattr(user, 'first_name', '')}}
-        )
+        from src.apps.core.tasks import send_welcome_email_task
+        user_data = {
+            "username": user.username,
+            "email": user.email,
+            "first_name": getattr(user, 'first_name', '')
+        }
+        send_welcome_email_task.delay(user_data)
+        logger.info(f"Welcome email task queued for user: {user.email}")
 
     @staticmethod
     async def send_password_reset_email(user, token:str) -> None:
         # Create secure URL token with embedded user_id
         from src.apps.core import security
+        from src.apps.core.tasks import send_password_reset_email_task
+        
         secure_token = security.create_secure_url_token({
             "user_id": user.id,
             "token": token,
             "purpose": "password_reset"
         }, expires_hours=1)
         reset_url = f"{settings.FRONTEND_URL}/reset-password?t={secure_token}"
-        await EmailService.send_email(
-            subject="Reset Your Password",
-            recipients=[NameEmail(name=user.username, email=user.email)],
-            template_name="password_reset",
-            context={"user": {"email":user.email, "first_name": getattr(user, 'first_name', '')}, "reset_url": reset_url}
-        )
+        
+        user_data = {
+            "username": user.username,
+            "email": user.email,
+            "first_name": getattr(user, 'first_name', '')
+        }
+        send_password_reset_email_task.delay(user_data, reset_url)
+        logger.info(f"Password reset email task queued for user: {user.email}")
 
     @staticmethod
     async def send_verification_email(user, token: str) -> None:
         # Create secure URL token with embedded user_id
         from src.apps.core import security
+        from src.apps.core.tasks import send_verification_email_task
+        
         secure_token = security.create_secure_url_token({
             "user_id": user.id,
             "token": token,
             "purpose": "email_verification"
         }, expires_hours=24)
         verification_url = f"{settings.FRONTEND_URL}/verify-email?t={secure_token}"
-        await EmailService.send_email(
-            subject="Verify Your Email Address",
-            recipients=[NameEmail(name=user.username, email=user.email)],
-            template_name="email_verification",
-            context={"user": {"email": user.email, "first_name": getattr(user, 'first_name', '')}, "verification_url": verification_url}
-        )
+        
+        user_data = {
+            "username": user.username,
+            "email": user.email,
+            "first_name": getattr(user, 'first_name', '')
+        }
+        send_verification_email_task.delay(user_data, verification_url)
+        logger.info(f"Verification email task queued for user: {user.email}")
 
     @staticmethod
     async def send_new_ip_notification(user, ip_address: str, whitelist_token: str, blacklist_token: str) -> None:
         """Send notification email when a new IP attempts to access the account"""
         from src.apps.core import security
+        from src.apps.core.tasks import send_new_ip_notification_task
         
         # Create secure URL tokens with embedded data
         whitelist_secure = security.create_secure_url_token({
@@ -123,14 +112,11 @@ class EmailService:
         
         whitelist_url = f"{settings.FRONTEND_URL}/api/v1/ip-access/verify?t={whitelist_secure}"
         blacklist_url = f"{settings.FRONTEND_URL}/api/v1/ip-access/verify?t={blacklist_secure}"
-        await EmailService.send_email(
-            subject="New IP Address Login Attempt",
-            recipients=[NameEmail(name=user.username, email=user.email)],
-            template_name="new_ip_notification",
-            context={
-                "user": {"email": user.email, "first_name": getattr(user, 'first_name', '')},
-                "ip_address": ip_address,
-                "whitelist_url": whitelist_url,
-                "blacklist_url": blacklist_url
-            }
-        )
+        
+        user_data = {
+            "username": user.username,
+            "email": user.email,
+            "first_name": getattr(user, 'first_name', '')
+        }
+        send_new_ip_notification_task.delay(user_data, ip_address, whitelist_url, blacklist_url)
+        logger.info(f"New IP notification task queued for user: {user.email}")

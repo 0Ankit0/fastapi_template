@@ -7,6 +7,7 @@ if TYPE_CHECKING:
     from .ip_access_control import IPAccessControl
     from .token_tracking import TokenTracking
     from .used_token import UsedToken
+    from .role import UserRole
 
 class UserBase(SQLModel):
     username: str = Field(
@@ -73,6 +74,7 @@ class User(UserBase, table=True):
     ip_access_controls: list["IPAccessControl"] = Relationship(back_populates="user")
     tokens: list["TokenTracking"] = Relationship(back_populates="user")
     used_tokens: list["UsedToken"] = Relationship(back_populates="user")
+    user_roles: list["UserRole"] = Relationship(back_populates="user")
 
 
 class UserProfileBase(SQLModel):
