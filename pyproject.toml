@@ -22,6 +22,11 @@ dependencies = [
     "greenlet>=3.3.1",
     "alembic>=1.18.4",
     "bcrypt>=4.0.0,<5.0.0",
+    "casbin>=1.37.0",
+    "casbin-sqlalchemy-adapter>=0.6.0",
+    "casbin-async-sqlalchemy-adapter>=0.3.3",
+    "celery>=5.4.0",
+    "redis>=5.2.0",
 ]
 
 [dependency-groups]
@@ -42,3 +47,4 @@ start = "uvicorn src.main:app --reload"
 test = "pytest --cov=app tests/"
 initial-migrate = 'alembic revision --autogenerate -m "init"'
 migrate = "alembic upgrade head"
+celery = "celery -A src.apps.core.celery_app worker --loglevel=info"

@@ -19,3 +19,9 @@ logs/
 *.log
 tmp/
 .hypothesis/
+htmlcov/
+
+# Temp files 
+*.md
+*.xml
+.coverage
