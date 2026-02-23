@@ -44,7 +44,7 @@ class TestTokenTracking:
         # Login
         response = await client.post(
             "/api/v1/auth/login/?set_cookie=false",
-            json={"username": "trackuser", "password": "TestPass123"}
+            json={"username": username, "password": "TestPass123"}
         )
         
         assert response.status_code == 200

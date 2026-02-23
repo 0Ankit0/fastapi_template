@@ -1,5 +1,6 @@
 import pytest
 import uuid
+import os
 from typing import AsyncGenerator
 from unittest.mock import AsyncMock, patch
 from httpx import ASGITransport, AsyncClient
@@ -9,6 +10,9 @@ from sqlmodel import SQLModel
 
 from src.main import app
 from src.db.session import get_session
+
+# Set TESTING environment variable before importing settings
+os.environ["TESTING"] = "True"
 
 
 @pytest.fixture(scope="function")
@@ -56,9 +60,23 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     
     app.dependency_overrides[get_db] = override_get_db
     
-    # Disable rate limiting for tests
-    original_enabled = app.state.limiter.enabled
-    app.state.limiter.enabled = False
+    # Disable rate limiting for tests - handle both main limiter and route limiters
+    if hasattr(app.state, 'limiter'):
+        original_enabled = app.state.limiter.enabled
+        app.state.limiter.enabled = False
+    else:
+        original_enabled = None
+    
+    # Also disable limiters in individual route modules
+    limiters_to_restore = []
+    try:
+        from src.apps.iam.api.v1.auth import signup, login, password
+        for module in [signup, login, password]:
+            if hasattr(module, 'limiter'):
+                limiters_to_restore.append((module.limiter, module.limiter.enabled))
+                module.limiter.enabled = False
+    except Exception:
+        pass
     
     # Mock email service to avoid sending real emails
     with patch("src.apps.iam.services.email.EmailService.send_welcome_email", new_callable=AsyncMock):
@@ -72,5 +90,11 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
                         yield test_client
     
     # Restore rate limiting after test
-    app.state.limiter.enabled = original_enabled
+    if original_enabled is not None:
+        app.state.limiter.enabled = original_enabled
+    
+    # Restore module limiters
+    for limiter, was_enabled in limiters_to_restore:
+        limiter.enabled = was_enabled
+    
     app.dependency_overrides.clear()
