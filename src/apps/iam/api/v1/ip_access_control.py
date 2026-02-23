@@ -1,6 +1,5 @@
-from typing import Sequence
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlmodel import select, desc, func
+from sqlmodel import select, desc, func, col
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone
 from src.apps.iam.api.deps import get_current_user, get_db
@@ -34,7 +33,7 @@ async def list_ip_access_controls(
         
         # Get total count
         count_result = await db.execute(
-            select(func.count(IPAccessControl.id)).where( # type: ignore
+            select(func.count(col(IPAccessControl.id))).where(
                 IPAccessControl.user_id == current_user.id
             )
         )
@@ -44,13 +43,12 @@ async def list_ip_access_controls(
         result = await db.execute(
             select(IPAccessControl).where(
                 IPAccessControl.user_id == current_user.id 
-            ).order_by(desc(IPAccessControl.last_seen))
+            ).order_by(desc(col(IPAccessControl.last_seen)))
             .offset(skip)
             .limit(limit)
         )
         items = result.scalars().all()
         items_response = [IPAccessControlResponse.model_validate(item) for item in items]
-
         # Create response
         response = PaginatedResponse[IPAccessControlResponse].create(
             items=items_response,
@@ -63,10 +61,10 @@ async def list_ip_access_controls(
         await RedisCache.set(cache_key, response.model_dump(), ttl=300)
         
         return response
-    except Exception:
+    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred fetching IP access controls"
+            detail=f"An error occurred fetching IP access controls: {str(e)}"
         )
 
 

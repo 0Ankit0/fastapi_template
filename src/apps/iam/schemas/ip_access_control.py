@@ -6,8 +6,8 @@ from ..utils.hashid import encode_id
 
 
 class IPAccessControlResponse(SQLModel):
-    id: str
-    user_id: str
+    id: int
+    user_id: int
     ip_address: str
     status: IpAccessStatus
     reason: str

@@ -3,7 +3,7 @@ Example API endpoints demonstrating Casbin RBAC usage.
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select, func
+from sqlmodel import select, func, col
 from pydantic import BaseModel
 from src.db.session import get_session
 from src.apps.iam.models import Role, Permission, User
@@ -21,8 +21,7 @@ from src.apps.core.schemas import PaginatedResponse
 from src.apps.core.cache import RedisCache
 
 
-router = APIRouter(prefix="/rbac", tags=["RBAC"])
-
+router = APIRouter()
 
 class RoleCreate(BaseModel):
     name: str
@@ -79,7 +78,7 @@ async def list_roles(
         return cached
     
     # Get total count
-    count_result = await session.execute(select(func.count(Role.id))) # type: ignore
+    count_result = await session.execute(select(func.count(col(Role.id))))
     total = count_result.scalar_one()
     
     # Get paginated data
@@ -162,7 +161,7 @@ async def list_permissions(
         return cached
     
     # Get total count
-    count_result = await session.execute(select(func.count(Permission.id))) # type: ignore
+    count_result = await session.execute(select(func.count(col(Permission.id))))
     total = count_result.scalar_one()
     
     # Get paginated data

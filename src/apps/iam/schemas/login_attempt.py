@@ -1,12 +1,11 @@
 from datetime import datetime
-from sqlmodel import SQLModel
-from pydantic import field_serializer
+from pydantic import BaseModel, field_serializer
 from ..utils.hashid import encode_id
 
 
-class LoginAttemptResponse(SQLModel):
-    id: str
-    user_id: str
+class LoginAttemptResponse(BaseModel):
+    id: int
+    user_id: int
     ip_address: str
     user_agent: str
     success: bool

@@ -10,7 +10,7 @@ from slowapi.errors import RateLimitExceeded
 from src.apps.core.config import settings
 from src.apps.core.handler import rate_limit_exceeded_handler
 from src.apps.core.middleware import SecurityHeadersMiddleware, IPAccessControlMiddleware
-from src.apps.iam.api.urls import api_router
+from src.apps.iam.api import api_router
 from src.db.session import engine
 from src.apps.iam.casbin_enforcer import CasbinEnforcer
 from src.apps.core.cache import RedisCache

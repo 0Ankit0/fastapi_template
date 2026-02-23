@@ -7,8 +7,8 @@ from ..utils.hashid import encode_id
 
 
 class TokenTrackingResponse(SQLModel):
-    id: str
-    user_id: str
+    id: int
+    user_id: int
     token_jti: str
     token_type: TokenType
     ip_address: str

@@ -3,7 +3,7 @@ User management endpoints with caching and pagination
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select, func, or_
+from sqlmodel import select, func, or_, col
 from typing import Optional
 from src.apps.iam.api.deps import get_current_user, get_current_active_superuser, get_db
 from src.apps.iam.models.user import User
@@ -36,13 +36,13 @@ async def list_users(
     
     # Build query
     query = select(User)
-    count_query = select(func.count(User.id))
+    count_query = select(func.count(col(User.id)))
     
     # Apply filters
     if search:
         search_filter = or_(
-            User.email.ilike(f"%{search}%"),
-            User.full_name.ilike(f"%{search}%")
+            col(User.email).ilike(f"%{search}%"),
+            col(User.username).ilike(f"%{search}%")
         )
         query = query.where(search_filter)
         count_query = count_query.where(search_filter)
@@ -56,13 +56,14 @@ async def list_users(
     total = count_result.scalar_one()
     
     # Get paginated data
-    query = query.offset(skip).limit(limit).order_by(User.id)
+    query = query.offset(skip).limit(limit).order_by(col(User.id))
     result = await db.execute(query)
     items = result.scalars().all()
+    items_response = [UserResponse.model_validate(user) for user in items]
     
     # Create response
     response = PaginatedResponse[UserResponse].create(
-        items=items,
+        items=items_response,
         total=total,
         skip=skip,
         limit=limit
@@ -135,8 +136,10 @@ async def update_current_user(
     Update current user's profile
     """
     # Update user fields
-    if user_update.full_name is not None:
-        current_user.full_name = user_update.full_name
+    if user_update.first_name is not None:
+        current_user.first_name = user_update.first_name
+    if user_update.last_name is not None:
+        current_user.last_name = user_update.last_name
     if user_update.email is not None:
         # Check if email is already taken
         result = await db.execute(
@@ -184,8 +187,10 @@ async def update_user(
         )
     
     # Update fields
-    if user_update.full_name is not None:
-        user.full_name = user_update.full_name
+    if user_update.first_name is not None:
+        user.first_name = user_update.first_name
+    if user_update.last_name is not None:
+        user.last_name = user_update.last_name
     if user_update.email is not None:
         # Check if email is already taken
         result = await db.execute(

@@ -1,6 +1,6 @@
 from typing import Sequence
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlmodel import select, desc, func
+from sqlmodel import select, desc, func, col
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone
 from src.apps.iam.api.deps import get_current_user, get_db
@@ -33,7 +33,7 @@ async def list_active_tokens(
         
         # Get total count
         count_result = await db.execute(
-            select(func.count(TokenTracking.id)).where( # type: ignore
+            select(func.count(col(TokenTracking.id))).where(
                 TokenTracking.user_id == current_user.id,
                 TokenTracking.is_active
             )
@@ -45,7 +45,7 @@ async def list_active_tokens(
             select(TokenTracking).where(
                 TokenTracking.user_id == current_user.id,
                 TokenTracking.is_active
-            ).order_by(desc(TokenTracking.created_at))
+            ).order_by(desc(col(TokenTracking.created_at)))
             .offset(skip)
             .limit(limit)
         )
