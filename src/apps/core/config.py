@@ -25,6 +25,49 @@ class Settings(BaseSettings):
 
     # Debug settings for environment
     DEBUG: bool = True
+    TESTING: bool = False
+
+    # Celery and Redis settings
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_DB: int = 0
+    REDIS_PASSWORD: str | None = None
+    REDIS_MAX_CONNECTIONS: int = 10
+    REDIS_URL: str | None = None
+    CELERY_BROKER_URL: str | None = None
+    CELERY_RESULT_BACKEND: str | None = None
+
+    @field_validator("REDIS_URL", mode="before")
+    def assemble_redis_url(cls, v: str | None, info: ValidationInfo) -> str:
+        if isinstance(v, str):
+            return v
+        data = info.data
+        password = data.get('REDIS_PASSWORD')
+        if password:
+            return f"redis://:{password}@{data.get('REDIS_HOST')}:{data.get('REDIS_PORT')}/{data.get('REDIS_DB')}"
+        return f"redis://{data.get('REDIS_HOST')}:{data.get('REDIS_PORT')}/{data.get('REDIS_DB')}"
+
+    @field_validator("CELERY_BROKER_URL", mode="before")
+    def assemble_celery_broker(cls, v: str | None, info: ValidationInfo) -> str:
+        if isinstance(v, str):
+            return v
+        data = info.data
+        debug: bool = data.get("DEBUG", True)
+        if debug:
+            return "memory://"
+        else:
+            return f"redis://{data.get('REDIS_HOST')}:{data.get('REDIS_PORT')}/{data.get('REDIS_DB')}"
+
+    @field_validator("CELERY_RESULT_BACKEND", mode="before")
+    def assemble_celery_backend(cls, v: str | None, info: ValidationInfo) -> str:
+        if isinstance(v, str):
+            return v
+        data = info.data
+        debug: bool = data.get("DEBUG", True)
+        if debug:
+            return "cache+memory://"
+        else:
+            return f"redis://{data.get('REDIS_HOST')}:{data.get('REDIS_PORT')}/{data.get('REDIS_DB')}"
 
     # CORS settings
     BACKEND_CORS_ORIGINS: List[Union[str, AnyHttpUrl]] = ["http://localhost", "http://localhost:3000"]
@@ -50,7 +93,7 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return v
         data = info.data
-        debug: bool = data.get("DEBUG") or True 
+        debug: bool = data.get("DEBUG", True)
         if debug:
             return f"sqlite+aiosqlite:///./{data.get('POSTGRES_DB')}.db"
         else:
@@ -61,7 +104,7 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return v
         data = info.data
-        debug: bool = data.get("DEBUG") or True
+        debug: bool = data.get("DEBUG", True)
         if debug:
             return f"sqlite:///./{data.get('POSTGRES_DB')}.db"
         else:
