@@ -1,5 +1,5 @@
 from datetime import timedelta, datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status, Body
 from sqlmodel import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from jose import jwt
@@ -19,7 +19,7 @@ async def refresh_token(
     response: Response,
     request: Request,
     set_cookie: bool,
-    refresh_token: str | None = None,
+    refresh_token: str | None = Body(None, embed=True),
     db: AsyncSession = Depends(get_db),
 ) -> Token | dict[str, str]:
     """
@@ -35,12 +35,16 @@ async def refresh_token(
                 detail="Refresh token missing"
             )
         
-        user_id = security.verify_token(refresh_token, token_type=TokenType.REFRESH)
-        if not user_id:
+        user = security.verify_token(refresh_token, token_type=TokenType.REFRESH)
+        user_id = user.get("sub") if user else None
+        if not user or not user_id:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid refresh token"
             )
+        
+        # Extract user_id from payload
+        user_id = int(user_id)
         
         # Check if refresh token is tracked and active
         refresh_payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
