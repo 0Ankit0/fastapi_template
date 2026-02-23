@@ -15,6 +15,7 @@ from src.apps.iam.schemas.user import (
     ResetPasswordConfirm,
     ChangePasswordRequest
 )
+from src.apps.core.cache import RedisCache
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -151,6 +152,10 @@ async def confirm_password_reset(
         
         await db.commit()
         
+        # Invalidate all related caches
+        await RedisCache.delete(f"user:profile:{user_id}")
+        await RedisCache.clear_pattern(f"tokens:active:{user_id}:*")
+        
         return {"message": "Password has been reset successfully"}
     except HTTPException:
         raise
@@ -195,6 +200,10 @@ async def change_password(
             token_tracking.revoke_reason = "Password changed"
         
         await db.commit()
+        
+        # Invalidate caches
+        await RedisCache.delete(f"user:profile:{current_user.id}")
+        await RedisCache.clear_pattern(f"tokens:active:{current_user.id}:*")
         
         return {"message": "Password changed successfully"}
     except HTTPException:

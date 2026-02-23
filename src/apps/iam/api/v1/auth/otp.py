@@ -16,6 +16,7 @@ from src.apps.iam.models.login_attempt import LoginAttempt
 from src.apps.iam.models.token_tracking import TokenTracking
 from src.apps.iam.schemas.token import Token
 from src.apps.iam.schemas.user import VerifyOTPRequest, DisableOTPRequest
+from src.apps.core.cache import RedisCache
 
 router = APIRouter()
 
@@ -104,6 +105,9 @@ async def verify_otp(
         current_user.otp_verified = True
         await db.commit()
         
+        # Invalidate user cache
+        await RedisCache.delete(f"user:profile:{current_user.id}")
+        
         return {"message": "OTP verified and enabled successfully"}
     except HTTPException:
         raise
@@ -143,6 +147,9 @@ async def disable_otp(
         current_user.otp_base32 = ""
         current_user.otp_auth_url = ""
         await db.commit()
+        
+        # Invalidate user cache
+        await RedisCache.delete(f"user:profile:{current_user.id}")
         
         return {"message": "OTP disabled successfully"}
     except HTTPException:

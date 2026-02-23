@@ -14,6 +14,7 @@ from src.apps.iam.models.token_tracking import TokenTracking
 from src.apps.iam.models.ip_access_control import IPAccessControl, IpAccessStatus
 from src.apps.iam.schemas.token import Token
 from src.apps.iam.schemas.user import UserCreate
+from src.apps.core.cache import RedisCache
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -75,6 +76,9 @@ async def signup(
         db.add(new_user)
         db.add(user_profile)
         await db.commit()
+        
+        # Invalidate users list cache
+        await RedisCache.clear_pattern("users:list:*")
         
         # Whitelist the current IP address on signup
         ip_control = IPAccessControl(
@@ -239,6 +243,9 @@ async def verify_email(
             db.add(used_token)
         
         await db.commit()
+        
+        # Invalidate user cache
+        await RedisCache.delete(f"user:profile:{user_id}")
         
         return {"message": "Email verified successfully"}
     except HTTPException:
