@@ -17,6 +17,9 @@ celery_app.conf.update(
     task_track_started=True,
     task_time_limit=30 * 60,
     result_expires=3600,
+    # In development, run tasks inline (no worker / broker needed)
+    task_always_eager=settings.DEBUG,
+    task_eager_propagates=settings.DEBUG,
 )
 
 if __name__ == '__main__':

@@ -13,7 +13,7 @@ from src.apps.iam.utils.hashid import decode_id_or_404
 from src.apps.core.schemas import PaginatedResponse
 from src.apps.core.cache import RedisCache
 
-router = APIRouter(prefix="/users", tags=["User Management"])
+router = APIRouter(prefix="/users")
 
 
 @router.get("/", response_model=PaginatedResponse[UserResponse])
@@ -36,8 +36,9 @@ async def list_users(
     if cached:
         return cached
     
+    
     # Build query
-    query = select(User).options(selectinload(User.profile))
+    query = select(User).options(selectinload(User.profile)) # type: ignore
     count_query = select(func.count(col(User.id)))
     
     # Apply filters
@@ -131,7 +132,7 @@ async def get_user(
     if cached:
         return UserResponse(**cached)
     
-    result = await db.execute(select(User).options(selectinload(User.profile)).where(User.id == uid))
+    result = await db.execute(select(User).options(selectinload(User.profile)).where(User.id == uid)) # type: ignore
     user = result.scalars().first()
     
     if not user:
@@ -222,7 +223,7 @@ async def update_user(
     Update user by ID (admin only)
     """
     uid = decode_id_or_404(user_id)
-    result = await db.execute(select(User).options(selectinload(User.profile)).where(User.id == uid))
+    result = await db.execute(select(User).options(selectinload(User.profile)).where(User.id == uid)) # type: ignore
     user = result.scalars().first()
     
     if not user:

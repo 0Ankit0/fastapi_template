@@ -1,10 +1,9 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from src.apps.core.config import settings
@@ -82,7 +81,7 @@ if not settings.DEBUG:
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
 @app.get("/")
-@limiter.limit("10/minute")
-async def read_root(request: Request):
+async def read_root():
     return {"Hello": "World"}

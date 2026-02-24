@@ -1,6 +1,7 @@
 from typing import Optional, TYPE_CHECKING
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
+from sqlalchemy import Column, Enum as SAEnum
 from src.apps.core.security import TokenType
 
 if TYPE_CHECKING:
@@ -15,6 +16,7 @@ class TokenTrackingBase(SQLModel):
         description="JWT ID (JTI) - unique identifier for the token"
     )
     token_type: TokenType = Field(
+        sa_column=Column(SAEnum(TokenType, values_callable=lambda e: [m.value for m in e])),
         description="Type of token: access, refresh"
     )
     ip_address: str = Field(

@@ -5,6 +5,7 @@ from celery import shared_task
 from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType, NameEmail
 from jinja2 import Environment, FileSystemLoader
 from src.apps.core.config import settings
+from src.apps.core.celery_app import celery_app  # noqa: F401 — registers the configured app so shared_task binds to it
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,32 @@ def send_email_task(
 ) -> bool:
     """Send an email using a template via Celery task"""
     if not settings.EMAIL_ENABLED:
-        logger.info(f"Mock Sending Email: Subject: {subject}, Recipients: {recipients}, Template: {template_name}")
+        if settings.DEBUG:
+            # Pretty-print the email to the console so tokens/URLs are easy to copy during development
+            sep = "=" * 60
+            lines = [
+                "",
+                sep,
+                "  📧  DEV EMAIL (not sent)",
+                sep,
+                f"  To      : {', '.join(r['email'] for r in recipients)}",
+                f"  Subject : {subject}",
+                f"  Template: {template_name}",
+            ]
+            # Surface any URL / token fields from the context so they're immediately visible
+            url_keys = ("reset_url", "verification_url", "whitelist_url", "blacklist_url")
+            for key in url_keys:
+                value = context.get(key)
+                if value:
+                    lines.append(f"  {key:<18}: {value}")
+                    # Also print the bare token so it can be pasted straight into a request body
+                    if "?t=" in value:
+                        token_val = value.split("?t=", 1)[1]
+                        lines.append(f"  {'token':<18}: {token_val}")
+            lines += [sep, ""]
+            print("\n".join(lines), flush=True)
+        else:
+            logger.info(f"Email skipped (EMAIL_ENABLED=False): Subject: {subject}, Recipients: {[r['email'] for r in recipients]}")
         return True
     
     try:

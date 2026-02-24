@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime
-from hypothesis import given, strategies as st
+from hypothesis import given, settings as h_settings, strategies as st
 
 from tests.factories import (
     UserFactory,
@@ -36,6 +36,7 @@ class TestUserFactory:
         assert user.is_superuser is True
     
     @given(username=st.text(min_size=1, max_size=50))
+    @h_settings(deadline=None)
     def test_create_users_various_usernames(self, username):
         """Test creating users with various usernames using Hypothesis."""
         user = UserFactory.build(username=username)

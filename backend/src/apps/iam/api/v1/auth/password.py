@@ -57,19 +57,18 @@ async def request_password_reset(
 
 @router.post("/password-reset-confirm/")
 async def confirm_password_reset(
-    t: str,
-    new_password: str,
+    body: ResetPasswordConfirm,
     db: AsyncSession = Depends(get_db)
 ) -> dict[str, str]:
     """
-    Confirm password reset with secure URL token and set new password
+    Confirm password reset. Pass the token and new password in the request body.
     """
     try:
         from src.apps.iam.models.used_token import UsedToken
         
         # Decrypt and verify the secure URL token
         try:
-            token_data = security.verify_secure_url_token(t)
+            token_data = security.verify_secure_url_token(body.token)
         except Exception:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -125,7 +124,7 @@ async def confirm_password_reset(
                 detail="User not found"
             )
         
-        user.hashed_password = security.get_password_hash(new_password)
+        user.hashed_password = security.get_password_hash(body.new_password)
         
         # Mark token as used
         if token_jti:
