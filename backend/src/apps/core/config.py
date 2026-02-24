@@ -125,8 +125,12 @@ class Settings(BaseSettings):
     # Social auth settings
     GOOGLE_CLIENT_ID: str = "your-google-client-id"
     GOOGLE_CLIENT_SECRET: str = "your-google-client-secret"
+    GITHUB_CLIENT_ID: str = "your-github-client-id"
+    GITHUB_CLIENT_SECRET: str = "your-github-client-secret"
     FACEBOOK_CLIENT_ID: str = "your-facebook-client-id"
     FACEBOOK_CLIENT_SECRET: str = "your-facebook-client-secret"
+    # URL to redirect user to after successful social login (frontend URL)
+    SOCIAL_AUTH_REDIRECT_URL: str = "http://localhost:3000/auth/callback"
 
     class Config:
         case_sensitive = True
@@ -134,3 +138,34 @@ class Settings(BaseSettings):
         extra = "ignore"
 
 settings = Settings()
+
+# ---------------------------------------------------------------------------
+# OAuth2 provider static configuration (endpoints, scopes, extra params).
+# Credentials are read from Settings above; only fixed metadata lives here.
+# ---------------------------------------------------------------------------
+from typing import Any  # noqa: E402
+
+OAUTH_PROVIDERS: dict[str, dict[str, Any]] = {
+    "google": {
+        "authorize_url": "https://accounts.google.com/o/oauth2/v2/auth",
+        "token_url": "https://oauth2.googleapis.com/token",
+        "userinfo_url": "https://www.googleapis.com/oauth2/v3/userinfo",
+        "scope": "openid email profile",
+        "extra_params": {"access_type": "online"},
+    },
+    "github": {
+        "authorize_url": "https://github.com/login/oauth/authorize",
+        "token_url": "https://github.com/login/oauth/access_token",
+        "userinfo_url": "https://api.github.com/user",
+        "emails_url": "https://api.github.com/user/emails",
+        "scope": "read:user user:email",
+        "extra_params": {},
+    },
+    "facebook": {
+        "authorize_url": "https://www.facebook.com/v18.0/dialog/oauth",
+        "token_url": "https://graph.facebook.com/v18.0/oauth/access_token",
+        "userinfo_url": "https://graph.facebook.com/me?fields=id,name,email,picture",
+        "scope": "email,public_profile",
+        "extra_params": {},
+    },
+}
