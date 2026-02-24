@@ -10,10 +10,10 @@ class TestRootEndpoint:
     
     @pytest.mark.asyncio
     async def test_read_root(self, client: AsyncClient):
-        """Test root endpoint returns hello world."""
+        """Test root endpoint redirects to /docs."""
         response = await client.get("/")
-        assert response.status_code == 200
-        assert response.json() == {"Hello": "World"}
+        assert response.status_code == 307
+        assert response.headers["location"] == "/docs"
 
 
 class TestAPIVersioning:
@@ -46,5 +46,5 @@ class TestHealthCheck:
     @pytest.mark.asyncio
     async def test_app_responds(self, client: AsyncClient):
         """Test that the application responds to requests."""
-        response = await client.get("/")
+        response = await client.get("/", follow_redirects=True)
         assert response.status_code == 200

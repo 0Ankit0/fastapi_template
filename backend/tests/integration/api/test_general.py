@@ -6,16 +6,16 @@ class TestAPIEndpoints:
     """Test general API endpoints."""
     
     @pytest.mark.asyncio
-    async def test_health_check(self, client: AsyncClient):
-        """Test API health check endpoint."""
+    async def test_root_redirects_to_docs(self, client: AsyncClient):
+        """Root URL should redirect to /docs."""
         response = await client.get("/")
-        assert response.status_code == 200
-        assert response.json() == {"Hello": "World"}
+        assert response.status_code == 307
+        assert response.headers["location"] == "/docs"
     
     @pytest.mark.asyncio
     async def test_cors_headers(self, client: AsyncClient):
         """Test CORS headers are present."""
-        response = await client.get("/")
+        response = await client.get("/", follow_redirects=True)
         # CORS headers should be set by middleware
         assert response.status_code == 200
     
