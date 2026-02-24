@@ -2,6 +2,7 @@ from typing import Annotated, AsyncGenerator
 from fastapi import Depends, HTTPException, status, Request
 from sqlmodel import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from src.apps.iam.models.user import User
 from src.apps.iam.models.token_tracking import TokenTracking
 from src.apps.iam.models.ip_access_control import IPAccessControl, IpAccessStatus
@@ -92,7 +93,7 @@ async def get_current_user(
                 )
     
     result = await db.execute(
-        select(User).where(User.id == int(token_data.sub)) # type: ignore
+        select(User).options(selectinload(User.profile)).where(User.id == int(token_data.sub)) # type: ignore
     )
     user = result.scalars().first()
 
