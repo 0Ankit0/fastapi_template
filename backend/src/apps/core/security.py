@@ -160,3 +160,23 @@ def verify_secure_url_token(url_token: str) -> dict[str, Any]:
         return payload.get("data", {})
     except Exception as e:
         raise JWTError(f"Invalid or tampered token: {str(e)}")
+
+
+def create_oauth_state(provider: str) -> str:
+    """Create a signed, short-lived JWT used as the OAuth2 *state* parameter for CSRF protection."""
+    payload = {
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=10),
+        "sub": provider,
+        "nonce": str(uuid.uuid4()),
+        "type": "oauth_state",
+    }
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM)
+
+
+def verify_oauth_state(state: str, provider: str) -> bool:
+    """Return True if *state* is a valid, unexpired oauth_state token for *provider*."""
+    try:
+        payload = jwt.decode(state, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        return payload.get("type") == "oauth_state" and payload.get("sub") == provider
+    except JWTError:
+        return False

@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from slowapi import Limiter
@@ -78,10 +78,9 @@ if not settings.DEBUG:
         allowed_hosts=["localhost", "127.0.0.1", settings.SERVER_HOST.replace("http://", "").replace("https://", "")]
     )
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
-@app.get("/")
-async def read_root():
-    return {"Hello": "World"}
+@app.get("/", include_in_schema=False)
+async def read_root() -> RedirectResponse:
+    """Redirect root to the interactive API documentation."""
+    return RedirectResponse(url="/docs")

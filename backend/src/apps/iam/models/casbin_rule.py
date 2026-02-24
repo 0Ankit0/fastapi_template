@@ -6,8 +6,10 @@ class CasbinRule(SQLModel, table=True):
     """
     Casbin policy rule storage model.
     This table stores all authorization policies and role mappings.
+    Table name must match what casbin-async-sqlalchemy-adapter expects.
     """
-    
+    __tablename__ = "casbin_rule"  # type: ignore[assignment]
+
     id: Optional[int] = Field(
         default=None,
         primary_key=True

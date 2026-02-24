@@ -18,6 +18,8 @@ from src.apps.iam.models.ip_access_control import IPAccessControl, IpAccessStatu
 from src.apps.iam.schemas.token import Token
 from src.apps.iam.schemas.user import LoginRequest
 
+from src.apps.iam.utils.ip_access import upsert_ip_access
+
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
@@ -57,6 +59,12 @@ async def login_access_token(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Incorrect username or password"
+            )
+        
+        if not user.hashed_password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"This account uses {user.social_provider or 'social'} login. Please sign in with your social provider."
             )
         
         if not security.verify_password(login_data.password, user.hashed_password):
@@ -134,14 +142,7 @@ async def login_access_token(
                     detail="User not found"
                 )
             # New IP detected - create pending entry and send notification email
-            new_ip_control = IPAccessControl(
-                user_id=user.id,
-                ip_address=ip_address,
-                status=IpAccessStatus.PENDING,
-                reason="New IP detected during login",
-                last_seen=datetime.now()
-            )
-            db.add(new_ip_control)
+            await upsert_ip_access(db, user.id, ip_address, IpAccessStatus.PENDING, "New IP detected during login")
             await db.commit()
             
             # Generate tokens for whitelist/blacklist actions

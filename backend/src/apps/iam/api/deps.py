@@ -1,5 +1,6 @@
-from typing import Annotated, AsyncGenerator
+from typing import Annotated, AsyncGenerator, Optional
 from fastapi import Depends, HTTPException, status, Request
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlmodel import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -13,22 +14,24 @@ from src.apps.core.config import settings
 from src.apps.core import security
 from src.apps.iam.schemas.token import TokenPayload
 
+# HTTPBearer with auto_error=False so cookie fallback still works,
+# but FastAPI registers the BearerAuth security scheme on all
+# routes that depend on get_current_user — enabling the Swagger
+# "Authorize" button and lock icons on protected endpoints.
+_bearer_scheme = HTTPBearer(auto_error=False)
+
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async for session in get_session():
         yield session
 
 async def get_current_user(
     request: Request,
+    credentials: Annotated[Optional[HTTPAuthorizationCredentials], Depends(_bearer_scheme)],
     db: Annotated[AsyncSession, Depends(get_db)]
     ) -> User:
-    # Try to get token from Authorization header
-    auth_header = request.headers.get("Authorization")
-    token = None
-
-    if auth_header and auth_header.startswith("Bearer "):
-        token = auth_header.split(" ")[1]
-
-    # Fallback to cookie if token is not found in header
+    # Prefer the Authorization: Bearer header (captured by HTTPBearer above),
+    # fall back to the access_token cookie for browser-based clients.
+    token: Optional[str] = credentials.credentials if credentials else None
     if not token:
         token = request.cookies.get(settings.ACCESS_TOKEN_COOKIE)
 

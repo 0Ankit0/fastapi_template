@@ -7,6 +7,7 @@ from src.apps.core import security
 from src.apps.core.security import TokenType
 from src.apps.core.cache import RedisCache
 from src.apps.core.config import settings
+from src.apps.iam.utils.ip_access import upsert_ip_access
 from src.db.session import get_session
 from datetime import datetime
 
@@ -133,15 +134,10 @@ class IPAccessControlMiddleware(BaseHTTPMiddleware):
                             await db.commit()
                             return await call_next(request)
                     else:
-                        # New IP detected — create a pending entry
-                        new_ip_control = IPAccessControl(
-                            user_id=int(user_id),
-                            ip_address=ip_address,
-                            status=IpAccessStatus.PENDING,
-                            reason="New IP detected",
-                            last_seen=datetime.now(),
+                        # New IP detected — upsert a pending entry
+                        await upsert_ip_access(
+                            db, int(user_id), ip_address, IpAccessStatus.PENDING, "New IP detected"
                         )
-                        db.add(new_ip_control)
                         await db.commit()
 
                         # Cache the pending status

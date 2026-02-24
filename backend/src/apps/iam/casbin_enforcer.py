@@ -46,25 +46,25 @@ class CasbinEnforcer:
     async def add_role_for_user(cls, user: str, role: str, domain: str = _GLOBAL) -> bool:
         if cls._enforcer is None:
             raise RuntimeError("Enforcer not initialized. Call get_enforcer first.")
-        return await cls._enforcer.add_grouping_policy(user, role, domain)
+        return await cls._enforcer.add_role_for_user_in_domain(user, role, domain)
 
     @classmethod
     async def remove_role_for_user(cls, user: str, role: str, domain: str = _GLOBAL) -> bool:
         if cls._enforcer is None:
             raise RuntimeError("Enforcer not initialized. Call get_enforcer first.")
-        return await cls._enforcer.delete_role_for_user(user, role, domain)
+        return await cls._enforcer.delete_roles_for_user_in_domain(user, role, domain)
 
     @classmethod
     async def get_roles_for_user(cls, user: str, domain: str = _GLOBAL) -> list[str]:
         if cls._enforcer is None:
             raise RuntimeError("Enforcer not initialized. Call get_enforcer first.")
-        return await cls._enforcer.get_roles_for_user(user, domain)
+        return cls._enforcer.get_roles_for_user_in_domain(user, domain)
 
     @classmethod
     async def get_users_for_role(cls, role: str, domain: str = _GLOBAL) -> list[str]:
         if cls._enforcer is None:
             raise RuntimeError("Enforcer not initialized. Call get_enforcer first.")
-        return await cls._enforcer.get_users_for_role(role, domain)
+        return cls._enforcer.get_users_for_role_in_domain(role, domain)
 
     # ── Permission checking ───────────────────────────────────────────────
 
@@ -78,5 +78,5 @@ class CasbinEnforcer:
     async def get_permissions_for_user(cls, user: str, domain: str = _GLOBAL) -> list[list[str]]:
         if cls._enforcer is None:
             raise RuntimeError("Enforcer not initialized. Call get_enforcer first.")
-        return await cls._enforcer.get_permissions_for_user(user, domain)
+        return cls._enforcer.get_permissions_for_user_in_domain(user, domain)
 

@@ -39,8 +39,6 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     password: Optional[str] = None
-    is_active: Optional[bool] = None
-    is_superuser: Optional[bool] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     phone: Optional[str] = None
@@ -93,6 +91,7 @@ class ChangePasswordRequest(BaseModel):
 
 class VerifyOTPRequest(BaseModel):
     otp_code: str
+    temp_token: str
 
 
 class DisableOTPRequest(BaseModel):

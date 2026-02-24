@@ -60,9 +60,22 @@ class User(UserBase, table=True):
         default=None,
         primary_key=True
     )
-    hashed_password: str = Field(
+    hashed_password: Optional[str] = Field(
+        default=None,
         max_length=255,
-        description="Hashed password for the user"
+        description="Hashed password for the user (None for social-login-only accounts)"
+    )
+    social_provider: Optional[str] = Field(
+        default=None,
+        max_length=50,
+        index=True,
+        description="OAuth2 provider name (google, github, facebook)"
+    )
+    social_id: Optional[str] = Field(
+        default=None,
+        max_length=255,
+        index=True,
+        description="Provider-specific user ID for social login"
     )
     created_at: datetime = Field(
         default_factory=datetime.now,

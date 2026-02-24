@@ -16,6 +16,8 @@ from src.apps.iam.schemas.token import Token
 from src.apps.iam.schemas.user import UserCreate
 from src.apps.core.cache import RedisCache
 
+from src.apps.iam.utils.ip_access import upsert_ip_access
+
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
@@ -81,14 +83,7 @@ async def signup(
         await RedisCache.clear_pattern("users:list:*")
         
         # Whitelist the current IP address on signup
-        ip_control = IPAccessControl(
-            user_id=new_user.id,
-            ip_address=ip_address,
-            status=IpAccessStatus.WHITELISTED,
-            reason="Initial signup IP",
-            last_seen=datetime.now()
-        )
-        db.add(ip_control)
+        await upsert_ip_access(db, new_user.id, ip_address, IpAccessStatus.WHITELISTED, "Initial signup IP")
         await db.commit()
 
         from src.apps.iam.services.email import EmailService

@@ -1,5 +1,6 @@
 from datetime import timedelta, datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from typing import Any
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlmodel import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from jose import jwt
@@ -135,8 +136,9 @@ async def disable_otp(
                 detail="OTP is not enabled"
             )
         
+        
         # Verify password before disabling
-        if not security.verify_password(otp_data.password, current_user.hashed_password):
+        if not security.verify_password(otp_data.password, current_user.hashed_password): # type: ignore
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Incorrect password"
@@ -166,10 +168,13 @@ async def disable_otp(
 async def validate_otp_login(
     otp_data: VerifyOTPRequest,
     request: Request,
+    response: Response,
+    set_cookie: bool = False,
     db: AsyncSession = Depends(get_db)
-) -> Token:
+) -> Token | dict[str, Any]:
     """
-    Validate OTP during login process (called after username/password validation)
+    Validate OTP during login process (called after username/password validation).
+    Pass set_cookie=true to receive the access token via HttpOnly cookie instead of JSON.
     """
     ip_address = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("user-agent", "unknown")
@@ -177,7 +182,8 @@ async def validate_otp_login(
 
     try:
         # Get user from temporary session or token
-        temp_token = request.headers.get("X-Temp-Auth-Token")
+        # temp_token = request.headers.get("X-Temp-Auth-Token")
+        temp_token = otp_data.temp_token
         if not temp_token:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -272,6 +278,17 @@ async def validate_otp_login(
         )
         db.add(refresh_token_tracking)
         await db.commit()
+        
+        if set_cookie:
+            response.set_cookie(
+                key=settings.ACCESS_TOKEN_COOKIE,
+                value=access_token,
+                httponly=True,
+                secure=settings.SECURE_COOKIES,
+                samesite="lax",
+                max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+            )
+            return {"message": "OTP validated successfully"}
         
         return Token(
             access=access_token,
