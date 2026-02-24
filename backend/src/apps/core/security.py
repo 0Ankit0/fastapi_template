@@ -25,18 +25,24 @@ class TokenType(str, Enum):
     IP_BLACKLIST = "ip_blacklist"
 
 
-def create_access_token(subject: Union[str, Any], expires_delta: timedelta | None = None) -> str:
+def create_access_token(
+    subject: Union[str, Any],
+    expires_delta: timedelta | None = None,
+    ip_address: str | None = None,
+) -> str:
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
-    to_encode = {
+    to_encode: dict[str, Any] = {
         "exp": expire,
         "sub": str(subject),
         "type": TokenType.ACCESS.value,
-        "jti": str(uuid.uuid4())
+        "jti": str(uuid.uuid4()),
     }
+    if ip_address:
+        to_encode["ip"] = ip_address
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 

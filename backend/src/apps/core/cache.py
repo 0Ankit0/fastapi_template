@@ -15,6 +15,7 @@ class RedisCache:
         """Get Redis client instance, only in production"""
         if settings.DEBUG:
             return None
+        assert settings.REDIS_URL, "REDIS_URL must be set in production"
         
         if cls._client is None:
             cls._pool = ConnectionPool.from_url(
