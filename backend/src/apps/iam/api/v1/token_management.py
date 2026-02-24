@@ -7,6 +7,7 @@ from src.apps.iam.api.deps import get_current_user, get_db
 from src.apps.iam.models.user import User
 from src.apps.iam.models.token_tracking import TokenTracking
 from src.apps.iam.schemas.token_tracking import TokenTrackingResponse
+from src.apps.iam.utils.hashid import decode_id_or_404
 from src.apps.core.schemas import PaginatedResponse
 from src.apps.core.cache import RedisCache
 
@@ -73,7 +74,7 @@ async def list_active_tokens(
 
 @router.post("/revoke/{token_id}")
 async def revoke_token(
-    token_id: int,
+    token_id: str,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ) -> dict[str, str]:
@@ -81,9 +82,10 @@ async def revoke_token(
     Revoke a specific token
     """
     try:
+        tid = decode_id_or_404(token_id)
         result = await db.execute(
             select(TokenTracking).where(
-                TokenTracking.id == token_id,
+                TokenTracking.id == tid,
                 TokenTracking.user_id == current_user.id
             )
         )

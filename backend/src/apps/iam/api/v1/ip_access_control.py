@@ -7,6 +7,7 @@ from src.apps.iam.models.user import User
 from src.apps.iam.models.ip_access_control import IPAccessControl, IpAccessStatus
 from src.apps.iam.models.token_tracking import TokenTracking
 from src.apps.iam.schemas.ip_access_control import IPAccessControlResponse, IPAccessControlUpdate
+from src.apps.iam.utils.hashid import decode_id_or_404
 from src.apps.core.schemas import PaginatedResponse
 from src.apps.core.cache import RedisCache
 
@@ -70,7 +71,7 @@ async def list_ip_access_controls(
 
 @router.get("/{ip_id}", response_model=IPAccessControlResponse)
 async def get_ip_access_control(
-    ip_id: int,
+    ip_id: str,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ) -> IPAccessControl:
@@ -78,7 +79,8 @@ async def get_ip_access_control(
     Get specific IP access control entry
     """
     try:
-        cache_key = f"ip_access:{current_user.id}:{ip_id}"
+        iid = decode_id_or_404(ip_id)
+        cache_key = f"ip_access:{current_user.id}:{iid}"
         
         # Try cache
         cached = await RedisCache.get(cache_key)
@@ -87,7 +89,7 @@ async def get_ip_access_control(
         
         result = await db.execute(
             select(IPAccessControl).where(
-                IPAccessControl.id == ip_id, 
+                IPAccessControl.id == iid, 
                 IPAccessControl.user_id == current_user.id 
             )
         )
@@ -114,7 +116,7 @@ async def get_ip_access_control(
 
 @router.patch("/{ip_id}", response_model=IPAccessControlResponse)
 async def update_ip_access_control(
-    ip_id: int,
+    ip_id: str,
     update_data: IPAccessControlUpdate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -123,9 +125,10 @@ async def update_ip_access_control(
     Update IP access control status (whitelist or blacklist)
     """
     try:
+        iid = decode_id_or_404(ip_id)
         result = await db.execute(
             select(IPAccessControl).where(
-                IPAccessControl.id == ip_id, 
+                IPAccessControl.id == iid, 
                 IPAccessControl.user_id == current_user.id 
             )
         )
@@ -140,9 +143,10 @@ async def update_ip_access_control(
         ip_control.status = update_data.status
         ip_control.reason = update_data.reason
         
-        # Invalidate caches
-        await RedisCache.delete(f"ip_access:{current_user.id}:{ip_id}")
+        # Invalidate caches (list + status check cache)
+        await RedisCache.delete(f"ip_access:{current_user.id}:{iid}")
         await RedisCache.clear_pattern(f"ip_access:{current_user.id}:*")
+        await RedisCache.delete(f"ip_access_status:{current_user.id}:{ip_control.ip_address}")
         
         # If blacklisting, revoke all tokens from this IP
         if update_data.status == IpAccessStatus.BLACKLISTED:
@@ -320,6 +324,9 @@ async def verify_ip_action(
             db.add(used_token)
         
         await db.commit()
+        
+        # Invalidate IP status cache so the middleware picks up the new status
+        await RedisCache.delete(f"ip_access_status:{user_id}:{ip_address}")
         
         return {"message": message}
     except HTTPException:

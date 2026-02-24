@@ -9,6 +9,7 @@ from slowapi.util import get_remote_address
 from src.apps.core.config import settings
 from src.apps.core import security
 from src.apps.core.security import TokenType
+from src.apps.core.cache import RedisCache
 from src.apps.iam.api.deps import get_current_user, get_db
 from src.apps.iam.models.user import User
 from src.apps.iam.models.login_attempt import LoginAttempt
@@ -187,7 +188,7 @@ async def login_access_token(
         
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = security.create_access_token(
-            user.id, expires_delta=access_token_expires
+            user.id, expires_delta=access_token_expires, ip_address=ip_address
         )
         refresh_token = security.create_refresh_token(user.id)
         
@@ -296,6 +297,8 @@ async def logout(
                         token_tracking.revoke_reason = "User logout from this device"
                     
                     await db.commit()
+                    # Invalidate cached token list so revoked tokens are not served from cache
+                    await RedisCache.clear_pattern(f"tokens:active:{current_user.id}:*")
             except Exception:
                 pass
         
