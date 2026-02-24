@@ -1,12 +1,11 @@
 from datetime import datetime
 from typing import Optional
-from sqlmodel import SQLModel
-from pydantic import field_serializer
+from pydantic import BaseModel, field_serializer
 from src.apps.core.security import TokenType
 from ..utils.hashid import encode_id
 
 
-class TokenTrackingResponse(SQLModel):
+class TokenTrackingResponse(BaseModel):
     id: int
     user_id: int
     token_jti: str
@@ -19,6 +18,9 @@ class TokenTrackingResponse(SQLModel):
     expires_at: datetime
     created_at: datetime
 
+    model_config = {"from_attributes": True}
+
     @field_serializer("id", "user_id")
     def serialize_ids(self, value: int) -> str:
         return encode_id(value)
+

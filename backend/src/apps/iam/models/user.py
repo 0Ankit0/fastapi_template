@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from .token_tracking import TokenTracking
     from .used_token import UsedToken
     from .role import UserRole
+    from .tenant import Tenant, TenantMember, TenantInvitation
 
 class UserBase(SQLModel):
     username: str = Field(
@@ -75,6 +76,15 @@ class User(UserBase, table=True):
     tokens: list["TokenTracking"] = Relationship(back_populates="user")
     used_tokens: list["UsedToken"] = Relationship(back_populates="user")
     user_roles: list["UserRole"] = Relationship(back_populates="user")
+    owned_tenants: list["Tenant"] = Relationship(
+        back_populates="owner",
+        sa_relationship_kwargs={"foreign_keys": "[Tenant.owner_id]"},
+    )
+    tenant_memberships: list["TenantMember"] = Relationship(back_populates="user")
+    sent_invitations: list["TenantInvitation"] = Relationship(
+        back_populates="inviter",
+        sa_relationship_kwargs={"foreign_keys": "[TenantInvitation.invited_by]"},
+    )
 
 
 class UserProfileBase(SQLModel):

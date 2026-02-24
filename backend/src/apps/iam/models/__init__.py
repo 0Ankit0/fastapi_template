@@ -5,6 +5,7 @@ from .token_tracking import TokenTracking
 from .used_token import UsedToken
 from .role import Role, Permission, UserRole, RolePermission
 from .casbin_rule import CasbinRule
+from .tenant import Tenant, TenantMember, TenantInvitation, TenantRole, InvitationStatus
 
 __all__ = [
     "User", 
@@ -17,5 +18,10 @@ __all__ = [
     "Permission",
     "UserRole",
     "RolePermission",
-    "CasbinRule"
+    "CasbinRule",
+    "Tenant",
+    "TenantMember",
+    "TenantInvitation",
+    "TenantRole",
+    "InvitationStatus",
 ]
