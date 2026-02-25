@@ -14,7 +14,7 @@ from src.apps.core.middleware import SecurityHeadersMiddleware, IPAccessControlM
 from src.apps.iam.api import api_router
 from src.apps.finance.api import finance_router
 from src.apps.multitenancy.api import multitenancy_router
-from src.db.session import engine
+from src.db.session import engine, init_db
 from src.apps.iam.casbin_enforcer import CasbinEnforcer
 from src.apps.websocket.api import ws_router
 from src.apps.websocket.manager import manager as ws_manager
@@ -26,7 +26,9 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initialize Casbin enforcer, Redis cache, and WebSocket manager on startup."""
+    """Initialize DB tables, Casbin enforcer, Redis cache, and WebSocket manager on startup."""
+    await init_db()
+
     enforcer = await CasbinEnforcer.get_enforcer(engine)
     app.state.casbin_enforcer = enforcer
 
