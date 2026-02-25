@@ -1,0 +1,30 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+fastapi = "*"
+uvicorn = "*"
+sqlmodel = "*"
+typer = "*"
+python-dotenv = "*"
+python-jose = {extras = ["cryptography"], version = "*"}
+passlib = {extras = ["bcrypt"], version = "*"}
+python-multipart = "*"
+alembic = "*"
+asyncpg = "*"
+pydantic-settings = "*"
+greenlet = "*"
+aiosqlite = "*"
+stripe = "*"
+openai = "*"
+fastapi-sso = "*"
+
+[dev-packages]
+pytest = "*"
+black = "*"
+ruff = "*"
+
+[requires]
+python_version = "3.14"

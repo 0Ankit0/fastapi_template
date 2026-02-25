@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Refund {{ payment_intent_id }}</title>
+</head>
+<body>
+    <div class="modal">
+        <h1>Refund {{ payment_intent_id }}</h1>
+
+        <form action="/finances/refund/{{ payment_intent_id }}" method="POST">
+            <!-- Simple form as replacement for Django Form -->
+            <label for="amount">Amount:</label>
+            <input type="number" name="amount" id="amount" required>
+            <br>
+            <label for="reason">Reason:</label>
+            <input type="text" name="reason" id="reason">
+            <br>
+            <input type="submit" value="Refund"/>
+        </form>
+    </div>
+</body>
+</html>
