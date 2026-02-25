@@ -1,16 +1,18 @@
 import logging
 from pathlib import Path
 from typing import Any, Dict, List
+
 from celery import shared_task
 from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType, NameEmail
-from jinja2 import Environment, FileSystemLoader
-from src.apps.core.config import settings
+
 from src.apps.core.celery_app import celery_app  # noqa: F401 — registers the configured app so shared_task binds to it
+from src.apps.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+# Default template directory — IAM templates (auth emails).
+# Other modules pass their own *template_dir* when calling this task.
 TEMPLATE_DIR = Path(__file__).resolve().parent.parent.parent / "apps" / "iam" / "templates"
-env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
 
 
 @shared_task(name="send_email_task")
@@ -19,11 +21,18 @@ def send_email_task(
     recipients: List[Dict[str, str]],
     template_name: str,
     context: Dict[str, Any],
+    template_dir: str | None = None,
 ) -> bool:
-    """Send an email using a template via Celery task"""
+    """
+    Core SMTP email sender Celery task.
+
+    *template_dir* lets calling modules supply their own Jinja2 template
+    folder (defaults to the IAM templates directory).
+    """
+    resolved_dir = Path(template_dir) if template_dir else TEMPLATE_DIR
+
     if not settings.EMAIL_ENABLED:
         if settings.DEBUG:
-            # Pretty-print the email to the console so tokens/URLs are easy to copy during development
             sep = "=" * 60
             lines = [
                 "",
@@ -34,24 +43,24 @@ def send_email_task(
                 f"  Subject : {subject}",
                 f"  Template: {template_name}",
             ]
-            # Surface any URL / token fields from the context so they're immediately visible
             url_keys = ("reset_url", "verification_url", "whitelist_url", "blacklist_url")
             for key in url_keys:
                 value = context.get(key)
                 if value:
                     lines.append(f"  {key:<18}: {value}")
-                    # Also print the bare token so it can be pasted straight into a request body
                     if "?t=" in value:
-                        token_val = value.split("?t=", 1)[1]
-                        lines.append(f"  {'token':<18}: {token_val}")
+                        lines.append(f"  {'token':<18}: {value.split('?t=', 1)[1]}")
             lines += [sep, ""]
             print("\n".join(lines), flush=True)
         else:
-            logger.info(f"Email skipped (EMAIL_ENABLED=False): Subject: {subject}, Recipients: {[r['email'] for r in recipients]}")
+            logger.info(
+                "Email skipped (EMAIL_ENABLED=False): Subject: %s, Recipients: %s",
+                subject,
+                [r["email"] for r in recipients],
+            )
         return True
-    
+
     try:
-        # Create email configuration
         conf = ConnectionConfig(
             MAIL_USERNAME=settings.EMAIL_HOST_USER,
             MAIL_PASSWORD=settings.EMAIL_HOST_PASSWORD,
@@ -62,75 +71,21 @@ def send_email_task(
             MAIL_SSL_TLS=False,
             USE_CREDENTIALS=True,
             VALIDATE_CERTS=True,
-            TEMPLATE_FOLDER=TEMPLATE_DIR
+            TEMPLATE_FOLDER=resolved_dir,
         )
-        
-        # Convert recipients list of dicts to NameEmail objects
         recipient_objects = [NameEmail(name=r.get("name", ""), email=r["email"]) for r in recipients]
-        
         message = MessageSchema(
             subject=subject,
             recipients=recipient_objects,
             template_body=context,
-            subtype=MessageType.html
+            subtype=MessageType.html,
         )
-        
-        fm = FastMail(conf)
-        # Note: FastMail.send_message is async, but Celery tasks are sync
-        # We need to use asyncio to run the async function
         import asyncio
+        fm = FastMail(conf)
         asyncio.run(fm.send_message(message, template_name=f"emails/{template_name}.html"))
-        
-        logger.info(f"Email sent successfully: Subject: {subject}, Recipients: {recipients}")
+        logger.info("Email sent: Subject=%s Recipients=%s", subject, [r["email"] for r in recipients])
         return True
-    except Exception as e:
-        logger.error(f"Failed to send email: {e}")
+    except Exception as exc:
+        logger.error("Failed to send email: %s", exc)
         return False
 
-
-@shared_task(name="send_welcome_email_task")
-def send_welcome_email_task(user_data: Dict[str, Any]) -> bool:
-    """Send welcome email task"""
-    recipients = [{"name": user_data.get("username", ""), "email": user_data["email"]}]
-    context = {"user": {"email": user_data["email"], "first_name": user_data.get("first_name", "")}}
-    return send_email_task("Welcome to Our Service!", recipients, "welcome", context)
-
-
-@shared_task(name="send_password_reset_email_task")
-def send_password_reset_email_task(user_data: Dict[str, Any], reset_url: str) -> bool:
-    """Send password reset email task"""
-    recipients = [{"name": user_data.get("username", ""), "email": user_data["email"]}]
-    context = {
-        "user": {"email": user_data["email"], "first_name": user_data.get("first_name", "")},
-        "reset_url": reset_url
-    }
-    return send_email_task("Reset Your Password", recipients, "password_reset", context)
-
-
-@shared_task(name="send_verification_email_task")
-def send_verification_email_task(user_data: Dict[str, Any], verification_url: str) -> bool:
-    """Send email verification task"""
-    recipients = [{"name": user_data.get("username", ""), "email": user_data["email"]}]
-    context = {
-        "user": {"email": user_data["email"], "first_name": user_data.get("first_name", "")},
-        "verification_url": verification_url
-    }
-    return send_email_task("Verify Your Email Address", recipients, "email_verification", context)
-
-
-@shared_task(name="send_new_ip_notification_task")
-def send_new_ip_notification_task(
-    user_data: Dict[str, Any],
-    ip_address: str,
-    whitelist_url: str,
-    blacklist_url: str
-) -> bool:
-    """Send new IP notification email task"""
-    recipients = [{"name": user_data.get("username", ""), "email": user_data["email"]}]
-    context = {
-        "user": {"email": user_data["email"], "first_name": user_data.get("first_name", "")},
-        "ip_address": ip_address,
-        "whitelist_url": whitelist_url,
-        "blacklist_url": blacklist_url
-    }
-    return send_email_task("New IP Address Login Attempt", recipients, "new_ip_notification", context)

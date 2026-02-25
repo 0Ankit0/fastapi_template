@@ -147,6 +147,18 @@ class Settings(BaseSettings):
     PAYPAL_CLIENT_SECRET: str = "your_paypal_sandbox_client_secret"
     PAYPAL_MODE: str = "sandbox"  # "sandbox" or "live"
 
+    # Push notification settings (Web Push / VAPID)
+    PUSH_ENABLED: bool = False
+    VAPID_PRIVATE_KEY: str = ""
+    VAPID_PUBLIC_KEY: str = ""
+    VAPID_CLAIMS_EMAIL: str = "mailto:admin@example.com"
+
+    # SMS / message notification settings (Twilio)
+    SMS_ENABLED: bool = False
+    TWILIO_ACCOUNT_SID: str = ""
+    TWILIO_AUTH_TOKEN: str = ""
+    TWILIO_FROM_NUMBER: str = ""
+
     # Social auth settings
     GOOGLE_CLIENT_ID: str = "your-google-client-id"
     GOOGLE_CLIENT_SECRET: str = "your-google-client-secret"

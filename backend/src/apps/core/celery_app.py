@@ -5,7 +5,11 @@ celery_app = Celery(
     "fastapi_template",
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
-    include=['src.apps.core.tasks']
+    include=[
+        'src.apps.core.tasks',
+        'src.apps.iam.tasks',
+        'src.apps.notification.tasks',
+    ]
 )
 
 celery_app.conf.update(
