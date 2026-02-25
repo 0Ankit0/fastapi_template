@@ -1,186 +1,43 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import {
   useRoles,
   usePermissions,
   useCreateRole,
   useCreatePermission,
-  useAssignPermission,
-  useRemovePermission,
-  useRolePermissions,
-  useUserRoles,
-  useAssignRole,
-  useRemoveRole,
 } from '@/hooks/use-rbac';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button, Skeleton } from '@/components/ui';
-import { ShieldCheck, Key, Users, Plus, X, ChevronDown, ChevronRight, Trash2 } from 'lucide-react';
-import type { Role, Permission } from '@/types';
+import { ShieldCheck, Key, Users, Plus, Settings2 } from 'lucide-react';
+import type { Role } from '@/types';
+import { UserRolesTab } from './user-roles-tab';
 
 type Tab = 'roles' | 'permissions' | 'user-roles';
 
-// ── Role row with expandable permissions ─────────────────────────────────────
+// ── Role row ─────────────────────────────────────────────────────────────────
 function RoleRow({ role }: { role: Role }) {
-  const [expanded, setExpanded] = useState(false);
-  const [permId, setPermId] = useState('');
-  const { data: permData, isLoading } = useRolePermissions(expanded ? role.id : '');
-  const assignPerm = useAssignPermission();
-  const removePerm = useRemovePermission();
-
   return (
-    <>
-      <tr className="border-b border-gray-100 hover:bg-gray-50">
-        <td className="px-4 py-3">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setExpanded((v) => !v)}
-              className="text-gray-400 hover:text-gray-700"
-            >
-              {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            </button>
-            <span className="text-sm font-medium text-gray-900">{role.name}</span>
-          </div>
-        </td>
-        <td className="px-4 py-3 text-sm text-gray-500">{role.description || '—'}</td>
-        <td className="px-4 py-3 text-sm text-gray-400">
-          {new Date(role.created_at).toLocaleDateString()}
-        </td>
-      </tr>
-      {expanded && (
-        <tr className="bg-blue-50/40">
-          <td colSpan={3} className="px-8 py-3">
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Permissions</p>
-            {isLoading && <Skeleton className="h-6 w-48" />}
-            <div className="flex flex-wrap gap-2 mb-2">
-              {(permData?.permissions ?? []).map((perm) => (
-                <span
-                  key={perm.id}
-                  className="inline-flex items-center gap-1 rounded-full bg-blue-100 text-blue-700 text-xs px-2 py-0.5"
-                >
-                  {perm.resource}:{perm.action}
-                  <button
-                    onClick={() => removePerm.mutate({ role_id: role.id, permission_id: perm.id })}
-                    className="ml-0.5 hover:text-red-600"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
-              {!isLoading && permData?.permissions.length === 0 && (
-                <span className="text-xs text-gray-400">No permissions assigned.</span>
-              )}
-            </div>
-            <div className="flex gap-2 items-center">
-              <input
-                type="text"
-                placeholder="Permission ID"
-                value={permId}
-                onChange={(e) => setPermId(e.target.value)}
-                className="rounded border border-gray-300 px-2 py-1 text-xs w-40"
-              />
-              <Button
-                size="sm"
-                onClick={() => {
-                  if (!permId.trim()) return;
-                  assignPerm.mutate(
-                    { role_id: role.id, permission_id: permId.trim() },
-                    { onSuccess: () => setPermId('') }
-                  );
-                }}
-                disabled={assignPerm.isPending}
-              >
-                <Plus className="h-3 w-3 mr-1" /> Assign
-              </Button>
-            </div>
-          </td>
-        </tr>
-      )}
-    </>
-  );
-}
-
-// ── User Roles tab ────────────────────────────────────────────────────────────
-function UserRolesTab() {
-  const [userId, setUserId] = useState('');
-  const [activeUserId, setActiveUserId] = useState('');
-  const [roleId, setRoleId] = useState('');
-  const { data, isLoading } = useUserRoles(activeUserId);
-  const assignRole = useAssignRole();
-  const removeRole = useRemoveRole();
-
-  const roles = data?.roles ?? [];
-
-  return (
-    <div className="space-y-4">
-      <Card>
-        <CardContent className="pt-4">
-          <p className="text-sm font-medium text-gray-700 mb-2">Look up a user's roles</p>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="User ID (hashid)"
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            />
-            <Button onClick={() => setActiveUserId(userId.trim())} disabled={!userId.trim()}>
-              Look up
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {activeUserId && (
-        <Card>
-          <CardContent className="pt-4">
-            <p className="text-xs text-gray-500 mb-2">User: <code className="bg-gray-100 px-1 rounded">{activeUserId}</code></p>
-            {isLoading && <Skeleton className="h-8 w-full" />}
-            <div className="flex flex-wrap gap-2 mb-3">
-              {roles.map((role: Role) => (
-                <span
-                  key={role.id}
-                  className="inline-flex items-center gap-1 rounded-full bg-purple-100 text-purple-700 text-sm px-3 py-1"
-                >
-                  {role.name}
-                  <button
-                    onClick={() => removeRole.mutate({ user_id: activeUserId, role_id: role.id })}
-                    className="ml-0.5 hover:text-red-600"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </span>
-              ))}
-              {!isLoading && roles.length === 0 && (
-                <p className="text-sm text-gray-400">No roles assigned to this user.</p>
-              )}
-            </div>
-            <div className="flex gap-2 items-center border-t border-gray-100 pt-3">
-              <input
-                type="text"
-                placeholder="Role ID to assign"
-                value={roleId}
-                onChange={(e) => setRoleId(e.target.value)}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm w-48"
-              />
-              <Button
-                size="sm"
-                onClick={() => {
-                  if (!roleId.trim()) return;
-                  assignRole.mutate(
-                    { user_id: activeUserId, role_id: roleId.trim() },
-                    { onSuccess: () => setRoleId('') }
-                  );
-                }}
-                disabled={assignRole.isPending}
-              >
-                <Plus className="h-3.5 w-3.5 mr-1" /> Assign Role
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+    <tr className="border-b border-gray-100 hover:bg-gray-50">
+      <td className="px-4 py-3">
+        <span className="text-sm font-medium text-gray-900">{role.name}</span>
+      </td>
+      <td className="px-4 py-3 text-sm text-gray-500">{role.description || '—'}</td>
+      <td className="px-4 py-3 text-sm text-gray-400">
+        {new Date(role.created_at).toLocaleDateString()}
+      </td>
+      <td className="px-4 py-3 text-right">
+        <Link
+          href={`/rbac/${role.id}`}
+          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors"
+          title="Manage permissions"
+        >
+          <Settings2 className="h-3.5 w-3.5" />
+          Manage
+        </Link>
+      </td>
+    </tr>
   );
 }
 
@@ -296,17 +153,18 @@ export default function RBACPage() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {rolesQuery.isLoading && (
-                  <tr><td colSpan={3} className="px-4 py-4 text-center text-gray-500">Loading…</td></tr>
+                  <tr><td colSpan={4} className="px-4 py-4 text-center text-gray-500">Loading…</td></tr>
                 )}
                 {(rolesQuery.data?.items ?? []).map((role) => (
                   <RoleRow key={role.id} role={role} />
                 ))}
                 {!rolesQuery.isLoading && rolesQuery.data?.items.length === 0 && (
-                  <tr><td colSpan={3} className="px-4 py-6 text-center text-gray-500">No roles found.</td></tr>
+                  <tr><td colSpan={4} className="px-4 py-6 text-center text-gray-500">No roles found.</td></tr>
                 )}
               </tbody>
             </table>

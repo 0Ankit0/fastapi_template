@@ -1,207 +1,336 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { useCurrentUser, useUpdateProfile } from '@/hooks/use-users';
-import { useChangePassword } from '@/hooks/use-auth';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useAuthStore } from '@/store/auth-store';
 import {
   useNotificationPreferences,
   useUpdateNotificationPreferences,
 } from '@/hooks/use-notifications';
+import { useResendVerification, useVerifyEmail } from '@/hooks/use-auth';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button, Skeleton } from '@/components/ui';
-import { Input } from '@/components/ui/input';
-import { User, Lock, Bell } from 'lucide-react';
+import {
+  Bell,
+  Mail,
+  ShieldAlert,
+  CheckCircle2,
+  XCircle,
+  Key,
+  Globe,
+  RefreshCw,
+  ExternalLink,
+} from 'lucide-react';
+import Link from 'next/link';
 
-const profileSchema = z.object({
-  first_name: z.string().optional(),
-  last_name: z.string().optional(),
-  phone: z.string().optional(),
-});
+const TABS = [
+  { id: 'account',       label: 'Account',       icon: Mail },
+  { id: 'notifications', label: 'Notifications',  icon: Bell },
+  { id: 'privacy',       label: 'Privacy',        icon: ShieldAlert },
+] as const;
 
-const passwordSchema = z
-  .object({
-    old_password: z.string().min(1, 'Current password is required'),
-    new_password: z.string().min(8, 'New password must be at least 8 characters'),
-    confirm_password: z.string(),
-  })
-  .refine((d) => d.new_password === d.confirm_password, {
-    message: "Passwords don't match",
-    path: ['confirm_password'],
-  });
+type TabId = (typeof TABS)[number]['id'];
 
-type ProfileFormData = z.infer<typeof profileSchema>;
-type PasswordFormData = z.infer<typeof passwordSchema>;
+// ── Toggle component ────────────────────────────────────────────────────────
+function Toggle({
+  checked,
+  onChange,
+  disabled,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+        checked ? 'bg-blue-600' : 'bg-gray-200'
+      }`}
+    >
+      <span
+        className={`inline-block h-5 w-5 rounded-full bg-white shadow transform transition-transform duration-200 ${
+          checked ? 'translate-x-5' : 'translate-x-0'
+        }`}
+      />
+    </button>
+  );
+}
 
 export default function SettingsPage() {
-  const { data: user, isLoading } = useCurrentUser();
-  const updateProfile = useUpdateProfile();
-  const changePassword = useChangePassword();
-  const { data: prefs } = useNotificationPreferences();
+  const { user } = useAuthStore();
+  const [activeTab, setActiveTab] = useState<TabId>('account');
+
+  // ── Notifications ──────────────────────────────────────────────────────
+  const { data: prefs, isLoading: prefsLoading } = useNotificationPreferences();
   const updatePref = useUpdateNotificationPreferences();
-  const [activeTab, setActiveTab] = useState('profile');
 
-  const profileForm = useForm<ProfileFormData>({
-    resolver: zodResolver(profileSchema),
-    values: {
-      first_name: user?.first_name ?? '',
-      last_name: user?.last_name ?? '',
-      phone: user?.phone ?? '',
-    },
-  });
-
-  const passwordForm = useForm<PasswordFormData>({
-    resolver: zodResolver(passwordSchema),
-  });
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
-  }
-
-  const tabs = [
-    { id: 'profile', label: 'Profile', icon: User },
-    { id: 'security', label: 'Security', icon: Lock },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
-  ];
+  // ── Email verification ─────────────────────────────────────────────────
+  const resend = useResendVerification();
+  const [resentOk, setResentOk] = useState(false);
+  const handleResend = () => {
+    resend.mutate(undefined, {
+      onSuccess: () => setResentOk(true),
+    });
+  };
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-500">Manage your account settings</p>
+        <p className="text-gray-500">App preferences and account management</p>
       </div>
 
       <div className="flex gap-6">
-        <div className="w-56 flex-shrink-0">
-          <nav className="space-y-1">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  activeTab === tab.id ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <tab.icon className="h-5 w-5" />
-                {tab.label}
-              </button>
-            ))}
-          </nav>
-        </div>
+        {/* Sidebar nav */}
+        <nav className="w-48 flex-shrink-0 space-y-1">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <tab.icon className="h-4 w-4" />
+              {tab.label}
+            </button>
+          ))}
+        </nav>
 
-        <div className="flex-1">
-          {activeTab === 'profile' && (
-            <Card>
-              <CardHeader><CardTitle>Profile Information</CardTitle></CardHeader>
-              <CardContent>
-                <form
-                  onSubmit={profileForm.handleSubmit((d) => updateProfile.mutate(d))}
-                  className="space-y-4"
-                >
-                  <div className="grid grid-cols-2 gap-4">
-                    <Input
-                      label="First Name"
-                      {...profileForm.register('first_name')}
-                      error={profileForm.formState.errors.first_name?.message}
-                    />
-                    <Input
-                      label="Last Name"
-                      {...profileForm.register('last_name')}
-                      error={profileForm.formState.errors.last_name?.message}
-                    />
+        <div className="flex-1 space-y-5">
+
+          {/* ── Account tab ─────────────────────────────────────────────── */}
+          {activeTab === 'account' && (
+            <>
+              {/* Email address + verification */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Mail className="h-5 w-5" />
+                    Email Address
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{user?.email}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">Your login email</p>
+                    </div>
+                    {user?.is_confirmed ? (
+                      <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Verified
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1.5 text-xs font-medium text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full">
+                        <XCircle className="h-3.5 w-3.5" />
+                        Unverified
+                      </span>
+                    )}
                   </div>
-                  <Input
-                    label="Phone"
-                    {...profileForm.register('phone')}
-                    error={profileForm.formState.errors.phone?.message}
-                  />
-                  <Button type="submit" isLoading={updateProfile.isPending}>
-                    Save Changes
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          )}
 
-          {activeTab === 'security' && (
-            <Card>
-              <CardHeader><CardTitle>Change Password</CardTitle></CardHeader>
-              <CardContent>
-                <form
-                  onSubmit={passwordForm.handleSubmit((d) =>
-                    changePassword.mutate(
-                      { current_password: d.old_password, new_password: d.new_password, confirm_password: d.new_password },
-                      { onSuccess: () => passwordForm.reset() }
-                    )
+                  {!user?.is_confirmed && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
+                      <p className="text-sm text-amber-800">
+                        Your email address hasn't been verified yet. Check your inbox for the
+                        verification link, or request a new one below.
+                      </p>
+                      {resentOk ? (
+                        <p className="flex items-center gap-2 text-sm font-medium text-emerald-700">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Verification email sent — check your inbox.
+                        </p>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleResend}
+                          isLoading={resend.isPending}
+                        >
+                          <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                          Resend verification email
+                        </Button>
+                      )}
+                    </div>
                   )}
-                  className="space-y-4"
-                >
-                  <Input
-                    type="password"
-                    label="Current Password"
-                    {...passwordForm.register('old_password')}
-                    error={passwordForm.formState.errors.old_password?.message}
-                  />
-                  <Input
-                    type="password"
-                    label="New Password"
-                    {...passwordForm.register('new_password')}
-                    error={passwordForm.formState.errors.new_password?.message}
-                  />
-                  <Input
-                    type="password"
-                    label="Confirm New Password"
-                    {...passwordForm.register('confirm_password')}
-                    error={passwordForm.formState.errors.confirm_password?.message}
-                  />
-                  <Button type="submit" isLoading={changePassword.isPending}>
-                    Update Password
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
+
+                  {user?.is_confirmed && (
+                    <p className="text-xs text-gray-400">
+                      To change your email address, contact support.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Username / display info (read-only, edit via Profile) */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Account Details</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {[
+                    { label: 'Username', value: user?.username },
+                    { label: 'Member since', value: user?.created_at ? new Date(user.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : '—' },
+                    { label: 'Account type', value: user?.is_superuser ? 'Superuser' : 'Standard' },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                      <span className="text-sm text-gray-500">{label}</span>
+                      <span className="text-sm font-medium text-gray-900">{value || '—'}</span>
+                    </div>
+                  ))}
+                  <p className="pt-1 text-xs text-gray-400">
+                    Update your name and avatar on the{' '}
+                    <Link href="/profile" className="text-blue-600 hover:underline">
+                      Profile page
+                    </Link>
+                    .
+                  </p>
+                </CardContent>
+              </Card>
+            </>
           )}
 
+          {/* ── Notifications tab ────────────────────────────────────────── */}
           {activeTab === 'notifications' && (
             <Card>
-              <CardHeader><CardTitle>Notification Preferences</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bell className="h-5 w-5" />
+                  Notification Channels
+                </CardTitle>
+              </CardHeader>
               <CardContent>
-                {prefs ? (
+                {prefsLoading ? (
                   <div className="space-y-4">
+                    {[1, 2, 3, 4].map((i) => (
+                      <Skeleton key={i} className="h-10 w-full" />
+                    ))}
+                  </div>
+                ) : prefs ? (
+                  <div className="divide-y divide-gray-100">
                     {(
                       [
-                        { key: 'email_enabled', label: 'Email Notifications' },
-                        { key: 'push_enabled', label: 'Push Notifications' },
-                        { key: 'websocket_enabled', label: 'In-App (WebSocket)' },
-                        { key: 'sms_enabled', label: 'SMS Notifications' },
+                        {
+                          key: 'websocket_enabled',
+                          label: 'In-App notifications',
+                          desc: 'Real-time alerts inside the dashboard',
+                        },
+                        {
+                          key: 'email_enabled',
+                          label: 'Email notifications',
+                          desc: 'Receive updates to your email address',
+                        },
+                        {
+                          key: 'push_enabled',
+                          label: 'Browser push notifications',
+                          desc: 'Desktop or mobile push alerts',
+                        },
+                        {
+                          key: 'sms_enabled',
+                          label: 'SMS notifications',
+                          desc: 'Text messages to your phone number',
+                        },
                       ] as const
-                    ).map(({ key, label }) => (
-                      <div key={key} className="flex items-center justify-between">
-                        <p className="font-medium text-gray-900">{label}</p>
-                        <input
-                          type="checkbox"
+                    ).map(({ key, label, desc }) => (
+                      <div key={key} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{label}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+                        </div>
+                        <Toggle
                           checked={!!prefs[key]}
-                          onChange={(e) =>
-                            updatePref.mutate({ [key]: e.target.checked })
-                          }
-                          className="h-4 w-4 rounded"
+                          onChange={(v) => updatePref.mutate({ [key]: v })}
+                          disabled={updatePref.isPending}
                         />
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-500">Loading preferences…</p>
+                  <p className="text-sm text-gray-500">Unable to load preferences.</p>
                 )}
               </CardContent>
             </Card>
           )}
+
+          {/* ── Privacy tab ─────────────────────────────────────────────── */}
+          {activeTab === 'privacy' && (
+            <div className="space-y-5">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Key className="h-5 w-5" />
+                    Active Sessions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-gray-600">
+                    View all devices and locations where your account is currently signed in. Revoke
+                    any session you don't recognise.
+                  </p>
+                  <Link href="/tokens">
+                    <Button variant="outline" size="sm">
+                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                      Manage sessions
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Globe className="h-5 w-5" />
+                    IP Access Rules
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-gray-600">
+                    Restrict account access to specific IP addresses. Any IP not on the allowlist
+                    will be blocked from signing in.
+                  </p>
+                  <Link href="/ip-access">
+                    <Button variant="outline" size="sm">
+                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                      Manage IP rules
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-red-600">
+                    <ShieldAlert className="h-5 w-5" />
+                    Danger Zone
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-4 space-y-3">
+                    <div>
+                      <p className="text-sm font-medium text-red-800">Deactivate account</p>
+                      <p className="text-xs text-red-700 mt-0.5">
+                        Signing out from all devices and disabling your account. You can reactivate
+                        by contacting support.
+                      </p>
+                    </div>
+                    <Link href="/tokens">
+                      <Button variant="destructive" size="sm">
+                        Revoke all sessions
+                      </Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
         </div>
       </div>
     </div>

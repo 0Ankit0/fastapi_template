@@ -25,3 +25,6 @@ htmlcov/
 *.md
 *.xml
 .coverage
+
+# Media Files
+media/

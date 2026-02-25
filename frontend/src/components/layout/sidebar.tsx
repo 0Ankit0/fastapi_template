@@ -15,6 +15,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/use-users';
+import { OrgSwitcher } from './org-switcher';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
@@ -39,7 +40,8 @@ export function Sidebar() {
           FastAPI Template
         </Link>
       </div>
-      <nav className="flex flex-col gap-1 p-4">
+      <OrgSwitcher />
+      <nav className="flex flex-col gap-1 p-4 pt-0">
         {navigation.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
