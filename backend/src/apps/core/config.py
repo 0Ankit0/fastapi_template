@@ -122,6 +122,11 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:3000"
     SERVER_HOST: str = "http://localhost:8000"
 
+    # Media / file uploads
+    MEDIA_DIR: str = "media"
+    MEDIA_URL: str = "/media"
+    MAX_AVATAR_SIZE_MB: int = 5
+
     # ---------------------------------------------------------------------------
     # Payment gateway settings
     # ---------------------------------------------------------------------------

@@ -1,8 +1,10 @@
 from contextlib import asynccontextmanager
+import os
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -93,6 +95,10 @@ app.include_router(finance_router, prefix=settings.API_V1_STR)
 app.include_router(multitenancy_router, prefix=settings.API_V1_STR)
 app.include_router(ws_router, prefix=settings.API_V1_STR)
 app.include_router(notification_router, prefix=settings.API_V1_STR)
+
+# Serve uploaded media files (avatars, etc.)
+os.makedirs(settings.MEDIA_DIR, exist_ok=True)
+app.mount(settings.MEDIA_URL, StaticFiles(directory=settings.MEDIA_DIR), name="media")
 
 @app.get("/", include_in_schema=False)
 async def read_root() -> RedirectResponse:

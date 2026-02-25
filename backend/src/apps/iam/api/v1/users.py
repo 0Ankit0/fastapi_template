@@ -1,7 +1,9 @@
 """
 User management endpoints with caching and pagination
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+import os
+import uuid
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlmodel import select, func, or_, col
@@ -12,6 +14,7 @@ from src.apps.iam.schemas.user import UserResponse, UserUpdate
 from src.apps.iam.utils.hashid import decode_id_or_404
 from src.apps.core.schemas import PaginatedResponse
 from src.apps.core.cache import RedisCache
+from src.apps.core.config import settings
 
 router = APIRouter(prefix="/users")
 
@@ -112,6 +115,67 @@ async def get_current_user_profile(
     # Cache for 5 minutes
     await RedisCache.set(cache_key, cache_data, ttl=300)
     
+    return current_user
+
+
+@router.post("/me/avatar", response_model=UserResponse)
+async def upload_avatar(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Upload or replace the current user's avatar image."""
+    ALLOWED_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+    MAX_SIZE = settings.MAX_AVATAR_SIZE_MB * 1024 * 1024
+
+    if file.content_type not in ALLOWED_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported file type: {file.content_type}. Allowed: jpeg, png, gif, webp",
+        )
+
+    contents = await file.read()
+    if len(contents) > MAX_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File too large. Maximum size is {settings.MAX_AVATAR_SIZE_MB} MB",
+        )
+
+    ext = file.filename.rsplit(".", 1)[-1].lower() if file.filename and "." in file.filename else "jpg"
+    filename = f"{current_user.id}_{uuid.uuid4().hex[:8]}.{ext}"
+    avatars_dir = os.path.join(settings.MEDIA_DIR, "avatars")
+    os.makedirs(avatars_dir, exist_ok=True)
+    file_path = os.path.join(avatars_dir, filename)
+
+    # Delete old avatar file if it exists locally
+    if current_user.profile and current_user.profile.image_url:
+        old_url = current_user.profile.image_url
+        old_relative = old_url.replace(settings.SERVER_HOST, "").lstrip("/")
+        old_path = os.path.join(settings.MEDIA_DIR, *old_relative.split("/")[1:])
+        if os.path.isfile(old_path):
+            os.remove(old_path)
+
+    with open(file_path, "wb") as f:
+        f.write(contents)
+
+    image_url = f"{settings.SERVER_HOST}{settings.MEDIA_URL}/avatars/{filename}"
+
+    if current_user.profile:
+        current_user.profile.image_url = image_url
+        db.add(current_user.profile)
+    else:
+        from src.apps.iam.models.user import UserProfile
+        profile = UserProfile(user_id=current_user.id, image_url=image_url)
+        db.add(profile)
+        current_user.profile = profile
+
+    await db.commit()
+    await db.refresh(current_user)
+    if current_user.profile:
+        await db.refresh(current_user.profile)
+
+    await RedisCache.delete(f"user:profile:{current_user.id}")
+
     return current_user
 
 
@@ -247,8 +311,8 @@ async def update_user(
                 detail="Email already registered"
             )
         user.email = user_update.email
-    if user_update.is_active is not None:
-        user.is_active = user_update.is_active
+    # if user_update.is_active is not None:
+    #     user.is_active = user_update.is_active
 
     # Update profile fields
     if user.profile:

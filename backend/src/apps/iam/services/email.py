@@ -110,8 +110,8 @@ class EmailService:
             "purpose": "ip_action"
         }, expires_hours=24)
         
-        whitelist_url = f"{settings.FRONTEND_URL}/api/v1/ip-access/verify?t={whitelist_secure}"
-        blacklist_url = f"{settings.FRONTEND_URL}/api/v1/ip-access/verify?t={blacklist_secure}"
+        whitelist_url = f"{settings.FRONTEND_URL}/ip-access/verify?t={whitelist_secure}"
+        blacklist_url = f"{settings.FRONTEND_URL}/ip-access/verify?t={blacklist_secure}"
         
         user_data = {
             "username": user.username,
