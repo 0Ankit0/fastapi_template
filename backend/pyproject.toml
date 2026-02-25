@@ -28,6 +28,8 @@ dependencies = [
     "celery>=5.4.0",
     "redis>=5.2.0",
     "httpx>=0.28.0",
+    "stripe>=14.3.0",
+    "paypalrestsdk>=1.13.3",
 ]
 
 [dependency-groups]
