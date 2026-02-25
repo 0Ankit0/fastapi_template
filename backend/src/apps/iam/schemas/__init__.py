@@ -9,17 +9,6 @@ from src.apps.iam.schemas.rbac import (
     UserRolesResponse,
     RolePermissionsResponse,
 )
-from src.apps.iam.schemas.tenant import (
-    TenantCreate,
-    TenantUpdate,
-    TenantResponse,
-    TenantMemberResponse,
-    TenantMemberUpdate,
-    TenantInvitationCreate,
-    TenantInvitationResponse,
-    TenantWithMembersResponse,
-    AcceptInvitationRequest,
-)
 
 __all__ = [
     "RoleCreate",
@@ -31,13 +20,5 @@ __all__ = [
     "CheckPermissionResponse",
     "UserRolesResponse",
     "RolePermissionsResponse",
-    "TenantCreate",
-    "TenantUpdate",
-    "TenantResponse",
-    "TenantMemberResponse",
-    "TenantMemberUpdate",
-    "TenantInvitationCreate",
-    "TenantInvitationResponse",
-    "TenantWithMembersResponse",
-    "AcceptInvitationRequest",
 ]
+
