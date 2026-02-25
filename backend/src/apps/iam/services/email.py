@@ -36,7 +36,7 @@ class EmailService:
 
     @staticmethod
     async def send_welcome_email(user) -> None:
-        from src.apps.core.tasks import send_welcome_email_task
+        from src.apps.iam.tasks import send_welcome_email_task
         user_data = {
             "username": user.username,
             "email": user.email,
@@ -49,7 +49,7 @@ class EmailService:
     async def send_password_reset_email(user, token:str) -> None:
         # Create secure URL token with embedded user_id
         from src.apps.core import security
-        from src.apps.core.tasks import send_password_reset_email_task
+        from src.apps.iam.tasks import send_password_reset_email_task
         
         secure_token = security.create_secure_url_token({
             "user_id": user.id,
@@ -70,7 +70,7 @@ class EmailService:
     async def send_verification_email(user, token: str) -> None:
         # Create secure URL token with embedded user_id
         from src.apps.core import security
-        from src.apps.core.tasks import send_verification_email_task
+        from src.apps.iam.tasks import send_verification_email_task
         
         secure_token = security.create_secure_url_token({
             "user_id": user.id,
@@ -91,7 +91,7 @@ class EmailService:
     async def send_new_ip_notification(user, ip_address: str, whitelist_token: str, blacklist_token: str) -> None:
         """Send notification email when a new IP attempts to access the account"""
         from src.apps.core import security
-        from src.apps.core.tasks import send_new_ip_notification_task
+        from src.apps.iam.tasks import send_new_ip_notification_task
         
         # Create secure URL tokens with embedded data
         whitelist_secure = security.create_secure_url_token({
