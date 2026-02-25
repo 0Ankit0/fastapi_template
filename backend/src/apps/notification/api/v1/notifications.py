@@ -41,6 +41,7 @@ async def list_notifications(
     db: AsyncSession = Depends(get_db),
 ) -> NotificationList:
     """Return paginated notifications for the authenticated user."""
+    assert isinstance(current_user.id, int),"User Id can't be None"
     return await get_user_notifications(
         db, current_user.id, unread_only=unread_only, skip=skip, limit=limit
     )
@@ -75,6 +76,8 @@ async def mark_all_notifications_read(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Mark every unread notification for the current user as read."""
+
+    assert isinstance(current_user.id, int),"User Id can't be None"
     count = await mark_all_read(db, current_user.id)
     return {"updated": count}
 
@@ -89,6 +92,8 @@ async def get_notification_endpoint(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> NotificationRead:
+    
+    assert isinstance(current_user.id, int),"User Id can't be None"
     notification = await get_notification(db, notification_id, current_user.id)
     if not notification:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found")
@@ -106,6 +111,8 @@ async def mark_notification_read(
     db: AsyncSession = Depends(get_db),
 ) -> NotificationRead:
     """Mark a single notification as read."""
+
+    assert isinstance(current_user.id, int),"User Id can't be None"
     notification = await mark_as_read(db, notification_id, current_user.id)
     if not notification:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found")

@@ -30,10 +30,13 @@ dependencies = [
     "httpx>=0.28.0",
     "stripe>=14.3.0",
     "paypalrestsdk>=1.13.3",
+    "pywebpush>=2.0.0",
+    "twilio>=9.0.0",
 ]
 
 [dependency-groups]
 dev = [
+    "celery-types>=0.24.0",
     "watchfiles>=1.1.1",
 ]
 test = [
