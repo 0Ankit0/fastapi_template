@@ -10,26 +10,36 @@ from src.apps.core.config import settings
 from src.apps.core.handler import rate_limit_exceeded_handler
 from src.apps.core.middleware import SecurityHeadersMiddleware, IPAccessControlMiddleware
 from src.apps.iam.api import api_router
+from src.apps.finance.api import finance_router
+from src.apps.multitenancy.api import multitenancy_router
 from src.db.session import engine
 from src.apps.iam.casbin_enforcer import CasbinEnforcer
+from src.apps.websocket.api import ws_router
+from src.apps.websocket.manager import manager as ws_manager
 from src.apps.core.cache import RedisCache
+from src.apps.notification.api import notification_router
 
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initialize Casbin enforcer and Redis cache on startup"""
+    """Initialize Casbin enforcer, Redis cache, and WebSocket manager on startup."""
     enforcer = await CasbinEnforcer.get_enforcer(engine)
     app.state.casbin_enforcer = enforcer
-    
-    # Initialize Redis cache in production
+
+    # Initialize Redis cache + WebSocket pub/sub in production
     if not settings.DEBUG:
-        await RedisCache.get_client()
-    
+        if settings.REDIS_URL:
+            await RedisCache.get_client()
+            await ws_manager.setup_redis(settings.REDIS_URL)
+
+    app.state.ws_manager = ws_manager
+
     yield
-    
-    # Cleanup Redis connection on shutdown
+
+    # Cleanup on shutdown
+    await ws_manager.teardown()
     await RedisCache.close()
 
 app = FastAPI(
@@ -79,6 +89,10 @@ if not settings.DEBUG:
     )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
+app.include_router(finance_router, prefix=settings.API_V1_STR)
+app.include_router(multitenancy_router, prefix=settings.API_V1_STR)
+app.include_router(ws_router, prefix=settings.API_V1_STR)
+app.include_router(notification_router, prefix=settings.API_V1_STR)
 
 @app.get("/", include_in_schema=False)
 async def read_root() -> RedirectResponse:
