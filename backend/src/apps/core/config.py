@@ -122,6 +122,31 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:3000"
     SERVER_HOST: str = "http://localhost:8000"
 
+    # ---------------------------------------------------------------------------
+    # Payment gateway settings
+    # ---------------------------------------------------------------------------
+    # Khalti (sandbox test credentials — from https://docs.khalti.com/)
+    KHALTI_ENABLED: bool = True
+    KHALTI_SECRET_KEY: str = "test_secret_key_dc74e0fd57cb46cd93832aee0a390234"
+    KHALTI_BASE_URL: str = "https://a.khalti.com/api/v2/"
+
+    # eSewa (sandbox test credentials — from https://developer.esewa.com.np/)
+    ESEWA_ENABLED: bool = True
+    ESEWA_SECRET_KEY: str = "8gBm/:&EnhH.1/q"
+    ESEWA_MERCHANT_CODE: str = "EPAYTEST"
+    ESEWA_BASE_URL: str = "https://rc-epay.esewa.com.np/api/epay/"
+
+    # Stripe (https://dashboard.stripe.com/test/apikeys)
+    STRIPE_ENABLED: bool = False
+    STRIPE_SECRET_KEY: str = "sk_test_your_stripe_secret_key"
+    STRIPE_WEBHOOK_SECRET: str = "whsec_your_stripe_webhook_secret"
+
+    # PayPal (https://developer.paypal.com/dashboard/applications/sandbox)
+    PAYPAL_ENABLED: bool = False
+    PAYPAL_CLIENT_ID: str = "your_paypal_sandbox_client_id"
+    PAYPAL_CLIENT_SECRET: str = "your_paypal_sandbox_client_secret"
+    PAYPAL_MODE: str = "sandbox"  # "sandbox" or "live"
+
     # Social auth settings
     GOOGLE_CLIENT_ID: str = "your-google-client-id"
     GOOGLE_CLIENT_SECRET: str = "your-google-client-secret"
