@@ -19,14 +19,14 @@ services:
 
   backend:
     build:
-      context: ../django-template-backend
+      context: ../Fastapi-template-backend
       dockerfile: Dockerfile
     ports:
       - '8000:8000'
     environment:
-      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-change-me-in-production}
-      - DJANGO_DEBUG=False
-      - DJANGO_ALLOWED_HOSTS=localhost,backend
+      - FASTAPI_SECRET_KEY=${FASTAPI_SECRET_KEY:-change-me-in-production}
+      - FASTAPI_DEBUG=False
+      - FASTAPI_ALLOWED_HOSTS=localhost,backend
       - DB_CONNECTION={"dbname":"ecommerce","username":"postgres","password":"postgres","host":"db","port":"5432"}
       - REDIS_CONNECTION=redis://redis:6379
       - CELERY_BROKER_URL=redis://redis:6379/0
@@ -39,11 +39,11 @@ services:
 
   celery:
     build:
-      context: ../django-template-backend
+      context: ../Fastapi-template-backend
       dockerfile: Dockerfile
     command: celery -A tasks worker -l info
     environment:
-      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-change-me-in-production}
+      - FASTAPI_SECRET_KEY=${FASTAPI_SECRET_KEY:-change-me-in-production}
       - DB_CONNECTION={"dbname":"ecommerce","username":"postgres","password":"postgres","host":"db","port":"5432"}
       - REDIS_CONNECTION=redis://redis:6379
       - CELERY_BROKER_URL=redis://redis:6379/0
@@ -57,11 +57,11 @@ services:
 
   celery-beat:
     build:
-      context: ../django-template-backend
+      context: ../Fastapi-template-backend
       dockerfile: Dockerfile
-    command: celery -A tasks beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    command: celery -A tasks beat -l info --scheduler Fastapi_celery_beat.schedulers:DatabaseScheduler
     environment:
-      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-change-me-in-production}
+      - FASTAPI_SECRET_KEY=${FASTAPI_SECRET_KEY:-change-me-in-production}
       - DB_CONNECTION={"dbname":"ecommerce","username":"postgres","password":"postgres","host":"db","port":"5432"}
       - REDIS_CONNECTION=redis://redis:6379
       - CELERY_BROKER_URL=redis://redis:6379/0

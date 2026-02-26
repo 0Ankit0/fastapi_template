@@ -10,8 +10,8 @@ import { ShoppingCart, Shield, Zap, Users } from 'lucide-react';
 const features = [
   {
     icon: ShoppingCart,
-    title: 'Django Template Ready',
-    description: 'Complete Django Template solution with payments, subscriptions, and billing.',
+    title: 'Fastapi Template Ready',
+    description: 'Complete Fastapi Template solution with payments, subscriptions, and billing.',
   },
   {
     icon: Shield,
@@ -21,7 +21,7 @@ const features = [
   {
     icon: Zap,
     title: 'Fast & Modern',
-    description: 'Built with Next.js and Django REST for optimal performance.',
+    description: 'Built with Next.js and Fastapi REST for optimal performance.',
   },
   {
     icon: Users,
@@ -45,7 +45,7 @@ export default function Home() {
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="text-xl font-bold text-blue-600">Django Template</div>
+            <div className="text-xl font-bold text-blue-600">Fastapi Template</div>
             <div className="flex items-center gap-4">
               <Link href="/login">
                 <Button variant="ghost">Sign in</Button>
@@ -62,10 +62,10 @@ export default function Home() {
         <section className="py-20 px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
-              Modern Django Template Platform
+              Modern Fastapi Template Platform
             </h1>
             <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-              A powerful, scalable Django Template solution built with Next.js and Django REST API.
+              A powerful, scalable Fastapi Template solution built with Next.js and Fastapi REST API.
               Multi-tenant, secure, and ready for production.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -120,7 +120,7 @@ export default function Home() {
 
       <footer className="py-8 px-4 border-t border-gray-200">
         <div className="max-w-7xl mx-auto text-center text-gray-500 text-sm">
-          © {new Date().getFullYear()} Django Template Platform. All rights reserved.
+          © {new Date().getFullYear()} Fastapi Template Platform. All rights reserved.
         </div>
       </footer>
     </div>

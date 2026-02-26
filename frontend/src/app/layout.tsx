@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Django Template',
-  description: 'Modern Django Template platform',
+  title: 'Fastapi Template',
+  description: 'Modern Fastapi Template platform',
 };
 
 export default function RootLayout({

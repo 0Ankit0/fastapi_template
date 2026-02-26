@@ -19,7 +19,7 @@ export function LanguageSwitcher() {
     setLanguage(code);
     setIsOpen(false);
     // In a real app with backend i18n, we would set a cookie or header here
-    // document.cookie = `django_language=${value}; path=/; SameSite=Lax`;
+    // document.cookie = `fastapi_language=${value}; path=/; SameSite=Lax`;
     // window.location.reload();
   };
 
