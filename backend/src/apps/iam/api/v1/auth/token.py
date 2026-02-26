@@ -11,6 +11,7 @@ from src.apps.iam.api.deps import get_db
 from src.apps.iam.models.user import User
 from src.apps.iam.models.token_tracking import TokenTracking
 from src.apps.iam.schemas.token import Token
+from src.apps.iam.utils.ip_access import revoke_tokens_for_ip, get_client_ip
 
 router = APIRouter()
 
@@ -76,7 +77,7 @@ async def refresh_token(
                 detail="User not found or inactive"
             )
         
-        ip_address = request.client.host if request.client else "unknown"
+        ip_address = get_client_ip(request)
         user_agent = request.headers.get("user-agent", "unknown")
         
         # Revoke old refresh token
@@ -95,7 +96,10 @@ async def refresh_token(
         # Track new tokens
         access_payload = jwt.decode(access_token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
         new_refresh_payload = jwt.decode(new_refresh_token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
-        
+
+        # Revoke any remaining active tokens for this user+IP before issuing new ones
+        await revoke_tokens_for_ip(db, user.id, ip_address)
+
         access_token_tracking = TokenTracking(
             user_id=user.id,
             token_jti=access_payload["jti"],

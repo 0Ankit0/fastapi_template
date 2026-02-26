@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from jose import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,8 +15,7 @@ from src.apps.core.security import TokenType
 from src.apps.iam.api.deps import get_db
 from src.apps.iam.models.ip_access_control import IpAccessStatus
 from src.apps.iam.models.token_tracking import TokenTracking
-from src.apps.iam.schemas.token import Token
-from src.apps.iam.utils.ip_access import upsert_ip_access
+from src.apps.iam.utils.ip_access import upsert_ip_access, revoke_tokens_for_ip, get_client_ip
 from src.apps.iam.utils.social import (
     extract_user_info,
     find_or_create_social_user,
@@ -44,7 +43,6 @@ async def social_login(provider: str) -> RedirectResponse:
         "client_id": client_id,
         "redirect_uri": get_callback_url(provider),
         "scope": config["scope"],
-        "response_type": "code",
         "state": security.create_oauth_state(provider),
         **config.get("extra_params", {}),
     }
@@ -65,10 +63,9 @@ async def social_callback(
     code: str,
     state: str,
     request: Request,
-    response: Response,
     set_cookie: bool = False,
     db: AsyncSession = Depends(get_db),
-) -> Token | dict[str, Any]:
+) -> RedirectResponse:
     if provider not in OAUTH_PROVIDERS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -169,7 +166,7 @@ async def social_callback(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This account has been deactivated.")
 
     # Whitelist the current IP — social login is already authenticated by the provider
-    ip_address = request.client.host if request.client else "unknown"
+    ip_address = get_client_ip(request)
     user_agent = request.headers.get("user-agent", "unknown")
 
     await upsert_ip_access(db, user.id, ip_address, IpAccessStatus.WHITELISTED, f"Social login via {provider}")
@@ -181,6 +178,9 @@ async def social_callback(
 
     access_payload = jwt.decode(access_token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
     refresh_payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
+
+    # Revoke any existing active tokens for this user+IP before issuing new ones
+    await revoke_tokens_for_ip(db, user.id, ip_address)
 
     db.add(TokenTracking(
         user_id=user.id,
@@ -200,8 +200,13 @@ async def social_callback(
     ))
     await db.commit()
 
+    # Redirect the popup back to the frontend auth-callback page with tokens as
+    # query params. The /auth-callback page stores the tokens and continues the flow.
+    frontend_callback = f"{settings.FRONTEND_URL}/auth-callback"
+
     if set_cookie:
-        response.set_cookie(
+        redirect_resp = RedirectResponse(url=frontend_callback, status_code=302)
+        redirect_resp.set_cookie(
             key=settings.ACCESS_TOKEN_COOKIE,
             value=access_token,
             httponly=True,
@@ -209,7 +214,10 @@ async def social_callback(
             samesite="lax",
             max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         )
-        return {"message": f"Logged in via {provider} successfully"}
+        return redirect_resp
 
-    return Token(access=access_token, refresh=refresh_token, token_type=TokenType.BEARER.value)
+    return RedirectResponse(
+        url=f"{frontend_callback}?access={access_token}&refresh={refresh_token}",
+        status_code=302,
+    )
 

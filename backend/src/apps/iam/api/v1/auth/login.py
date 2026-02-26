@@ -18,7 +18,7 @@ from src.apps.iam.models.ip_access_control import IPAccessControl, IpAccessStatu
 from src.apps.iam.schemas.token import Token
 from src.apps.iam.schemas.user import LoginRequest
 
-from src.apps.iam.utils.ip_access import upsert_ip_access
+from src.apps.iam.utils.ip_access import upsert_ip_access, revoke_tokens_for_ip, get_client_ip
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -36,7 +36,7 @@ async def login_access_token(
     """
     OAuth2 compatible token login, get an access token for future requests
     """
-    ip_address = request.client.host if request.client else "unknown"
+    ip_address = get_client_ip(request)
     user_agent = request.headers.get("user-agent", "unknown")
     user = None
     
@@ -196,7 +196,10 @@ async def login_access_token(
         # Decode tokens to get JTI
         access_payload = jwt.decode(access_token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
         refresh_payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
-        
+
+        # Revoke any existing active tokens for this user+IP before issuing new ones
+        await revoke_tokens_for_ip(db, user.id, ip_address)
+
         # Track access token
         access_token_tracking = TokenTracking(
             user_id=user.id,
@@ -279,7 +282,7 @@ async def logout(
             try:
                 payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
                 jti = payload.get("jti")
-                ip_address = request.client.host if request.client else "unknown"
+                ip_address = get_client_ip(request)
                 
                 if jti:
                     # Revoke only tokens from current IP/device

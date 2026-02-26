@@ -13,6 +13,7 @@ from jose import JWTError, jwt
 from src.apps.core.config import settings
 from src.apps.core import security
 from src.apps.iam.schemas.token import TokenPayload
+from src.apps.iam.utils.ip_access import get_client_ip
 
 # HTTPBearer with auto_error=False so cookie fallback still works,
 # but FastAPI registers the BearerAuth security scheme on all
@@ -79,7 +80,7 @@ async def get_current_user(
             )
         
         # Verify IP matches the one used to create token (if strict mode)
-        current_ip = request.client.host if request.client else "unknown"
+        current_ip = get_client_ip(request)
         if token_tracking.ip_address != current_ip:
             # Check if current IP is whitelisted for this user
             ip_result = await db.execute(

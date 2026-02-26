@@ -7,7 +7,7 @@ from src.apps.core import security
 from src.apps.core.security import TokenType
 from src.apps.core.cache import RedisCache
 from src.apps.core.config import settings
-from src.apps.iam.utils.ip_access import upsert_ip_access
+from src.apps.iam.utils.ip_access import upsert_ip_access, get_client_ip
 from src.db.session import get_session
 from datetime import datetime
 
@@ -52,8 +52,8 @@ class IPAccessControlMiddleware(BaseHTTPMiddleware):
         if any(request.url.path.startswith(path) for path in self.EXCLUDED_PATHS):
             return await call_next(request)
 
-        ip_address = request.client.host if request.client else None
-        if not ip_address:
+        ip_address = get_client_ip(request) or None
+        if not ip_address or ip_address == "unknown":
             return await call_next(request)
 
         # Extract token from Authorization header or cookie

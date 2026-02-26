@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from src.apps.core.config import settings
 from src.apps.core.handler import rate_limit_exceeded_handler
 from src.apps.core.middleware import SecurityHeadersMiddleware, IPAccessControlMiddleware
@@ -70,6 +71,10 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler) 
 
+# Trust proxy headers (X-Forwarded-For / X-Real-IP) so request.client.host
+# reflects the real client IP rather than the loopback / proxy address.
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+
 # Security headers middleware
 app.add_middleware(SecurityHeadersMiddleware)
 
@@ -79,8 +84,8 @@ app.add_middleware(IPAccessControlMiddleware)
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
-    allow_credentials=True,
+    allow_origins=["*"] if settings.DEBUG else [str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+    allow_credentials=not settings.DEBUG,
     allow_methods=["*"],
     allow_headers=["*"],
 )

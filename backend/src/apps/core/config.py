@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "FastAPI Template"
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = "supersecretkey"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS:int = 7
     ACCESS_TOKEN_COOKIE: str = "access_token"
     REFRESH_TOKEN_COOKIE: str = "refresh_token"
@@ -193,9 +193,10 @@ OAUTH_PROVIDERS: dict[str, dict[str, Any]] = {
         "token_url": "https://oauth2.googleapis.com/token",
         "userinfo_url": "https://www.googleapis.com/oauth2/v3/userinfo",
         "scope": "openid email profile",
-        "extra_params": {"access_type": "online"},
+        "extra_params": {"access_type": "online", "response_type": "code"},
     },
     "github": {
+        # GitHub OAuth App docs: https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps
         "authorize_url": "https://github.com/login/oauth/authorize",
         "token_url": "https://github.com/login/oauth/access_token",
         "userinfo_url": "https://api.github.com/user",
@@ -208,6 +209,6 @@ OAUTH_PROVIDERS: dict[str, dict[str, Any]] = {
         "token_url": "https://graph.facebook.com/v18.0/oauth/access_token",
         "userinfo_url": "https://graph.facebook.com/me?fields=id,name,email,picture",
         "scope": "email,public_profile",
-        "extra_params": {},
+        "extra_params": {"response_type": "code"},
     },
 }

@@ -18,6 +18,7 @@ from src.apps.iam.models.token_tracking import TokenTracking
 from src.apps.iam.schemas.token import Token
 from src.apps.iam.schemas.user import VerifyOTPRequest, DisableOTPRequest
 from src.apps.core.cache import RedisCache
+from src.apps.iam.utils.ip_access import revoke_tokens_for_ip, get_client_ip
 
 router = APIRouter()
 
@@ -176,7 +177,7 @@ async def validate_otp_login(
     Validate OTP during login process (called after username/password validation).
     Pass set_cookie=true to receive the access token via HttpOnly cookie instead of JSON.
     """
-    ip_address = request.client.host if request.client else "unknown"
+    ip_address = get_client_ip(request)
     user_agent = request.headers.get("user-agent", "unknown")
     user = None
 
@@ -255,7 +256,10 @@ async def validate_otp_login(
         # Decode tokens to get JTI
         access_payload = jwt.decode(access_token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
         refresh_payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
-        
+
+        # Revoke any existing active tokens for this user+IP before issuing new ones
+        await revoke_tokens_for_ip(db, user.id, ip_address)
+
         # Track access token
         access_token_tracking = TokenTracking(
             user_id=user.id,
