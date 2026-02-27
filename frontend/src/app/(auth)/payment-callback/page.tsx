@@ -23,7 +23,6 @@ function PaymentCallbackInner() {
   const verifyPayment = useVerifyPayment();
 
   useEffect(() => {
-    // Determine provider + payload
     const provider = (searchParams.get('provider') || 'khalti') as PaymentProvider;
     const pidx = searchParams.get('pidx') ?? undefined;
     const data = searchParams.get('data') ?? undefined;
@@ -35,7 +34,7 @@ function PaymentCallbackInner() {
     }
 
     verifyPayment.mutate(
-      { provider, pidx, oid: data },
+      { provider, pidx, data },
       {
         onSuccess: (result) => {
           if (result.status === 'completed') {

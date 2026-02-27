@@ -26,8 +26,10 @@ export interface InitiatePaymentResponse {
 
 export interface VerifyPaymentRequest {
   provider: PaymentProvider;
-  pidx?: string;
-  oid?: string;
+  pidx?: string;       // Khalti
+  oid?: string;        // eSewa legacy
+  refId?: string;      // eSewa legacy
+  data?: string;       // eSewa v2 base64-encoded callback data
   transaction_id?: number;
 }
 

@@ -64,10 +64,6 @@ export default function FinancesPage() {
           </CardHeader>
           <CardContent>
             <PaymentInitiateForm
-              purchaseOrderId=""
-              purchaseOrderName=""
-              amount={0}
-              returnUrl={typeof window !== 'undefined' ? `${window.location.origin}/finances` : '/finances'}
               onSuccess={() => setShowPayForm(false)}
             />
           </CardContent>
