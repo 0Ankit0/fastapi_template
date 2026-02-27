@@ -1,0 +1,145 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/constants/app_constants.dart';
+import '../../../../shared/widgets/app_text_field.dart';
+import '../../../../shared/widgets/loading_button.dart';
+import '../providers/auth_provider.dart';
+
+class RegisterPage extends ConsumerStatefulWidget {
+  const RegisterPage({super.key});
+
+  @override
+  ConsumerState<RegisterPage> createState() => _RegisterPageState();
+}
+
+class _RegisterPageState extends ConsumerState<RegisterPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _register() async {
+    if (!_formKey.currentState!.validate()) return;
+    await ref.read(authNotifierProvider.notifier).register(
+          _usernameController.text.trim(),
+          _emailController.text.trim(),
+          _passwordController.text,
+        );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authState = ref.watch(authNotifierProvider);
+    final isLoading = authState.isLoading;
+
+    ref.listen(authNotifierProvider, (prev, next) {
+      final err = next.valueOrNull?.error;
+      if (err != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(err), backgroundColor: Colors.red),
+        );
+        ref.read(authNotifierProvider.notifier).clearError();
+      }
+    });
+
+    return Scaffold(
+      appBar: AppBar(
+        leading: BackButton(onPressed: () => context.go(AppConstants.loginRoute)),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Create account',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ).animate().fadeIn(),
+                const SizedBox(height: 8),
+                Text(
+                  'Join us today',
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(color: Colors.grey),
+                ).animate().fadeIn(delay: 100.ms),
+                const SizedBox(height: 32),
+                AppTextField(
+                  controller: _usernameController,
+                  label: 'Username',
+                  prefixIcon: Icons.person_outline,
+                  validator: (v) =>
+                      v == null || v.isEmpty ? 'Enter a username' : null,
+                ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1),
+                const SizedBox(height: 16),
+                AppTextField(
+                  controller: _emailController,
+                  label: 'Email',
+                  prefixIcon: Icons.email_outlined,
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Enter your email';
+                    if (!v.contains('@')) return 'Enter a valid email';
+                    return null;
+                  },
+                ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1),
+                const SizedBox(height: 16),
+                AppTextField(
+                  controller: _passwordController,
+                  label: 'Password',
+                  prefixIcon: Icons.lock_outline,
+                  obscureText: _obscurePassword,
+                  suffixIcon: IconButton(
+                    icon: Icon(_obscurePassword
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined),
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
+                  ),
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Enter a password';
+                    if (v.length < 8) return 'Password must be at least 8 characters';
+                    return null;
+                  },
+                ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1),
+                const SizedBox(height: 32),
+                LoadingButton(
+                  isLoading: isLoading,
+                  onPressed: _register,
+                  label: 'Create Account',
+                ).animate().fadeIn(delay: 500.ms),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('Already have an account? '),
+                    TextButton(
+                      onPressed: () => context.go(AppConstants.loginRoute),
+                      child: const Text('Sign In'),
+                    ),
+                  ],
+                ).animate().fadeIn(delay: 600.ms),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
