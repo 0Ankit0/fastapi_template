@@ -77,7 +77,7 @@ class EsewaService(BasePaymentProvider):
         total_amount = request.amount  # eSewa expects rupees (not paisa)
 
         signed_field_names = "total_amount,transaction_uuid,product_code"
-        message = f"{total_amount},{transaction_uuid},{settings.ESEWA_MERCHANT_CODE}"
+        message = f"total_amount={total_amount},transaction_uuid={transaction_uuid},product_code={settings.ESEWA_MERCHANT_CODE}"
         signature = _compute_esewa_signature(message, settings.ESEWA_SECRET_KEY)
 
         form_data = EsewaInitiateData(
@@ -156,7 +156,7 @@ class EsewaService(BasePaymentProvider):
         # ------ verify signature ------------------------------------------
         if cb.signed_field_names and cb.signature:
             fields = [f.strip() for f in cb.signed_field_names.split(",")]
-            message = ",".join(str(decoded.get(f, "")) for f in fields)
+            message = ",".join(f"{f}={decoded.get(f, '')}" for f in fields)
             expected_sig = _compute_esewa_signature(message, settings.ESEWA_SECRET_KEY)
             if expected_sig != cb.signature:
                 raise ValueError("eSewa callback signature verification failed")

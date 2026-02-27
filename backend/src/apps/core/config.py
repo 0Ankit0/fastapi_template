@@ -132,8 +132,8 @@ class Settings(BaseSettings):
     # ---------------------------------------------------------------------------
     # Khalti (sandbox test credentials — from https://docs.khalti.com/)
     KHALTI_ENABLED: bool = True
-    KHALTI_SECRET_KEY: str = "test_secret_key_dc74e0fd57cb46cd93832aee0a390234"
-    KHALTI_BASE_URL: str = "https://a.khalti.com/api/v2/"
+    KHALTI_SECRET_KEY: str = "05bf95cc57244045b8df5fad06748dab"
+    KHALTI_BASE_URL: str = "https://dev.khalti.com/api/v2/"
 
     # eSewa (sandbox test credentials — from https://developer.esewa.com.np/)
     ESEWA_ENABLED: bool = True

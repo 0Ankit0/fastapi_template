@@ -47,7 +47,6 @@ class KhaltiService(BasePaymentProvider):
 
         Returns the ``payment_url`` the client should redirect the user to.
         """
-        # Build customer_info if provided
         customer_info: dict = {}
         if request.customer_name:
             customer_info["name"] = request.customer_name
@@ -160,7 +159,6 @@ class KhaltiService(BasePaymentProvider):
         khalti_status: str = data.get("status", "")
         transaction_id_provider: str = data.get("transaction_id", "")
 
-        # Map Khalti status → our enum
         status_map = {
             "Completed": PaymentStatus.COMPLETED,
             "Pending": PaymentStatus.PENDING,
@@ -170,7 +168,6 @@ class KhaltiService(BasePaymentProvider):
         }
         our_status = status_map.get(khalti_status, PaymentStatus.FAILED)
 
-        # Find the transaction by pidx
         from sqlmodel import select
         result = await db.execute(
             select(PaymentTransaction).where(PaymentTransaction.provider_pidx == pidx)
