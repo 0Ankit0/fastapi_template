@@ -42,6 +42,10 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
+      // Only persist tokens (stored separately) — never persist user data or
+      // isAuthenticated to localStorage. User state must always come from the
+      // server, preventing client-side spoofing of roles/permissions.
+      partialize: () => ({}),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },
