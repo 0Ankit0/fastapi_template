@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/payment.dart';
 import '../providers/payment_provider.dart';
+import 'payment_utils.dart';
 import 'payment_webview_page.dart';
 
 class PaymentsPage extends ConsumerStatefulWidget {
@@ -89,6 +92,12 @@ class _PaymentsPageState extends ConsumerState<PaymentsPage> {
   }
 
   Future<void> _openPaymentWebView(InitiatePaymentResponse response) async {
+    if (kIsWeb) {
+      await _handleWebPayment(response);
+      return;
+    }
+
+    // ── Native mobile: full-screen WebView ──────────────────────────────
     final result = await Navigator.of(context).push<PaymentResult>(
       MaterialPageRoute(
         fullscreenDialog: true,
@@ -116,7 +125,35 @@ class _PaymentsPageState extends ConsumerState<PaymentsPage> {
       );
     }
 
-    // Refresh transaction list regardless of result
+    _resetForm();
+  }
+
+  /// Web fallback: Khalti → open payment URL in browser tab.
+  /// eSewa → POST form via dart:html (see payment_utils_web.dart).
+  Future<void> _handleWebPayment(InitiatePaymentResponse response) async {
+    try {
+      if (response.provider == PaymentProvider.esewa) {
+        final formAction = response.extra?['form_action'] as String? ??
+            'https://rc-epay.esewa.com.np/api/epay/main/v2/form';
+        final formFields =
+            response.extra?['form_fields'] as Map<String, dynamic>? ?? {};
+        await submitEsewaFormWeb(formAction, formFields);
+      } else {
+        // Khalti and others: redirect to payment URL
+        final url = response.paymentUrl;
+        if (url != null) {
+          await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _showError('Could not open payment page: $e');
+    }
+    _resetForm();
+  }
+
+  void _resetForm() {
+    if (!mounted) return;
     ref.invalidate(transactionsProvider);
     setState(() {
       _showForm = false;
