@@ -4,7 +4,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from src.apps.iam.models.user import User
-from src.apps.iam.models.ip_access_control import IPAccessControl, IpAccessStatus
 
 
 class TestCompleteAuthenticationFlow:
@@ -47,17 +46,6 @@ class TestCompleteAuthenticationFlow:
         assert user.profile is not None
         assert user.profile.first_name == "Life"
         assert user.profile.last_name == "Cycle"
-        
-        # Verify IP was whitelisted
-        ip_result = await db_session.execute(
-            select(IPAccessControl).where(
-                IPAccessControl.user_id == user.id,
-                IPAccessControl.ip_address == "127.0.0.1"
-            )
-        )
-        ip_control = ip_result.scalars().first()
-        assert ip_control is not None
-        assert ip_control.status == IpAccessStatus.WHITELISTED
         
         # Step 2: Login with credentials
         login_response = await client.post(

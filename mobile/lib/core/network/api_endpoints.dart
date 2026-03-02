@@ -32,10 +32,6 @@ class ApiEndpoints {
   static String revokeToken(String id) => '/tokens/revoke/$id';
   static const String revokeAll = '/tokens/revoke-all';
 
-  // IAM - IP Access
-  static const String ipAccess = '/ip-access/';
-  static String updateIpAccess(String id) => '/ip-access/$id';
-
   // Payments
   static const String payments = '/payments/';
   static const String paymentProviders = '/payments/providers/';

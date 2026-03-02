@@ -4,7 +4,6 @@ from sqlmodel import Field, SQLModel, Relationship
 
 if TYPE_CHECKING:
     from .login_attempt import LoginAttempt
-    from .ip_access_control import IPAccessControl
     from .token_tracking import TokenTracking
     from .used_token import UsedToken
     from .role import UserRole
@@ -87,7 +86,6 @@ class User(UserBase, table=True):
     # Relationships
     profile: Optional["UserProfile"] = Relationship(back_populates="user")
     login_attempts: list["LoginAttempt"] = Relationship(back_populates="user")
-    ip_access_controls: list["IPAccessControl"] = Relationship(back_populates="user")
     tokens: list["TokenTracking"] = Relationship(back_populates="user")
     used_tokens: list["UsedToken"] = Relationship(back_populates="user")
     user_roles: list["UserRole"] = Relationship(back_populates="user")

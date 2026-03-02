@@ -5,7 +5,6 @@ from hypothesis import given, strategies as st
 from src.apps.iam.models.user import User, UserProfile
 from src.apps.iam.models.login_attempt import LoginAttempt
 from src.apps.iam.models.token_tracking import TokenTracking
-from src.apps.iam.models.ip_access_control import IPAccessControl, IpAccessStatus
 from src.apps.core.security import TokenType
 
 
@@ -104,38 +103,3 @@ class TestTokenTrackingModel:
         assert tracking.token_jti == "unique-jti-123"
         assert tracking.token_type == TokenType.ACCESS
         assert tracking.is_active is True
-
-
-class TestIPAccessControlModel:
-    """Test IPAccessControl model."""
-    
-    def test_ip_whitelisted(self):
-        """Test whitelisted IP."""
-        ip_control = IPAccessControl(
-            user_id=1,
-            ip_address="192.168.1.1",
-            status=IpAccessStatus.WHITELISTED,
-            reason="Trusted IP"
-        )
-        assert ip_control.status == IpAccessStatus.WHITELISTED
-        assert ip_control.reason == "Trusted IP"
-    
-    def test_ip_blacklisted(self):
-        """Test blacklisted IP."""
-        ip_control = IPAccessControl(
-            user_id=1,
-            ip_address="10.0.0.1",
-            status=IpAccessStatus.BLACKLISTED,
-            reason="Suspicious activity"
-        )
-        assert ip_control.status == IpAccessStatus.BLACKLISTED
-    
-    def test_ip_pending(self):
-        """Test pending IP."""
-        ip_control = IPAccessControl(
-            user_id=1,
-            ip_address="172.16.0.1",
-            status=IpAccessStatus.PENDING,
-            reason="New location"
-        )
-        assert ip_control.status == IpAccessStatus.PENDING

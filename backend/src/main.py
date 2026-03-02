@@ -11,7 +11,7 @@ from slowapi.errors import RateLimitExceeded
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from src.apps.core.config import settings
 from src.apps.core.handler import rate_limit_exceeded_handler
-from src.apps.core.middleware import SecurityHeadersMiddleware, IPAccessControlMiddleware
+from src.apps.core.middleware import SecurityHeadersMiddleware
 from src.apps.iam.api import api_router
 from src.apps.finance.api import finance_router
 from src.apps.multitenancy.api import multitenancy_router
@@ -77,9 +77,6 @@ app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 # Security headers middleware
 app.add_middleware(SecurityHeadersMiddleware)
-
-# IP access control middleware
-app.add_middleware(IPAccessControlMiddleware)
 
 # CORS middleware
 app.add_middleware(

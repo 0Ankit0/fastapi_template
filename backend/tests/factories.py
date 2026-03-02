@@ -6,7 +6,6 @@ from factory.declarations import LazyAttribute
 from src.apps.iam.models.user import User, UserProfile
 from src.apps.iam.models.login_attempt import LoginAttempt
 from src.apps.iam.models.token_tracking import TokenTracking
-from src.apps.iam.models.ip_access_control import IPAccessControl, IpAccessStatus
 from src.apps.core import security
 from src.apps.core.security import TokenType
 
@@ -71,17 +70,3 @@ class TokenTrackingFactory(Factory):
     is_active = True
     created_at = LazyAttribute(lambda _: datetime.now(timezone.utc))
     expires_at = LazyAttribute(lambda _: datetime.now(timezone.utc))
-
-
-class IPAccessControlFactory(Factory):
-    """Factory for creating IPAccessControl instances."""
-    
-    class Meta(): # type: ignore
-        model = IPAccessControl
-    
-    user_id = Faker("random_int", min=1, max=1000)
-    ip_address = Faker("ipv4")
-    status = IpAccessStatus.WHITELISTED
-    reason = "Test IP"
-    last_seen = LazyAttribute(lambda _: datetime.now(timezone.utc))
-    created_at = LazyAttribute(lambda _: datetime.now(timezone.utc))

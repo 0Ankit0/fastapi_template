@@ -11,7 +11,6 @@ import {
   CreditCard,
   Shield,
   Key,
-  Globe,
   Users,
 } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/use-users';
@@ -25,7 +24,6 @@ const navigation = [
   { name: 'Notifications', href: '/notifications', icon: Bell },
   { name: 'Roles & Permissions', href: '/rbac', icon: Shield },
   { name: 'Active Sessions', href: '/tokens', icon: Key },
-  { name: 'IP Access', href: '/ip-access', icon: Globe },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 

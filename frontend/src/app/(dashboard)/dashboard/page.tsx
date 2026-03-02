@@ -3,21 +3,18 @@
 import { useAuthStore } from '@/store/auth-store';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useTokens } from '@/hooks/use-tokens';
-import { useIPAccessControls } from '@/hooks/use-ip-access';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Bell, Shield, Key, Globe, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
+import { Bell, Shield, Key, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
   const { data: notifData, isLoading: loadingNotifs } = useNotifications({ limit: 5 });
   const { data: tokenData } = useTokens({ limit: 1 });
-  const { data: ipData } = useIPAccessControls({ limit: 1 });
 
   const recentNotifs = notifData?.items ?? [];
   const unreadCount = notifData?.unread_count ?? 0;
   const activeSessions = tokenData?.total ?? 0;
-  const ipEntries = ipData?.total ?? 0;
 
   const stats = [
     {
@@ -33,13 +30,6 @@ export default function DashboardPage() {
       icon: Key,
       href: '/tokens',
       color: 'text-purple-600 bg-purple-50',
-    },
-    {
-      name: 'IP Rules',
-      value: String(ipEntries),
-      icon: Globe,
-      href: '/ip-access',
-      color: 'text-green-600 bg-green-50',
     },
     {
       name: '2FA Status',
@@ -137,7 +127,6 @@ export default function DashboardPage() {
               {[
                 { href: '/profile', icon: Shield, label: 'Security Settings', desc: 'Manage 2FA & password', color: 'text-blue-600' },
                 { href: '/tokens', icon: Key, label: 'Active Sessions', desc: 'View & revoke sessions', color: 'text-purple-600' },
-                { href: '/ip-access', icon: Globe, label: 'IP Access', desc: 'Manage allowed IPs', color: 'text-green-600' },
                 { href: '/notifications', icon: Bell, label: 'Notifications', desc: `${unreadCount} unread`, color: 'text-orange-600' },
               ].map((item) => (
                 <Link

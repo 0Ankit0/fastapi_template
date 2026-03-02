@@ -18,7 +18,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.apps.core import security
 from src.apps.core.security import TokenType
-from src.apps.iam.models.ip_access_control import IPAccessControl, IpAccessStatus
 from src.apps.iam.models.token_tracking import TokenTracking
 from src.apps.websocket.crypto import (
     decrypt,
@@ -247,16 +246,6 @@ class TestWSRestEndpoints:
         db_session.add(user)
         await db_session.commit()
         await db_session.refresh(user)
-
-        # Whitelist both testclient and 127.0.0.1 (httpx uses testclient)
-        for ip in ("testclient", "127.0.0.1"):
-            db_session.add(IPAccessControl(
-                user_id=user.id,
-                ip_address=ip,
-                status=IpAccessStatus.WHITELISTED,
-                reason="test",
-            ))
-        await db_session.commit()
         return user
 
     async def _get_token(self, client: AsyncClient, db_session: AsyncSession):
@@ -350,12 +339,6 @@ class TestWSHandshakeAndMessages:
         )
         db_session.add(tracking)
 
-        # Whitelist IP
-        ip = IPAccessControl(
-            user_id=user.id, ip_address="127.0.0.1",
-            status=IpAccessStatus.WHITELISTED, reason="test",
-        )
-        db_session.add(ip)
         await db_session.commit()
         return user, token, jti
 

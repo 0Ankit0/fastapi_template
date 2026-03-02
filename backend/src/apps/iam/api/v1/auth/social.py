@@ -13,9 +13,8 @@ from src.apps.core import security
 from src.apps.core.config import OAUTH_PROVIDERS, settings
 from src.apps.core.security import TokenType
 from src.apps.iam.api.deps import get_db
-from src.apps.iam.models.ip_access_control import IpAccessStatus
 from src.apps.iam.models.token_tracking import TokenTracking
-from src.apps.iam.utils.ip_access import upsert_ip_access, revoke_tokens_for_ip, get_client_ip
+from src.apps.iam.utils.ip_access import revoke_tokens_for_ip, get_client_ip
 from src.apps.iam.utils.social import (
     extract_user_info,
     find_or_create_social_user,
@@ -169,11 +168,9 @@ async def social_callback(
     ip_address = get_client_ip(request)
     user_agent = request.headers.get("user-agent", "unknown")
 
-    await upsert_ip_access(db, user.id, ip_address, IpAccessStatus.WHITELISTED, f"Social login via {provider}")
-
     # Issue application JWT tokens
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = security.create_access_token(user.id, expires_delta=access_token_expires, ip_address=ip_address)
+    access_token = security.create_access_token(user.id, expires_delta=access_token_expires)
     refresh_token = security.create_refresh_token(user.id)
 
     access_payload = jwt.decode(access_token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])

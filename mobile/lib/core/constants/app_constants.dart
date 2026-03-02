@@ -15,6 +15,5 @@ class AppConstants {
   static const String settingsRoute = '/home/settings';
   static const String profileRoute = '/home/profile';
   static const String tokensRoute = '/home/settings/tokens';
-  static const String ipAccessRoute = '/home/settings/ip-access';
   static const String paymentsRoute = '/home/payments';
 }

@@ -86,37 +86,3 @@ class EmailService:
         }
         send_verification_email_task.delay(user_data, verification_url)
         logger.info(f"Verification email task queued for user: {user.email}")
-
-    @staticmethod
-    async def send_new_ip_notification(user, ip_address: str, whitelist_token: str, blacklist_token: str) -> None:
-        """Send notification email when a new IP attempts to access the account"""
-        from src.apps.core import security
-        from src.apps.iam.tasks import send_new_ip_notification_task
-        
-        # Create secure URL tokens with embedded data
-        whitelist_secure = security.create_secure_url_token({
-            "user_id": user.id,
-            "ip_address": ip_address,
-            "token": whitelist_token,
-            "action": "whitelist",
-            "purpose": "ip_action"
-        }, expires_hours=24)
-        
-        blacklist_secure = security.create_secure_url_token({
-            "user_id": user.id,
-            "ip_address": ip_address,
-            "token": blacklist_token,
-            "action": "blacklist",
-            "purpose": "ip_action"
-        }, expires_hours=24)
-        
-        whitelist_url = f"{settings.FRONTEND_URL}/ip-access/verify?t={whitelist_secure}"
-        blacklist_url = f"{settings.FRONTEND_URL}/ip-access/verify?t={blacklist_secure}"
-        
-        user_data = {
-            "username": user.username,
-            "email": user.email,
-            "first_name": getattr(user, 'first_name', '')
-        }
-        send_new_ip_notification_task.delay(user_data, ip_address, whitelist_url, blacklist_url)
-        logger.info(f"New IP notification task queued for user: {user.email}")

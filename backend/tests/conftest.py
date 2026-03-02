@@ -81,13 +81,12 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     # Mock email service to avoid sending real emails
     with patch("src.apps.iam.services.email.EmailService.send_welcome_email", new_callable=AsyncMock):
         with patch("src.apps.iam.services.email.EmailService.send_verification_email", new_callable=AsyncMock):
-            with patch("src.apps.iam.services.email.EmailService.send_new_ip_notification", new_callable=AsyncMock):
-                with patch("src.apps.iam.services.email.EmailService.send_password_reset_email", new_callable=AsyncMock):
-                    async with AsyncClient(
-                        transport=ASGITransport(app=app),
-                        base_url="http://test"
-                    ) as test_client:
-                        yield test_client
+            with patch("src.apps.iam.services.email.EmailService.send_password_reset_email", new_callable=AsyncMock):
+                async with AsyncClient(
+                    transport=ASGITransport(app=app),
+                    base_url="http://test"
+                ) as test_client:
+                    yield test_client
     
     # Restore rate limiting after test
     if original_enabled is not None:

@@ -11,12 +11,11 @@ from src.apps.core.security import TokenType
 from src.apps.iam.api.deps import get_current_user, get_db
 from src.apps.iam.models.user import User, UserProfile
 from src.apps.iam.models.token_tracking import TokenTracking
-from src.apps.iam.models.ip_access_control import IPAccessControl, IpAccessStatus
 from src.apps.iam.schemas.token import Token
 from src.apps.iam.schemas.user import UserCreate
 from src.apps.core.cache import RedisCache
 
-from src.apps.iam.utils.ip_access import upsert_ip_access, revoke_tokens_for_ip, get_client_ip
+from src.apps.iam.utils.ip_access import revoke_tokens_for_ip, get_client_ip
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -37,19 +36,6 @@ async def signup(
     ip_address = get_client_ip(request)
     
     try:
-        # Check if this IP is globally blacklisted for any existing user
-        blacklist_check = await db.execute(
-            select(IPAccessControl).where(
-                IPAccessControl.ip_address == ip_address,
-                IPAccessControl.status == IpAccessStatus.BLACKLISTED
-            )
-        )
-        if blacklist_check.scalars().first():
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Your IP address has been blacklisted"
-            )
-        
         result = await db.execute(
             select(User).where(User.username == login_data.username)
         )
@@ -82,10 +68,6 @@ async def signup(
         # Invalidate users list cache
         await RedisCache.clear_pattern("users:list:*")
         
-        # Whitelist the current IP address on signup
-        await upsert_ip_access(db, new_user.id, ip_address, IpAccessStatus.WHITELISTED, "Initial signup IP")
-        await db.commit()
-
         from src.apps.iam.services.email import EmailService
         await EmailService.send_welcome_email(new_user)
         

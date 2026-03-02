@@ -7,9 +7,7 @@ from tests.factories import (
     UserProfileFactory,
     LoginAttemptFactory,
     TokenTrackingFactory,
-    IPAccessControlFactory
 )
-from src.apps.iam.models.ip_access_control import IpAccessStatus
 from src.apps.core.security import TokenType
 
 
@@ -97,28 +95,3 @@ class TestTokenTrackingFactory:
         """Test creating refresh token tracking."""
         tracking = TokenTrackingFactory.build(token_type=TokenType.REFRESH)
         assert tracking.token_type == TokenType.REFRESH
-
-
-class TestIPAccessControlFactory:
-    """Test IPAccessControlFactory."""
-    
-    def test_create_ip_control(self):
-        """Test creating IP access control with factory."""
-        ip_control = IPAccessControlFactory.build()
-        assert ip_control.user_id is not None
-        assert ip_control.ip_address is not None
-        assert ip_control.status == IpAccessStatus.WHITELISTED
-    
-    def test_create_blacklisted_ip(self):
-        """Test creating blacklisted IP control."""
-        ip_control = IPAccessControlFactory.build(
-            status=IpAccessStatus.BLACKLISTED,
-            reason="Suspicious activity"
-        )
-        assert ip_control.status == IpAccessStatus.BLACKLISTED
-        assert ip_control.reason == "Suspicious activity"
-    
-    def test_create_pending_ip(self):
-        """Test creating pending IP control."""
-        ip_control = IPAccessControlFactory.build(status=IpAccessStatus.PENDING)
-        assert ip_control.status == IpAccessStatus.PENDING

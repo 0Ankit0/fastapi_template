@@ -14,11 +14,10 @@ from src.apps.iam.api.deps import get_current_user, get_db
 from src.apps.iam.models.user import User
 from src.apps.iam.models.login_attempt import LoginAttempt
 from src.apps.iam.models.token_tracking import TokenTracking
-from src.apps.iam.models.ip_access_control import IPAccessControl, IpAccessStatus
 from src.apps.iam.schemas.token import Token
 from src.apps.iam.schemas.user import LoginRequest
 
-from src.apps.iam.utils.ip_access import upsert_ip_access, revoke_tokens_for_ip, get_client_ip
+from src.apps.iam.utils.ip_access import revoke_tokens_for_ip, get_client_ip
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -97,77 +96,6 @@ async def login_access_token(
                 detail="Inactive user"
             )
         
-        # Check IP access control before allowing login
-        ip_check_result = await db.execute(
-            select(IPAccessControl).where(
-                IPAccessControl.user_id == user.id,
-                IPAccessControl.ip_address == ip_address
-            )
-        )
-        ip_control = ip_check_result.scalars().first()
-        
-        if ip_control:
-            if ip_control.status == IpAccessStatus.BLACKLISTED:
-                login_attempt = LoginAttempt(
-                    user_id=user.id,
-                    ip_address=ip_address,
-                    user_agent=user_agent,
-                    success=False,
-                    failure_reason="IP address is blacklisted"
-                )
-                db.add(login_attempt)
-                await db.commit()
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Your IP address has been blacklisted"
-                )
-            elif ip_control.status == IpAccessStatus.PENDING:
-                login_attempt = LoginAttempt(
-                    user_id=user.id,
-                    ip_address=ip_address,
-                    user_agent=user_agent,
-                    success=False,
-                    failure_reason="IP access pending approval"
-                )
-                db.add(login_attempt)
-                await db.commit()
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Access from this IP is pending approval. Please check your email."
-                )
-        else:
-            if not user.id:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="User not found"
-                )
-            # New IP detected - create pending entry and send notification email
-            await upsert_ip_access(db, user.id, ip_address, IpAccessStatus.PENDING, "New IP detected during login")
-            await db.commit()
-            
-            # Generate tokens for whitelist/blacklist actions
-            whitelist_token = security.create_ip_action_token(user.id, ip_address, "whitelist")
-            blacklist_token = security.create_ip_action_token(user.id, ip_address, "blacklist")
-            
-            # Send notification email
-            from src.apps.iam.services.email import EmailService
-            await EmailService.send_new_ip_notification(user, ip_address, whitelist_token, blacklist_token)
-            
-            login_attempt = LoginAttempt(
-                user_id=user.id,
-                ip_address=ip_address,
-                user_agent=user_agent,
-                success=False,
-                failure_reason="New IP detected - pending approval"
-            )
-            db.add(login_attempt)
-            await db.commit()
-            
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="New IP detected. Please check your email to approve this IP address."
-            )
-        
         # Check if OTP is enabled for this user
         if user.otp_enabled and user.otp_verified:
             temp_token = security.create_temp_auth_token(user.id)
@@ -189,7 +117,7 @@ async def login_access_token(
         
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = security.create_access_token(
-            user.id, expires_delta=access_token_expires, ip_address=ip_address
+            user.id, expires_delta=access_token_expires
         )
         refresh_token = security.create_refresh_token(user.id)
         

@@ -8,7 +8,6 @@ from datetime import datetime, timezone
 from src.apps.iam.models.login_attempt import LoginAttempt
 from src.apps.iam.models.user import User
 from src.apps.iam.models.token_tracking import TokenTracking
-from src.apps.iam.models.ip_access_control import IPAccessControl, IpAccessStatus
 from src.apps.core import security
 from src.apps.core.security import TokenType
 
@@ -31,15 +30,6 @@ class TestTokenTracking:
         db_session.add(user)
         await db_session.commit()
         await db_session.refresh(user)
-        
-        ip_control = IPAccessControl(
-            user_id=user.id,
-            ip_address="127.0.0.1",
-            status=IpAccessStatus.WHITELISTED,
-            reason="Test"
-        )
-        db_session.add(ip_control)
-        await db_session.commit()
         
         # Login
         response = await client.post(
@@ -128,15 +118,6 @@ class TestLoginAttemptTracking:
         db_session.add(user)
         await db_session.commit()
         await db_session.refresh(user)
-        
-        ip_control = IPAccessControl(
-            user_id=user.id,
-            ip_address="127.0.0.1",
-            status=IpAccessStatus.WHITELISTED,
-            reason="Test"
-        )
-        db_session.add(ip_control)
-        await db_session.commit()
         
         # Login
         response = await client.post(

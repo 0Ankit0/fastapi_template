@@ -176,30 +176,6 @@ class TestTempAuthToken:
         assert payload["type"] == TokenType.TEMP_AUTH.value
 
 
-class TestIPActionToken:
-    """Test IP whitelist/blacklist action tokens."""
-    
-    def test_create_ip_whitelist_token(self):
-        """Test creating an IP whitelist token."""
-        user_id = 303
-        ip_address = "192.168.1.1"
-        token = security.create_ip_action_token(user_id, ip_address, "whitelist")
-        
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
-        assert payload["sub"] == str(user_id)
-        assert payload["ip"] == ip_address
-        assert payload["type"] == TokenType.IP_WHITELIST.value
-    
-    def test_create_ip_blacklist_token(self):
-        """Test creating an IP blacklist token."""
-        user_id = 303
-        ip_address = "192.168.1.2"
-        token = security.create_ip_action_token(user_id, ip_address, "blacklist")
-        
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
-        assert payload["type"] == TokenType.IP_BLACKLIST.value
-
-
 class TestSecureUrlToken:
     """Test secure URL token creation and verification."""
     

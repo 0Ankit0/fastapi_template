@@ -77,13 +77,6 @@ export {
 export { useTokens, useRevokeToken, useRevokeAllTokens } from './use-tokens';
 
 export {
-  useIPAccessControls,
-  useIPAccessControl,
-  useUpdateIPAccess,
-  useVerifyIPToken,
-} from './use-ip-access';
-
-export {
   useWebSocket,
   useNotificationWebSocket,
   useTenantWebSocket,

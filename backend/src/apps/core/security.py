@@ -21,14 +21,11 @@ class TokenType(str, Enum):
     EMAIL_VERIFICATION = "email_verification"
     TEMP_AUTH = "temp_auth"
     BEARER = "bearer"
-    IP_WHITELIST = "ip_whitelist"
-    IP_BLACKLIST = "ip_blacklist"
 
 
 def create_access_token(
     subject: Union[str, Any],
     expires_delta: timedelta | None = None,
-    ip_address: str | None = None,
 ) -> str:
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
@@ -41,8 +38,6 @@ def create_access_token(
         "type": TokenType.ACCESS.value,
         "jti": str(uuid.uuid4()),
     }
-    if ip_address:
-        to_encode["ip"] = ip_address
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
@@ -92,20 +87,6 @@ def create_temp_auth_token(subject: Union[str, Any]) -> str:
         "exp": expire,
         "sub": str(subject),
         "type": TokenType.TEMP_AUTH.value,
-        "jti": str(uuid.uuid4())
-    }
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
-
-def create_ip_action_token(user_id: int, ip_address: str, action: str) -> str:
-    """Create a token for IP whitelist/blacklist action, valid for 24 hours"""
-    expire = datetime.now(timezone.utc) + timedelta(hours=24)
-    token_type = TokenType.IP_WHITELIST if action == "whitelist" else TokenType.IP_BLACKLIST
-    to_encode = {
-        "exp": expire,
-        "sub": str(user_id),
-        "ip": ip_address,
-        "type": token_type.value,
         "jti": str(uuid.uuid4())
     }
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)

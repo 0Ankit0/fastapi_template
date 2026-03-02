@@ -36,14 +36,6 @@ class HomeTab extends StatelessWidget {
             color: Colors.teal,
             onTap: () => context.go('/home/settings/tokens'),
           ),
-          const SizedBox(height: 8),
-          _QuickAccessCard(
-            icon: Icons.security,
-            title: 'IP Access Control',
-            subtitle: 'Manage IP whitelist / blacklist',
-            color: Colors.orange,
-            onTap: () => context.go('/home/settings/ip-access'),
-          ),
         ],
       ),
     );

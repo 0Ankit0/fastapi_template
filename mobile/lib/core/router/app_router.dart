@@ -11,7 +11,6 @@ import '../../features/notifications/presentation/pages/notifications_page.dart'
 import '../../features/payments/presentation/pages/payments_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/presentation/pages/tokens_page.dart';
-import '../../features/profile/presentation/pages/ip_access_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../constants/app_constants.dart';
 
@@ -108,10 +107,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'tokens',
                     builder: (context, state) => const TokensPage(),
-                  ),
-                  GoRoute(
-                    path: 'ip-access',
-                    builder: (context, state) => const IpAccessPage(),
                   ),
                 ],
               ),

@@ -9,6 +9,4 @@ class AppColors {
   static const Color success = Color(0xFF4CAF50);
   static const Color warning = Color(0xFFFF9800);
   static const Color pending = Color(0xFFFF9800);
-  static const Color whitelisted = Color(0xFF4CAF50);
-  static const Color blacklisted = Color(0xFFB3261E);
 }

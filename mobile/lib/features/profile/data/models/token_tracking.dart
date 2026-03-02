@@ -4,9 +4,7 @@ enum TokenType {
   passwordReset,
   emailVerification,
   tempAuth,
-  bearer,
-  ipWhitelist,
-  ipBlacklist;
+  bearer;
 
   static TokenType fromString(String v) {
     switch (v) {
@@ -22,10 +20,6 @@ enum TokenType {
         return TokenType.tempAuth;
       case 'bearer':
         return TokenType.bearer;
-      case 'ip_whitelist':
-        return TokenType.ipWhitelist;
-      case 'ip_blacklist':
-        return TokenType.ipBlacklist;
       default:
         return TokenType.access;
     }
@@ -45,10 +39,6 @@ enum TokenType {
         return 'temp_auth';
       case TokenType.bearer:
         return 'bearer';
-      case TokenType.ipWhitelist:
-        return 'ip_whitelist';
-      case TokenType.ipBlacklist:
-        return 'ip_blacklist';
     }
   }
 }

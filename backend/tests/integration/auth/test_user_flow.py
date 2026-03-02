@@ -4,7 +4,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from src.apps.iam.models.user import User
-from src.apps.iam.models.ip_access_control import IPAccessControl, IpAccessStatus
 from src.apps.core import security
 
 
@@ -73,16 +72,6 @@ class TestCompleteUserFlow:
         await db_session.commit()
         await db_session.refresh(user)
         
-        # Whitelist IP
-        ip_control = IPAccessControl(
-            user_id=user.id,
-            ip_address="127.0.0.1",
-            status=IpAccessStatus.WHITELISTED,
-            reason="Test"
-        )
-        db_session.add(ip_control)
-        await db_session.commit()
-        
         # Login to get tokens
         login_response = await client.post(
             "/api/v1/auth/login/?set_cookie=false",
@@ -105,40 +94,3 @@ class TestCompleteUserFlow:
         assert "refresh" in new_tokens
         assert new_tokens["access"] != tokens["access"]
         assert new_tokens["refresh"] != tokens["refresh"]
-
-
-class TestIPAccessFlow:
-    """Test IP access control flow."""
-    
-    @pytest.mark.asyncio
-    async def test_signup_whitelists_ip(self, client: AsyncClient, db_session: AsyncSession):
-        """Test that signup automatically whitelists the IP."""
-        signup_data = {
-            "username": "ipuser",
-            "email": "ip@example.com",
-            "password": "TestPass123",
-            "confirm_password": "TestPass123"
-        }
-        
-        response = await client.post(
-            "/api/v1/auth/signup/?set_cookie=false",
-            json=signup_data
-        )
-        
-        assert response.status_code == 200
-        
-        # Check IP was whitelisted
-        result = await db_session.execute(
-            select(User).where(User.username == "ipuser")
-        )
-        user = result.scalars().first()
-        assert user is not None
-        
-        ip_result = await db_session.execute(
-            select(IPAccessControl).where(
-                IPAccessControl.user_id == user.id
-            )
-        )
-        ip_control = ip_result.scalars().first()
-        assert ip_control is not None
-        assert ip_control.status == IpAccessStatus.WHITELISTED

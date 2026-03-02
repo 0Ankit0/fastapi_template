@@ -4,7 +4,6 @@ from unittest.mock import AsyncMock, patch
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.apps.iam.models.ip_access_control import IPAccessControl, IpAccessStatus
 from src.apps.core import security
 from src.apps.notification.models.notification import Notification, NotificationType
 from src.apps.notification.schemas.notification import NotificationCreate
@@ -34,15 +33,6 @@ async def _make_user(db: AsyncSession, **kwargs):
     db.add(user)
     await db.commit()
     await db.refresh(user)
-    # Whitelist IP so auth works in client tests
-    ip = IPAccessControl(
-        user_id=user.id,
-        ip_address="127.0.0.1",
-        status=IpAccessStatus.WHITELISTED,
-        reason="Test",
-    )
-    db.add(ip)
-    await db.commit()
     return user
 
 

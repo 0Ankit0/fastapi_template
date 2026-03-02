@@ -6,14 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from src.apps.iam.models.user import User
 from src.apps.iam.models.token_tracking import TokenTracking
-from src.apps.iam.models.ip_access_control import IPAccessControl, IpAccessStatus
 from src.db.session import get_session
 from pydantic import ValidationError
 from jose import JWTError, jwt
 from src.apps.core.config import settings
 from src.apps.core import security
 from src.apps.iam.schemas.token import TokenPayload
-from src.apps.iam.utils.ip_access import get_client_ip
 
 # HTTPBearer with auto_error=False so cookie fallback still works,
 # but FastAPI registers the BearerAuth security scheme on all
@@ -78,23 +76,6 @@ async def get_current_user(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token has been revoked or is invalid"
             )
-        
-        # Verify IP matches the one used to create token (if strict mode)
-        current_ip = get_client_ip(request)
-        if token_tracking.ip_address != current_ip:
-            # Check if current IP is whitelisted for this user
-            ip_result = await db.execute(
-                select(IPAccessControl).where(
-                    IPAccessControl.user_id == int(token_data.sub),
-                    IPAccessControl.ip_address == current_ip,
-                    IPAccessControl.status == IpAccessStatus.WHITELISTED
-                )
-            )
-            if not ip_result.scalars().first():
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Token cannot be used from this IP address"
-                )
     
     result = await db.execute(
         select(User).options(selectinload(User.profile)).where(User.id == int(token_data.sub)) # type: ignore

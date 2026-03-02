@@ -320,14 +320,6 @@ class _PrivacyTab extends ConsumerWidget {
             buttonLabel: 'Manage Sessions',
             onTap: () => context.go(AppConstants.tokensRoute),
           ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.05),
-          const SizedBox(height: 12),
-          _PrivacyCard(
-            icon: Icons.security_outlined,
-            title: 'IP Access Rules',
-            subtitle: 'Manage IP whitelist and blacklist',
-            buttonLabel: 'Manage Rules',
-            onTap: () => context.go(AppConstants.ipAccessRoute),
-          ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.05),
           const SizedBox(height: 24),
           const _SectionHeader(label: 'Danger Zone'),
           Card(

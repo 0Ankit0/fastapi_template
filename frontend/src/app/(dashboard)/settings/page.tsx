@@ -17,7 +17,6 @@ import {
   CheckCircle2,
   XCircle,
   Key,
-  Globe,
   RefreshCw,
   ExternalLink,
 } from 'lucide-react';
@@ -278,27 +277,6 @@ export default function SettingsPage() {
                     <Button variant="outline" size="sm">
                       <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
                       Manage sessions
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Globe className="h-5 w-5" />
-                    IP Access Rules
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <p className="text-sm text-gray-600">
-                    Restrict account access to specific IP addresses. Any IP not on the allowlist
-                    will be blocked from signing in.
-                  </p>
-                  <Link href="/ip-access">
-                    <Button variant="outline" size="sm">
-                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                      Manage IP rules
                     </Button>
                   </Link>
                 </CardContent>
