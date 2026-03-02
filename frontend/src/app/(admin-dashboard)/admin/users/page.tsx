@@ -1,14 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   useListUsers,
   useGetUser,
   useUpdateUser,
   useDeleteUser,
 } from '@/hooks/use-users';
-import { useCurrentUser } from '@/hooks/use-users';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -147,8 +145,6 @@ function EditUserModal({ user, onClose }: { user: User; onClose: () => void }) {
 }
 
 export default function AdminUsersPage() {
-  const { data: currentUser } = useCurrentUser();
-  const router = useRouter();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -156,12 +152,6 @@ export default function AdminUsersPage() {
 
   const { data, isLoading } = useListUsers({ skip: page * limit, limit, search: search || undefined });
   const deleteUser = useDeleteUser();
-
-  // Guard: superuser only
-  if (currentUser && !currentUser.is_superuser) {
-    router.replace('/dashboard');
-    return null;
-  }
 
   const users = data?.items ?? [];
   const total = data?.total ?? 0;
