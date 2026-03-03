@@ -3,6 +3,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth-store';
+import { analytics } from '@/lib/analytics';
+import { TenantEvents } from '@/lib/analytics/events';
 import type {
   Tenant,
   TenantWithMembers,
@@ -51,8 +53,10 @@ export function useCreateTenant() {
       const response = await apiClient.post<Tenant>('/tenants/', data);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
+      analytics.capture(TenantEvents.TENANT_CREATED, { name: data.name });
+      analytics.group('organization', data.id, { name: data.name });
     },
   });
 }
@@ -170,6 +174,7 @@ export function useCreateInvitation() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['tenants', variables.tenantId, 'invitations'] });
+      analytics.capture(TenantEvents.TENANT_MEMBER_INVITED, { tenant_id: variables.tenantId });
     },
   });
 }
@@ -184,6 +189,7 @@ export function useAcceptInvitation() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
+      analytics.capture(TenantEvents.TENANT_MEMBER_JOINED);
     },
   });
 }
@@ -214,6 +220,9 @@ export function useSwitchTenant() {
     mutationFn: async (tenant: Tenant) => {
       setTenant(tenant);
       return tenant;
+    },
+    onSuccess: (tenant) => {
+      analytics.group('organization', tenant.id, { name: tenant.name });
     },
   });
 }

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/error/error_handler.dart';
+import '../../../../core/analytics/analytics_provider.dart';
+import '../../../../core/analytics/analytics_events.dart';
 import '../../../../features/auth/data/models/otp_setup_response.dart';
 import '../../../../features/auth/data/models/user.dart';
 import '../../../../features/auth/presentation/providers/auth_provider.dart';
@@ -88,6 +90,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         'phone': _phoneController.text.trim(),
       });
       ref.read(authNotifierProvider.notifier).updateUser(updated);
+      ref.read(analyticsServiceProvider).capture(UserAnalyticsEvents.profileUpdated);
       _showSnack('Profile updated successfully');
     } catch (e) {
       _showSnack(ErrorHandler.handle(e).message, error: true);
@@ -110,6 +113,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       _newPwController.clear();
       _confirmPwController.clear();
       _showSnack('Password changed successfully');
+      ref.read(analyticsServiceProvider).capture(AuthAnalyticsEvents.passwordChanged);
     } catch (e) {
       _showSnack(ErrorHandler.handle(e).message, error: true);
     } finally {
@@ -145,6 +149,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       ref.read(authNotifierProvider.notifier).updateUser(updated);
       setState(() => _otpSetupResult = null);
       _otpConfirmController.clear();
+      ref.read(analyticsServiceProvider).capture(AuthAnalyticsEvents.otpEnabled);
       _showSnack('Two-factor authentication enabled!');
     } catch (e) {
       _showSnack(ErrorHandler.handle(e).message, error: true);
@@ -197,6 +202,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       _disablePwController.clear();
       final updated = await repo.getMe();
       ref.read(authNotifierProvider.notifier).updateUser(updated);
+      ref.read(analyticsServiceProvider).capture(AuthAnalyticsEvents.otpDisabled);
       _showSnack('Two-factor authentication disabled');
     } catch (e) {
       _showSnack(ErrorHandler.handle(e).message, error: true);
@@ -247,6 +253,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         final updated =
             await repo.updateMe({'image_url': urlController.text.trim()});
         ref.read(authNotifierProvider.notifier).updateUser(updated);
+        ref.read(analyticsServiceProvider).capture(UserAnalyticsEvents.avatarUploaded);
         _showSnack('Avatar updated');
       } catch (e) {
         _showSnack(ErrorHandler.handle(e).message, error: true);

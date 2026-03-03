@@ -3,6 +3,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth-store';
+import { analytics } from '@/lib/analytics';
+import { AuthEvents } from '@/lib/analytics/events';
 import type {
   LoginCredentials,
   SignupData,
@@ -34,6 +36,7 @@ export function useAuth() {
       const tokens = data as AuthTokens;
       setTokens(tokens.access, tokens.refresh);
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
+      analytics.capture(AuthEvents.LOGGED_IN, { method: 'email' });
     },
   });
 
@@ -49,6 +52,7 @@ export function useAuth() {
     onSuccess: (data) => {
       setTokens(data.access, data.refresh);
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
+      analytics.capture(AuthEvents.SIGNED_UP);
     },
   });
 
@@ -56,8 +60,10 @@ export function useAuth() {
     queryKey: ['currentUser'],
     queryFn: async () => {
       const response = await apiClient.get<User>('/users/me/');
-      setUser(response.data);
-      return response.data;
+      const u = response.data;
+      setUser(u);
+      analytics.identify(String(u.id), { email: u.email, username: u.username });
+      return u;
     },
     enabled: typeof window !== 'undefined' && !!localStorage.getItem('access_token'),
   });
@@ -68,6 +74,8 @@ export function useAuth() {
     } catch {
       // ignore logout errors
     } finally {
+      analytics.capture(AuthEvents.LOGGED_OUT);
+      analytics.reset();
       storeLogout();
       queryClient.clear();
       if (typeof window !== 'undefined') {
@@ -107,6 +115,7 @@ export function useVerifyOTP() {
     onSuccess: (data) => {
       setTokens(data.access, data.refresh);
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
+      analytics.capture(AuthEvents.LOGGED_IN, { method: 'otp' });
     },
   });
 }
@@ -130,6 +139,7 @@ export function useConfirmOTP() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
+      analytics.capture(AuthEvents.OTP_ENABLED);
     },
   });
 }
@@ -144,6 +154,7 @@ export function useDisableOTP() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
+      analytics.capture(AuthEvents.OTP_DISABLED);
     },
   });
 }
@@ -154,6 +165,9 @@ export function useRequestPasswordReset() {
       const response = await apiClient.post('/auth/password-reset-request/', data);
       return response.data;
     },
+    onSuccess: () => {
+      analytics.capture(AuthEvents.PASSWORD_RESET_REQUESTED);
+    },
   });
 }
 
@@ -162,6 +176,9 @@ export function useConfirmPasswordReset() {
     mutationFn: async (data: ResetPasswordConfirmData) => {
       const response = await apiClient.post('/auth/password-reset-confirm/', data);
       return response.data;
+    },
+    onSuccess: () => {
+      analytics.capture(AuthEvents.PASSWORD_RESET_COMPLETED);
     },
   });
 }
@@ -172,6 +189,9 @@ export function useChangePassword() {
       const response = await apiClient.post('/auth/change-password/', data);
       return response.data;
     },
+    onSuccess: () => {
+      analytics.capture(AuthEvents.PASSWORD_CHANGED);
+    },
   });
 }
 
@@ -180,6 +200,9 @@ export function useVerifyEmail() {
     mutationFn: async (t: string) => {
       const response = await apiClient.post('/auth/verify-email/', null, { params: { t } });
       return response.data;
+    },
+    onSuccess: () => {
+      analytics.capture(AuthEvents.EMAIL_VERIFIED);
     },
   });
 }
@@ -192,3 +215,4 @@ export function useResendVerification() {
     },
   });
 }
+

@@ -21,13 +21,16 @@ from src.apps.websocket.api import ws_router
 from src.apps.websocket.manager import manager as ws_manager
 from src.apps.core.cache import RedisCache
 from src.apps.notification.api import notification_router
+from src.apps.analytics import init_analytics, shutdown_analytics
+from src.apps.analytics.api import router as analytics_router
+from src.apps.analytics.middleware import AnalyticsMiddleware
 
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initialize DB tables, Casbin enforcer, Redis cache, and WebSocket manager on startup."""
+    """Initialize DB tables, Casbin enforcer, Redis cache, WebSocket manager, and Analytics on startup."""
     await init_db()
 
     enforcer = await CasbinEnforcer.get_enforcer(engine)
@@ -41,11 +44,15 @@ async def lifespan(app: FastAPI):
 
     app.state.ws_manager = ws_manager
 
+    # Analytics service (no-op when ANALYTICS_ENABLED=false)
+    app.state.analytics = init_analytics()
+
     yield
 
     # Cleanup on shutdown
     await ws_manager.teardown()
     await RedisCache.close()
+    await shutdown_analytics()
 
 app = FastAPI(
     lifespan=lifespan,
@@ -78,6 +85,9 @@ app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 # Security headers middleware
 app.add_middleware(SecurityHeadersMiddleware)
 
+# Analytics request-tracking middleware
+app.add_middleware(AnalyticsMiddleware)
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -99,6 +109,7 @@ app.include_router(finance_router, prefix=settings.API_V1_STR)
 app.include_router(multitenancy_router, prefix=settings.API_V1_STR)
 app.include_router(ws_router, prefix=settings.API_V1_STR)
 app.include_router(notification_router, prefix=settings.API_V1_STR)
+app.include_router(analytics_router, prefix=settings.API_V1_STR)
 
 # Serve uploaded media files (avatars, etc.)
 os.makedirs(settings.MEDIA_DIR, exist_ok=True)

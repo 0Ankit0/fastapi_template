@@ -14,6 +14,10 @@ class ApiEndpoints {
   static const String passwordResetConfirm = '/auth/password-reset-confirm/';
   static const String resendVerification = '/auth/resend-verification/';
 
+  // Social Auth
+  static const String socialProviders = '/auth/social/providers/';
+  static String socialLogin(String provider) => '/auth/social/$provider/';
+
   // OTP / 2FA
   static const String otpEnable = '/auth/otp/enable/';
   static const String otpVerify = '/auth/otp/verify/';

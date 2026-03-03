@@ -24,6 +24,37 @@ from src.apps.iam.utils.social import (
 
 router = APIRouter()
 
+# Maps provider name → its enabled setting flag
+_PROVIDER_ENABLED: dict[str, bool] = {
+    "google": settings.GOOGLE_ENABLED,
+    "github": settings.GITHUB_ENABLED,
+    "facebook": settings.FACEBOOK_ENABLED,
+}
+
+
+def _assert_provider_enabled(provider: str) -> None:
+    """Raise 400 if the provider is disabled or unknown."""
+    if provider not in OAUTH_PROVIDERS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Provider '{provider}' is not supported. Supported: {list(OAUTH_PROVIDERS.keys())}",
+        )
+    if not _PROVIDER_ENABLED.get(provider, False):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Social login with '{provider}' is not enabled.",
+        )
+
+
+@router.get(
+    "/social/providers/",
+    summary="List enabled social auth providers",
+    description="Returns a list of social OAuth2 providers that are currently enabled.",
+)
+async def list_social_providers() -> dict:
+    enabled = [p for p, on in _PROVIDER_ENABLED.items() if on]
+    return {"providers": enabled}
+
 
 @router.get(
     "/social/{provider}/",
@@ -31,11 +62,7 @@ router = APIRouter()
     description="Redirects the browser to the OAuth2 provider's login page. Supported: google, github, facebook.",
 )
 async def social_login(provider: str) -> RedirectResponse:
-    if provider not in OAUTH_PROVIDERS:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Provider '{provider}' is not supported. Supported: {list(OAUTH_PROVIDERS.keys())}",
-        )
+    _assert_provider_enabled(provider)
     config = OAUTH_PROVIDERS[provider]
     client_id, _ = get_provider_credentials(provider)
     params: dict[str, Any] = {
@@ -65,11 +92,7 @@ async def social_callback(
     set_cookie: bool = False,
     db: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
-    if provider not in OAUTH_PROVIDERS:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Provider '{provider}' is not supported",
-        )
+    _assert_provider_enabled(provider)
 
     if not security.verify_oauth_state(state, provider):
         raise HTTPException(

@@ -32,6 +32,7 @@ dependencies = [
     "paypalrestsdk>=1.13.3",
     "pywebpush>=2.0.0",
     "twilio>=9.0.0",
+    "posthog>=3.0.0",
 ]
 
 [dependency-groups]

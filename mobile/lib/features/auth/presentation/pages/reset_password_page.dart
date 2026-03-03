@@ -6,6 +6,8 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/error/error_handler.dart';
 import '../../../../core/providers/dio_provider.dart';
 import '../../../../core/network/api_endpoints.dart';
+import '../../../../core/analytics/analytics_provider.dart';
+import '../../../../core/analytics/analytics_events.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/loading_button.dart';
 
@@ -45,6 +47,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
         'confirm_password': _confirmPasswordController.text,
       });
       if (mounted) setState(() { _isLoading = false; _success = true; });
+      ref.read(analyticsServiceProvider).capture(AuthAnalyticsEvents.passwordResetCompleted);
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);

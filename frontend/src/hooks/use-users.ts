@@ -3,6 +3,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth-store';
+import { analytics } from '@/lib/analytics';
+import { UserEvents } from '@/lib/analytics/events';
 import type { User, UserUpdate, PaginatedResponse } from '@/types';
 
 export function useCurrentUser() {
@@ -30,6 +32,7 @@ export function useUpdateProfile() {
     onSuccess: (data) => {
       setUser(data);
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
+      analytics.capture(UserEvents.PROFILE_UPDATED);
     },
   });
 }

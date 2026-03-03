@@ -83,3 +83,5 @@ export {
   useWSStats,
   useWSIsOnline,
 } from './use-websocket';
+
+export { useAnalytics } from './use-analytics';

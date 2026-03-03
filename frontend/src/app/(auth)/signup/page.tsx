@@ -1,5 +1,7 @@
 import { SignupForm } from '@/components/auth/signup-form';
+import { getEnabledProviders } from '@/lib/oauth';
 
-export default function SignupPage() {
-  return <SignupForm />;
+export default async function SignupPage() {
+  const enabledProviders = await getEnabledProviders();
+  return <SignupForm enabledProviders={enabledProviders} />;
 }

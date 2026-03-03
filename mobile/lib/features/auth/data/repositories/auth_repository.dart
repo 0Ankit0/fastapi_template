@@ -169,4 +169,14 @@ class AuthRepository {
       throw ErrorHandler.handle(e);
     }
   }
+
+  Future<List<String>> getEnabledSocialProviders() async {
+    try {
+      final response = await _dioClient.dio.get(ApiEndpoints.socialProviders);
+      final data = response.data as Map<String, dynamic>;
+      return List<String>.from(data['providers'] as List? ?? []);
+    } catch (e) {
+      return [];
+    }
+  }
 }

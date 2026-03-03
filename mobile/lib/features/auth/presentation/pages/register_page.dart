@@ -3,9 +3,11 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/providers/dio_provider.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/loading_button.dart';
 import '../providers/auth_provider.dart';
+import 'social_auth_webview_page.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
@@ -36,6 +38,30 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           _emailController.text.trim(),
           _passwordController.text,
         );
+  }
+
+  Future<void> _socialLogin(String provider) async {
+    final result = await Navigator.of(context).push<SocialAuthResult>(
+      MaterialPageRoute(
+        builder: (_) => SocialAuthWebViewPage(provider: provider),
+        fullscreenDialog: true,
+      ),
+    );
+    if (result == null || !result.success) {
+      if (result?.error != null && result!.error != 'cancelled' && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Social login failed: ${result.error}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+    final secureStorage = ref.read(secureStorageProvider);
+    await secureStorage.saveAccessToken(result.accessToken!);
+    await secureStorage.saveRefreshToken(result.refreshToken!);
+    await ref.read(authNotifierProvider.notifier).refreshSession();
   }
 
   @override
@@ -125,6 +151,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   label: 'Create Account',
                 ).animate().fadeIn(delay: 500.ms),
                 const SizedBox(height: 24),
+                _SocialLoginSection(onSocialLogin: _socialLogin),
+                const SizedBox(height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -141,5 +169,72 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         ),
       ),
     );
+  }
+}
+
+/// Widget that fetches enabled social providers and shows sign-up buttons for each.
+class _SocialLoginSection extends ConsumerWidget {
+  final Future<void> Function(String provider) onSocialLogin;
+
+  const _SocialLoginSection({required this.onSocialLogin});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final providersAsync = ref.watch(socialProvidersProvider);
+
+    return providersAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (providers) {
+        if (providers.isEmpty) return const SizedBox.shrink();
+        return Column(
+          children: [
+            Row(
+              children: [
+                const Expanded(child: Divider()),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    'Or continue with',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: Colors.grey),
+                  ),
+                ),
+                const Expanded(child: Divider()),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: providers.map((provider) {
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: OutlinedButton(
+                      onPressed: () => onSocialLogin(provider),
+                      child: Text(_providerLabel(provider)),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  String _providerLabel(String provider) {
+    switch (provider) {
+      case 'google':
+        return 'Google';
+      case 'github':
+        return 'GitHub';
+      case 'facebook':
+        return 'Facebook';
+      default:
+        return provider[0].toUpperCase() + provider.substring(1);
+    }
   }
 }

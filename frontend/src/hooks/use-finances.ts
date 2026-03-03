@@ -2,6 +2,8 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { analytics } from '@/lib/analytics';
+import { PaymentEvents } from '@/lib/analytics/events';
 import type {
   InitiatePaymentRequest,
   InitiatePaymentResponse,
@@ -27,6 +29,13 @@ export function useInitiatePayment() {
       const response = await apiClient.post<InitiatePaymentResponse>('/payments/initiate/', data);
       return response.data;
     },
+    onSuccess: (data, variables) => {
+      analytics.capture(PaymentEvents.PAYMENT_INITIATED, {
+        provider: variables.provider,
+        amount: variables.amount,
+        order_id: variables.purchase_order_id,
+      });
+    },
   });
 }
 
@@ -37,8 +46,12 @@ export function useVerifyPayment() {
       const response = await apiClient.post<VerifyPaymentResponse>('/payments/verify/', data);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      analytics.capture(
+        data.status === 'completed' ? PaymentEvents.PAYMENT_COMPLETED : PaymentEvents.PAYMENT_FAILED,
+        { provider: data.provider, status: data.status },
+      );
     },
   });
 }

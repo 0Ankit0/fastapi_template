@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/payment.dart';
 import '../providers/payment_provider.dart';
+import '../../../../core/analytics/analytics_provider.dart';
+import '../../../../core/analytics/analytics_events.dart';
 import 'payment_utils.dart';
 import 'payment_webview_page.dart';
 
@@ -80,6 +82,15 @@ class _PaymentsPageState extends ConsumerState<PaymentsPage> {
             : _customerPhoneCtrl.text.trim(),
       ));
 
+      ref.read(analyticsServiceProvider).capture(
+        PaymentAnalyticsEvents.paymentInitiated,
+        {
+          'provider': _selectedProvider!.name,
+          'amount': nprAmount,
+          'order_id': _orderId!,
+        },
+      );
+
       if (!mounted) return;
       setState(() => _initiating = false);
 
@@ -117,6 +128,12 @@ class _PaymentsPageState extends ConsumerState<PaymentsPage> {
     if (!mounted) return;
 
     if (result != null) {
+      ref.read(analyticsServiceProvider).capture(
+        result.success
+            ? PaymentAnalyticsEvents.paymentCompleted
+            : PaymentAnalyticsEvents.paymentFailed,
+        {'provider': response.provider.name},
+      );
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result.message),

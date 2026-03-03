@@ -165,14 +165,29 @@ class Settings(BaseSettings):
     TWILIO_FROM_NUMBER: str = ""
 
     # Social auth settings
+    GOOGLE_ENABLED: bool = False
     GOOGLE_CLIENT_ID: str = "your-google-client-id"
     GOOGLE_CLIENT_SECRET: str = "your-google-client-secret"
+    GITHUB_ENABLED: bool = False
     GITHUB_CLIENT_ID: str = "your-github-client-id"
     GITHUB_CLIENT_SECRET: str = "your-github-client-secret"
+    FACEBOOK_ENABLED: bool = False
     FACEBOOK_CLIENT_ID: str = "your-facebook-client-id"
     FACEBOOK_CLIENT_SECRET: str = "your-facebook-client-secret"
     # URL to redirect user to after successful social login (frontend URL)
     SOCIAL_AUTH_REDIRECT_URL: str = "http://localhost:3000/auth/callback"
+
+    # ---------------------------------------------------------------------------
+    # Analytics settings
+    # ---------------------------------------------------------------------------
+    ANALYTICS_ENABLED: bool = False
+    # Provider name — used by the factory to select the correct adapter.
+    # Built-in: "posthog". Add more by creating a new adapter and registering it.
+    ANALYTICS_PROVIDER: str = "posthog"
+
+    # PostHog
+    POSTHOG_API_KEY: str = ""
+    POSTHOG_HOST: str = "https://us.i.posthog.com"
 
     class Config:
         case_sensitive = True

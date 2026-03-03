@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/error/error_handler.dart';
+import '../../../../core/analytics/analytics_provider.dart';
+import '../../../../core/analytics/analytics_events.dart';
 import '../../data/models/token_tracking.dart';
 import '../../../tokens/presentation/providers/token_provider.dart';
 
@@ -42,6 +44,10 @@ class TokensPage extends ConsumerWidget {
                   await ref
                       .read(tokenRepositoryProvider)
                       .revokeAllTokens();
+                  ref.read(analyticsServiceProvider).capture(
+                    UserAnalyticsEvents.tokenRevoked,
+                    {'scope': 'all'},
+                  );
                   ref.invalidate(tokenListProvider);
                 } catch (e) {
                   if (context.mounted) {
@@ -94,6 +100,10 @@ class TokensPage extends ConsumerWidget {
                           await ref
                               .read(tokenRepositoryProvider)
                               .revokeToken(token.id);
+                          ref.read(analyticsServiceProvider).capture(
+                            UserAnalyticsEvents.tokenRevoked,
+                            {'scope': 'single'},
+                          );
                           ref.invalidate(tokenListProvider);
                         } catch (e) {
                           if (context.mounted) {
