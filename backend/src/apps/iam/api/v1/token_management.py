@@ -10,6 +10,9 @@ from src.apps.iam.schemas.token_tracking import TokenTrackingResponse
 from src.apps.iam.utils.hashid import decode_id_or_404
 from src.apps.core.schemas import PaginatedResponse
 from src.apps.core.cache import RedisCache
+from src.apps.analytics.dependencies import get_analytics
+from src.apps.analytics.service import AnalyticsService
+from src.apps.analytics.events import UserEvents
 
 router = APIRouter()
 
@@ -76,7 +79,8 @@ async def list_active_tokens(
 async def revoke_token(
     token_id: str,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    analytics: AnalyticsService = Depends(get_analytics),
 ) -> dict[str, str]:
     """
     Revoke a specific token
@@ -110,7 +114,13 @@ async def revoke_token(
         
         # Invalidate cache
         await RedisCache.clear_pattern(f"tokens:active:{current_user.id}:*")
-        
+
+        await analytics.capture(
+            str(current_user.id),
+            UserEvents.TOKEN_REVOKED,
+            {"token_id": token_id, "revoke_all": False},
+        )
+
         return {"message": "Token revoked successfully"}
     except HTTPException:
         raise
@@ -125,7 +135,8 @@ async def revoke_token(
 @router.post("/revoke-all")
 async def revoke_all_tokens(
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    analytics: AnalyticsService = Depends(get_analytics),
 ) -> dict[str, str]:
     """
     Revoke all active tokens for the current user
@@ -148,7 +159,13 @@ async def revoke_all_tokens(
         
         # Invalidate cache
         await RedisCache.clear_pattern(f"tokens:active:{current_user.id}:*")
-        
+
+        await analytics.capture(
+            str(current_user.id),
+            UserEvents.TOKEN_REVOKED,
+            {"revoke_all": True, "count": len(tokens)},
+        )
+
         return {"message": f"Revoked {len(tokens)} active token(s)"}
     except Exception:
         await db.rollback()

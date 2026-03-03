@@ -16,6 +16,9 @@ from src.apps.iam.schemas.user import UserCreate
 from src.apps.core.cache import RedisCache
 
 from src.apps.iam.utils.ip_access import revoke_tokens_for_ip, get_client_ip
+from src.apps.analytics.dependencies import get_analytics
+from src.apps.analytics.service import AnalyticsService
+from src.apps.analytics.events import AuthEvents
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -28,7 +31,8 @@ async def signup(
     response: Response,
     set_cookie: bool,
     login_data: UserCreate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    analytics: AnalyticsService = Depends(get_analytics),
 ) -> Token | dict[str, str]:
     """
     Create a new user account
@@ -110,6 +114,16 @@ async def signup(
         db.add(refresh_token_tracking)
         await db.commit()
 
+        await analytics.identify(
+            str(new_user.id),
+            {"email": new_user.email, "username": new_user.username, "created_at": str(new_user.created_at)},
+        )
+        await analytics.capture(
+            str(new_user.id),
+            AuthEvents.SIGNED_UP,
+            {"ip_address": ip_address, "user_agent": user_agent},
+        )
+
         if set_cookie:
             response.set_cookie(
                 key=settings.ACCESS_TOKEN_COOKIE,
@@ -139,7 +153,9 @@ async def signup(
 @router.post("/verify-email/")
 async def verify_email(
     t: str,
-    db: AsyncSession = Depends(get_db)
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    analytics: AnalyticsService = Depends(get_analytics),
 ) -> dict[str, str]:
     """
     Verify user email with secure token sent via email
@@ -223,10 +239,12 @@ async def verify_email(
             db.add(used_token)
         
         await db.commit()
-        
+
         # Invalidate user cache
         await RedisCache.delete(f"user:profile:{user_id}")
-        
+
+        await analytics.capture(str(user_id), AuthEvents.EMAIL_VERIFIED)
+
         return {"message": "Email verified successfully"}
     except HTTPException:
         raise

@@ -15,6 +15,9 @@ from src.apps.iam.utils.hashid import decode_id_or_404
 from src.apps.core.schemas import PaginatedResponse
 from src.apps.core.cache import RedisCache
 from src.apps.core.config import settings
+from src.apps.analytics.dependencies import get_analytics
+from src.apps.analytics.service import AnalyticsService
+from src.apps.analytics.events import UserEvents
 
 router = APIRouter(prefix="/users")
 
@@ -123,6 +126,7 @@ async def upload_avatar(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    analytics: AnalyticsService = Depends(get_analytics),
 ):
     """Upload or replace the current user's avatar image."""
     ALLOWED_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
@@ -175,6 +179,12 @@ async def upload_avatar(
         await db.refresh(current_user.profile)
 
     await RedisCache.delete(f"user:profile:{current_user.id}")
+
+    await analytics.capture(
+        str(current_user.id),
+        UserEvents.AVATAR_UPLOADED,
+        {"file_type": file.content_type, "file_size_bytes": len(contents)},
+    )
 
     return current_user
 
@@ -232,7 +242,8 @@ async def get_user(
 async def update_current_user(
     user_update: UserUpdate,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    analytics: AnalyticsService = Depends(get_analytics),
 ):
     """
     Update current user's profile
@@ -272,7 +283,14 @@ async def update_current_user(
     # Invalidate caches
     await RedisCache.delete(f"user:profile:{current_user.id}")
     await RedisCache.clear_pattern("users:list:*")
-    
+
+    updated_fields = user_update.model_dump(exclude_unset=True)
+    await analytics.capture(
+        str(current_user.id),
+        UserEvents.PROFILE_UPDATED,
+        {"updated_fields": list(updated_fields.keys())},
+    )
+
     return current_user
 
 

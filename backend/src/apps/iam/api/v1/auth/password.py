@@ -16,6 +16,9 @@ from src.apps.iam.schemas.user import (
     ChangePasswordRequest
 )
 from src.apps.core.cache import RedisCache
+from src.apps.analytics.dependencies import get_analytics
+from src.apps.analytics.service import AnalyticsService
+from src.apps.analytics.events import AuthEvents
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -26,7 +29,8 @@ limiter = Limiter(key_func=get_remote_address)
 async def request_password_reset(
     request: Request,
     reset_data: ResetPasswordRequest,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    analytics: AnalyticsService = Depends(get_analytics),
 ) -> dict[str, str]:
     """
     Request a password reset link via email
@@ -44,7 +48,9 @@ async def request_password_reset(
         
         from src.apps.iam.services.email import EmailService
         await EmailService.send_password_reset_email(user, reset_token)
-        
+
+        await analytics.capture(str(user.id), AuthEvents.PASSWORD_RESET_REQUESTED)
+
         return {"message": "If the email exists, a password reset link has been sent"}
     except HTTPException:
         raise
@@ -58,7 +64,8 @@ async def request_password_reset(
 @router.post("/password-reset-confirm/")
 async def confirm_password_reset(
     body: ResetPasswordConfirm,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    analytics: AnalyticsService = Depends(get_analytics),
 ) -> dict[str, str]:
     """
     Confirm password reset. Pass the token and new password in the request body.
@@ -154,7 +161,9 @@ async def confirm_password_reset(
         # Invalidate all related caches
         await RedisCache.delete(f"user:profile:{user_id}")
         await RedisCache.clear_pattern(f"tokens:active:{user_id}:*")
-        
+
+        await analytics.capture(str(user_id), AuthEvents.PASSWORD_RESET_COMPLETED)
+
         return {"message": "Password has been reset successfully"}
     except HTTPException:
         raise
@@ -170,7 +179,8 @@ async def confirm_password_reset(
 async def change_password(
     password_data: ChangePasswordRequest,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    analytics: AnalyticsService = Depends(get_analytics),
 ) -> dict[str, str]:
     """
     Change password for authenticated user
@@ -203,7 +213,9 @@ async def change_password(
         # Invalidate caches
         await RedisCache.delete(f"user:profile:{current_user.id}")
         await RedisCache.clear_pattern(f"tokens:active:{current_user.id}:*")
-        
+
+        await analytics.capture(str(current_user.id), AuthEvents.PASSWORD_CHANGED)
+
         return {"message": "Password changed successfully"}
     except HTTPException:
         raise

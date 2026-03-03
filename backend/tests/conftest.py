@@ -54,11 +54,16 @@ async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
 async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     """Create a test client with database session override and disabled rate limiting."""
     from src.apps.iam.api.deps import get_db
-    
+    from src.apps.analytics.service import AnalyticsService
+    from src.apps.analytics.dependencies import get_analytics
+
     async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
         yield db_session
-    
+
+    # Provide a disabled (no-op) analytics service for tests
+    _noop_analytics = AnalyticsService(provider=None)
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_analytics] = lambda: _noop_analytics
     
     # Disable rate limiting for tests - handle both main limiter and route limiters
     if hasattr(app.state, 'limiter'):

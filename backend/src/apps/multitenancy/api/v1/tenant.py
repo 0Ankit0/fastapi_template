@@ -32,6 +32,9 @@ from src.apps.multitenancy.schemas.tenant import (
 from src.apps.iam.utils.hashid import decode_id_or_404
 from src.apps.core.cache import RedisCache
 from src.apps.core.schemas import PaginatedResponse
+from src.apps.analytics.dependencies import get_analytics
+from src.apps.analytics.service import AnalyticsService
+from src.apps.analytics.events import TenantEvents
 
 router = APIRouter()
 
@@ -81,6 +84,7 @@ async def create_tenant(
     data: TenantCreate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    analytics: AnalyticsService = Depends(get_analytics),
 ):
     """Create a new tenant. The calling user becomes the owner."""
     existing = (
@@ -112,6 +116,11 @@ async def create_tenant(
     await CasbinEnforcer.add_role_for_user(str(current_user.id), TenantRole.OWNER, tenant.slug)
 
     await RedisCache.clear_pattern(f"tenants:list:*")
+    await analytics.capture(
+        str(current_user.id),
+        TenantEvents.TENANT_CREATED,
+        {"tenant_id": tenant.id, "tenant_slug": tenant.slug, "tenant_name": tenant.name},
+    )
     return tenant
 
 
@@ -288,6 +297,7 @@ async def remove_member(
     user_id: int,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    analytics: AnalyticsService = Depends(get_analytics),
 ):
     """Remove a member from the tenant (admin/owner, or user removing themselves)."""
     if user_id != current_user.id:
@@ -326,6 +336,12 @@ async def remove_member(
     await db.delete(membership)
     await db.commit()
 
+    await analytics.capture(
+        str(current_user.id),
+        TenantEvents.TENANT_MEMBER_REMOVED,
+        {"tenant_id": tenant_id, "removed_user_id": user_id},
+    )
+
 
 # ── Invitations ───────────────────────────────────────────────────────────────
 
@@ -335,6 +351,7 @@ async def invite_member(
     data: TenantInvitationCreate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    analytics: AnalyticsService = Depends(get_analytics),
 ):
     """Invite a user to a tenant by email (admin/owner only)."""
     await _require_tenant_role(tenant_id, current_user, db, min_role=TenantRole.ADMIN)
@@ -367,6 +384,12 @@ async def invite_member(
     db.add(invitation)
     await db.commit()
     await db.refresh(invitation)
+
+    await analytics.capture(
+        str(current_user.id),
+        TenantEvents.TENANT_MEMBER_INVITED,
+        {"tenant_id": tenant_id, "invitee_email": str(data.email), "role": data.role.value},
+    )
     return invitation
 
 
@@ -407,6 +430,7 @@ async def accept_invitation(
     body: AcceptInvitationRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    analytics: AnalyticsService = Depends(get_analytics),
 ):
     """Accept an invitation token and join the tenant."""
     invitation = (
@@ -464,6 +488,11 @@ async def accept_invitation(
     # Add Casbin role in tenant domain
     await CasbinEnforcer.add_role_for_user(str(current_user.id), invitation.role, tenant.slug)
     await RedisCache.clear_pattern(f"tenants:list:*")
+    await analytics.capture(
+        str(current_user.id),
+        TenantEvents.TENANT_MEMBER_JOINED,
+        {"tenant_id": tenant.id, "tenant_slug": tenant.slug, "role": invitation.role.value},
+    )
     return membership
 
 

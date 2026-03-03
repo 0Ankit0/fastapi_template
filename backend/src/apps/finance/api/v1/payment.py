@@ -28,6 +28,9 @@ from src.apps.finance.services.khalti import KhaltiService
 from src.apps.finance.services.stripe import StripeService
 from src.apps.finance.services.paypal import PayPalService
 from src.apps.iam.api.deps import get_db
+from src.apps.analytics.dependencies import get_analytics
+from src.apps.analytics.service import AnalyticsService
+from src.apps.analytics.events import PaymentEvents
 
 router = APIRouter()
 
@@ -85,6 +88,7 @@ async def list_enabled_providers() -> list[str]:
 async def initiate_payment(
     request_body: InitiatePaymentRequest,
     db: AsyncSession = Depends(get_db),
+    analytics: AnalyticsService = Depends(get_analytics),
 ) -> InitiatePaymentResponse:
     """
     Initiate a new payment with the specified provider.
@@ -94,7 +98,19 @@ async def initiate_payment(
     """
     provider_svc = _get_provider(request_body.provider)
     try:
-        return await provider_svc.initiate_payment(request_body, db)
+        result = await provider_svc.initiate_payment(request_body, db)
+        distinct_id = str(result.transaction_id)
+        await analytics.capture(
+            distinct_id,
+            PaymentEvents.PAYMENT_INITIATED,
+            {
+                "provider": request_body.provider.value,
+                "amount": request_body.amount,
+                "purchase_order_id": request_body.purchase_order_id,
+                "transaction_id": result.transaction_id,
+            },
+        )
+        return result
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     except Exception as exc:
@@ -112,6 +128,7 @@ async def initiate_payment(
 async def verify_payment(
     request_body: VerifyPaymentRequest,
     db: AsyncSession = Depends(get_db),
+    analytics: AnalyticsService = Depends(get_analytics),
 ) -> VerifyPaymentResponse:
     """
     Verify a payment after the provider redirects the user back.
@@ -121,7 +138,24 @@ async def verify_payment(
     """
     provider_svc = _get_provider(request_body.provider)
     try:
-        return await provider_svc.verify_payment(request_body, db)
+        result = await provider_svc.verify_payment(request_body, db)
+        from src.apps.finance.models.payment import PaymentStatus
+        event = (
+            PaymentEvents.PAYMENT_COMPLETED
+            if result.status == PaymentStatus.COMPLETED
+            else PaymentEvents.PAYMENT_FAILED
+        )
+        await analytics.capture(
+            str(result.transaction_id),
+            event,
+            {
+                "provider": request_body.provider.value,
+                "status": result.status.value,
+                "amount": result.amount,
+                "transaction_id": result.transaction_id,
+            },
+        )
+        return result
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     except Exception as exc:

@@ -15,6 +15,9 @@ from src.apps.core.security import TokenType
 from src.apps.iam.api.deps import get_db
 from src.apps.iam.models.token_tracking import TokenTracking
 from src.apps.iam.utils.ip_access import revoke_tokens_for_ip, get_client_ip
+from src.apps.analytics.dependencies import get_analytics
+from src.apps.analytics.service import AnalyticsService
+from src.apps.analytics.events import AuthEvents
 from src.apps.iam.utils.social import (
     extract_user_info,
     find_or_create_social_user,
@@ -91,6 +94,7 @@ async def social_callback(
     request: Request,
     set_cookie: bool = False,
     db: AsyncSession = Depends(get_db),
+    analytics: AnalyticsService = Depends(get_analytics),
 ) -> RedirectResponse:
     _assert_provider_enabled(provider)
 
@@ -219,6 +223,12 @@ async def social_callback(
         expires_at=datetime.fromtimestamp(refresh_payload["exp"], tz=timezone.utc),
     ))
     await db.commit()
+
+    await analytics.capture(
+        str(user.id),
+        AuthEvents.LOGGED_IN_SOCIAL,
+        {"provider": provider, "ip_address": ip_address, "user_agent": user_agent},
+    )
 
     # Redirect the popup back to the frontend auth-callback page with tokens as
     # query params. The /auth-callback page stores the tokens and continues the flow.

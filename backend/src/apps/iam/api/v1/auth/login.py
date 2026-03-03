@@ -18,6 +18,9 @@ from src.apps.iam.schemas.token import Token
 from src.apps.iam.schemas.user import LoginRequest
 
 from src.apps.iam.utils.ip_access import revoke_tokens_for_ip, get_client_ip
+from src.apps.analytics.dependencies import get_analytics
+from src.apps.analytics.service import AnalyticsService
+from src.apps.analytics.events import AuthEvents
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -30,7 +33,8 @@ async def login_access_token(
     response: Response,
     set_cookie: bool,
     login_data: LoginRequest,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    analytics: AnalyticsService = Depends(get_analytics),
 ) -> Token | dict[str, Any]:
     """
     OAuth2 compatible token login, get an access token for future requests
@@ -150,7 +154,13 @@ async def login_access_token(
         )
         db.add(refresh_token_tracking)
         await db.commit()
-        
+
+        await analytics.capture(
+            str(user.id),
+            AuthEvents.LOGGED_IN,
+            {"ip_address": ip_address, "user_agent": user_agent, "method": "password"},
+        )
+
         if set_cookie:
             response.set_cookie(
                 key=settings.ACCESS_TOKEN_COOKIE,
@@ -190,7 +200,8 @@ async def logout(
     request: Request,
     response: Response,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    analytics: AnalyticsService = Depends(get_analytics),
 ) -> dict[str, str]:
     """
     Logout user by clearing cookies and revoking current session token only
@@ -236,6 +247,7 @@ async def logout(
         
         response.delete_cookie(key=settings.ACCESS_TOKEN_COOKIE)
         response.delete_cookie(key=settings.REFRESH_TOKEN_COOKIE)
+        await analytics.capture(str(current_user.id), AuthEvents.LOGGED_OUT)
         return {"message": "Successfully logged out from this device"}
     except Exception:
         raise HTTPException(
