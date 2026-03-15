@@ -33,6 +33,7 @@ dependencies = [
     "pywebpush>=2.0.0",
     "twilio>=9.0.0",
     "posthog>=3.0.0",
+    "strawberry-graphql[fastapi]>=0.311.1",
 ]
 
 [dependency-groups]
