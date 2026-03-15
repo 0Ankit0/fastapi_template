@@ -8,6 +8,7 @@ import {
   Shield,
   Settings,
   Activity,
+  BadgeCheck,
 } from 'lucide-react';
 import { OrgSwitcher } from './org-switcher';
 
@@ -16,6 +17,7 @@ const adminNavigation = [
   { name: 'Manage Users', href: '/admin/users', icon: Users },
   { name: 'Roles & Permissions', href: '/rbac', icon: Shield },
   { name: 'Active Sessions', href: '/tokens', icon: Activity },
+  { name: 'Subscriptions', href: '/admin/subscriptions', icon: BadgeCheck },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 

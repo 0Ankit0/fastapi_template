@@ -24,6 +24,7 @@ import {
   ChevronDown, ChevronRight, UserMinus, Shield, Send, X,
 } from 'lucide-react';
 import type { Tenant, TenantRole } from '@/types';
+import { SubscriptionGuard } from '@/components/auth/subscription-guard';
 
 const ROLES: TenantRole[] = ['owner', 'admin', 'member'];
 
@@ -243,6 +244,14 @@ function TenantCard({ tenant, isActive }: { tenant: Tenant; isActive: boolean })
 }
 
 export default function TenantsPage() {
+  return (
+    <SubscriptionGuard>
+      <TenantsPageInner />
+    </SubscriptionGuard>
+  );
+}
+
+function TenantsPageInner() {
   const { data, isLoading } = useTenants();
   const createTenant = useCreateTenant();
   const { tenant: currentTenant } = useAuthStore();

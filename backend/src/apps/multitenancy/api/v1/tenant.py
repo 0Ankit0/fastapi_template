@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select, func, col
 
 from src.apps.iam.api.deps import get_current_user, get_db
+from src.apps.subscription.dependencies import require_active_subscription
 from src.apps.iam.casbin_enforcer import CasbinEnforcer
 from src.apps.multitenancy.models.tenant import (
     InvitationStatus,
@@ -82,7 +83,7 @@ async def _require_tenant_role(
 @router.post("/", response_model=TenantResponse, status_code=status.HTTP_201_CREATED)
 async def create_tenant(
     data: TenantCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_active_subscription),
     db: AsyncSession = Depends(get_db),
     analytics: AnalyticsService = Depends(get_analytics),
 ):
@@ -188,7 +189,7 @@ async def get_tenant(
 async def update_tenant(
     tenant_id: int,
     data: TenantUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_active_subscription),
     db: AsyncSession = Depends(get_db),
 ):
     """Update tenant details (admin or owner only)."""
@@ -210,7 +211,7 @@ async def update_tenant(
 @router.delete("/{tenant_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_tenant(
     tenant_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_active_subscription),
     db: AsyncSession = Depends(get_db),
 ):
     """Delete a tenant (owner only)."""
@@ -349,7 +350,7 @@ async def remove_member(
 async def invite_member(
     tenant_id: int,
     data: TenantInvitationCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_active_subscription),
     db: AsyncSession = Depends(get_db),
     analytics: AnalyticsService = Depends(get_analytics),
 ):

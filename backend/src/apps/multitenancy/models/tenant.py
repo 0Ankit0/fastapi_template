@@ -44,6 +44,11 @@ class Tenant(TenantBase, table=True):
     )
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
+    # when a tenant is automatically deactivated due to plan downgrade
+    disabled_by_limit: bool = Field(
+        default=False,
+        description="True if the tenant was disabled because the owner exceeded subscription limits",
+    )
 
     # Relationships
     members: list["TenantMember"] = Relationship(back_populates="tenant")
@@ -62,6 +67,11 @@ class TenantMemberBase(SQLModel):
         description="Role of the user within the tenant",
     )
     is_active: bool = Field(default=True, description="Whether the membership is active")
+    # record when membership is deactivated due to subscription limit enforcement
+    disabled_by_limit: bool = Field(
+        default=False,
+        description="True if the membership was disabled because the owner exceeded subscription limits",
+    )
 
 
 class TenantMember(TenantMemberBase, table=True):

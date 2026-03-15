@@ -38,6 +38,19 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Handle 402 Payment Required — subscription expired or missing.
+    // Redirect to the subscription management page.
+    if (error.response?.status === 402) {
+      if (typeof window !== 'undefined') {
+        const currentPath = window.location.pathname;
+        // Avoid redirect loops if already on the subscription page
+        if (!currentPath.startsWith('/subscription')) {
+          window.location.href = '/subscription?reason=subscription_required';
+        }
+      }
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {

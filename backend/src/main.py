@@ -11,7 +11,7 @@ from slowapi.errors import RateLimitExceeded
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from src.apps.core.config import settings
 from src.apps.core.handler import rate_limit_exceeded_handler
-from src.apps.core.middleware import SecurityHeadersMiddleware
+from src.apps.core.middleware import SecurityHeadersMiddleware, SubscriptionMiddleware
 from src.apps.iam.api import api_router
 from src.apps.finance.api import finance_router
 from src.apps.multitenancy.api import multitenancy_router
@@ -24,6 +24,7 @@ from src.apps.notification.api import notification_router
 from src.apps.analytics import init_analytics, shutdown_analytics
 from src.apps.analytics.api import router as analytics_router
 from src.apps.analytics.middleware import AnalyticsMiddleware
+from src.apps.subscription.api import subscription_router
 
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
@@ -85,6 +86,10 @@ app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 # Security headers middleware
 app.add_middleware(SecurityHeadersMiddleware)
 
+# Subscription validation middleware — checks JWT + active subscription for
+# protected owner-dashboard routes (e.g. /api/v1/tenants).
+app.add_middleware(SubscriptionMiddleware)
+
 # Analytics request-tracking middleware
 app.add_middleware(AnalyticsMiddleware)
 
@@ -110,6 +115,7 @@ app.include_router(multitenancy_router, prefix=settings.API_V1_STR)
 app.include_router(ws_router, prefix=settings.API_V1_STR)
 app.include_router(notification_router, prefix=settings.API_V1_STR)
 app.include_router(analytics_router, prefix=settings.API_V1_STR)
+app.include_router(subscription_router, prefix=settings.API_V1_STR)
 
 # Serve uploaded media files (avatars, etc.)
 os.makedirs(settings.MEDIA_DIR, exist_ok=True)
