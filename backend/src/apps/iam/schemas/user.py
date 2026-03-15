@@ -1,5 +1,6 @@
 from typing import Optional, List
 from pydantic import BaseModel, EmailStr, field_serializer, field_validator, model_validator, ValidationInfo
+from src.apps.core.security import validate_password_strength
 from ..utils.hashid import encode_id
 
 
@@ -19,14 +20,7 @@ class UserCreate(UserBase):
 
     @field_validator("password")
     def validate_password_strength(cls, value):
-        if len(value) < 8:
-            raise ValueError("Password must be at least 8 characters long")
-        if not any(c.isupper() for c in value):
-            raise ValueError("Password must contain at least one uppercase letter")
-        if not any(c.islower() for c in value):
-            raise ValueError("Password must contain at least one lowercase letter")
-        if not any(c.isdigit() for c in value):
-            raise ValueError("Password must contain at least one digit")
+        validate_password_strength(value)
         return value
 
     @field_validator("confirm_password")
@@ -64,6 +58,11 @@ class ResetPasswordConfirm(BaseModel):
             raise ValueError("Passwords do not match")
         return value
 
+    @field_validator("new_password")
+    def validate_password_strength(cls, value):
+        validate_password_strength(value)
+        return value
+
 
 class ChangePasswordRequest(BaseModel):
     current_password: str
@@ -78,14 +77,7 @@ class ChangePasswordRequest(BaseModel):
 
     @field_validator("new_password")
     def validate_password_strength(cls, value):
-        if len(value) < 8:
-            raise ValueError("Password must be at least 8 characters long")
-        if not any(c.isupper() for c in value):
-            raise ValueError("Password must contain at least one uppercase letter")
-        if not any(c.islower() for c in value):
-            raise ValueError("Password must contain at least one lowercase letter")
-        if not any(c.isdigit() for c in value):
-            raise ValueError("Password must contain at least one digit")
+        validate_password_strength(value)
         return value
 
 

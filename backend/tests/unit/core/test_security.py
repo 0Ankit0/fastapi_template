@@ -25,6 +25,17 @@ class TestPasswordHashing:
         hashed = security.get_password_hash(password)
         assert security.verify_password(password, hashed) is True
     
+    def test_password_hashing_uses_pepper(self, monkeypatch):
+        """Ensure password pepper is applied consistently."""
+        password = "TestPassword123"
+
+        monkeypatch.setattr("src.apps.core.config.settings.PASSWORD_PEPPER", "pepper1")
+        hashed = security.get_password_hash(password)
+        assert security.verify_password(password, hashed) is True
+
+        monkeypatch.setattr("src.apps.core.config.settings.PASSWORD_PEPPER", "pepper2")
+        assert security.verify_password(password, hashed) is False
+
     def test_verify_incorrect_password(self):
         """Test password verification with incorrect password."""
         password = "TestPassword123"

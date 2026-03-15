@@ -11,6 +11,17 @@ from src.apps.core.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+
+def _apply_pepper(password: str) -> str:
+    """Append a secret pepper to the password before hashing/verifying.
+
+    The pepper is an additional secret value stored in config (not the database),
+    so if an attacker obtains the password hashes they still need the pepper to
+    brute-force passwords.
+    """
+    pepper = settings.PASSWORD_PEPPER or ""
+    return password + pepper
+
 ALGORITHM = "HS256"
 
 
@@ -105,10 +116,34 @@ def verify_token(token: str, token_type: TokenType | None = None) -> dict:
     return payload
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    return pwd_context.verify(_apply_pepper(plain_password), hashed_password)
+
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    return pwd_context.hash(_apply_pepper(password))
+
+
+def validate_password_strength(password: str) -> None:
+    """Validate password strength based on current settings.
+
+    Raises ValueError when the password does not meet requirements.
+    """
+    if len(password) < settings.PASSWORD_MIN_LENGTH:
+        raise ValueError(f"Password must be at least {settings.PASSWORD_MIN_LENGTH} characters long")
+
+    if settings.PASSWORD_REQUIRE_UPPERCASE and not any(c.isupper() for c in password):
+        raise ValueError("Password must contain at least one uppercase letter")
+
+    if settings.PASSWORD_REQUIRE_LOWERCASE and not any(c.islower() for c in password):
+        raise ValueError("Password must contain at least one lowercase letter")
+
+    if settings.PASSWORD_REQUIRE_DIGIT and not any(c.isdigit() for c in password):
+        raise ValueError("Password must contain at least one digit")
+
+    if settings.PASSWORD_REQUIRE_SPECIAL:
+        special_chars = "!@#$%^&*()-_=+[]{}|;:'\",.<>?/~`"
+        if not any(c in special_chars for c in password):
+            raise ValueError("Password must contain at least one special character")
 
 
 def create_secure_url_token(data: dict[str, Any], expires_hours: int = 24) -> str:

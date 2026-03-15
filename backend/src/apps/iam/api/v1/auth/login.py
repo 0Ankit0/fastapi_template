@@ -1,7 +1,7 @@
 from datetime import timedelta, datetime, timezone
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from sqlmodel import select
+from sqlmodel import col, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from jose import jwt
 from slowapi import Limiter
@@ -63,7 +63,36 @@ async def login_access_token(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Incorrect username or password"
             )
-        
+
+        if settings.REQUIRE_EMAIL_VERIFICATION and not user.is_confirmed:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Email verification is required before signing in"
+            )
+
+        if settings.MAX_LOGIN_ATTEMPTS > 0 and settings.ACCOUNT_LOCKOUT_DURATION_MINUTES > 0:
+            window_start = datetime.now() - timedelta(minutes=settings.ACCOUNT_LOCKOUT_DURATION_MINUTES)
+            result = await db.execute(
+                select(LoginAttempt)
+                .where(
+                    LoginAttempt.user_id == user.id,
+                    LoginAttempt.success == False,
+                    LoginAttempt.timestamp >= window_start,
+                )
+                .order_by(col(LoginAttempt.timestamp).desc())
+            )
+            failures = result.scalars().all()
+            if len(failures) >= settings.MAX_LOGIN_ATTEMPTS:
+                last_attempt = failures[0]
+                lockout_expires = last_attempt.timestamp + timedelta(minutes=settings.ACCOUNT_LOCKOUT_DURATION_MINUTES)
+                remaining_seconds = int((lockout_expires - datetime.now()).total_seconds())
+                if remaining_seconds > 0:
+                    remaining_minutes = (remaining_seconds + 59) // 60
+                    raise HTTPException(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        detail=f"Too many login attempts. Try again in {remaining_minutes} minutes."
+                    )
+
         if not user.hashed_password:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

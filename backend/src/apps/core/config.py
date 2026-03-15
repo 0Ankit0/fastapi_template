@@ -6,6 +6,8 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "FastAPI Template"
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = "supersecretkey"
+    # Optional pepper used when hashing passwords (adds an extra secret layer)
+    PASSWORD_PEPPER: str | None = None
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS:int = 7
     ACCESS_TOKEN_COOKIE: str = "access_token"
@@ -36,6 +38,13 @@ class Settings(BaseSettings):
     REDIS_URL: str | None = None
     CELERY_BROKER_URL: str | None = None
     CELERY_RESULT_BACKEND: str | None = None
+
+    @field_validator("PASSWORD_PEPPER", mode="before")
+    def assemble_password_pepper(cls, v: str | None, info: ValidationInfo) -> str:
+        if isinstance(v, str) and v:
+            return v
+        # Fallback to SECRET_KEY when pepper is not explicitly set
+        return info.data.get("SECRET_KEY") or "supersecretkey"
 
     @field_validator("REDIS_URL", mode="before")
     def assemble_redis_url(cls, v: str | None, info: ValidationInfo) -> str:

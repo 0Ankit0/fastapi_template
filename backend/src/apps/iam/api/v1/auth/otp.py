@@ -217,6 +217,35 @@ async def validate_otp_login(
         
         result = await db.execute(select(User).where(User.id == int(user_id)))
         user = result.scalars().first()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid temporary token"
+            )
+
+        if settings.MAX_LOGIN_ATTEMPTS > 0 and settings.ACCOUNT_LOCKOUT_DURATION_MINUTES > 0:
+            window_start = datetime.now() - timedelta(minutes=settings.ACCOUNT_LOCKOUT_DURATION_MINUTES)
+            result = await db.execute(
+                select(LoginAttempt)
+                .where(
+                    LoginAttempt.user_id == user.id,
+                    LoginAttempt.success == False,
+                    LoginAttempt.timestamp >= window_start,
+                )
+                .order_by(LoginAttempt.timestamp.desc())
+            )
+            failures = result.scalars().all()
+            if len(failures) >= settings.MAX_LOGIN_ATTEMPTS:
+                last_attempt = failures[0]
+                lockout_expires = last_attempt.timestamp + timedelta(minutes=settings.ACCOUNT_LOCKOUT_DURATION_MINUTES)
+                remaining_seconds = int((lockout_expires - datetime.now()).total_seconds())
+                if remaining_seconds > 0:
+                    remaining_minutes = (remaining_seconds + 59) // 60
+                    raise HTTPException(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        detail=f"Too many login attempts. Try again in {remaining_minutes} minutes."
+                    )
         
         if not user:
             raise HTTPException(
