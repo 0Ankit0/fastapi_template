@@ -4,10 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/error/error_handler.dart';
-import '../../../../core/providers/dio_provider.dart';
-import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/analytics/analytics_provider.dart';
 import '../../../../core/analytics/analytics_events.dart';
+import '../providers/auth_provider.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/loading_button.dart';
 
@@ -34,11 +33,9 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
     try {
-      final dio = ref.read(dioClientProvider).dio;
-      await dio.post(
-        ApiEndpoints.passwordResetRequest,
-        data: {'email': _emailController.text.trim()},
-      );
+      await ref.read(authRepositoryProvider).passwordResetRequest(
+            _emailController.text.trim(),
+          );
       if (mounted) setState(() { _isLoading = false; _submitted = true; });
       ref.read(analyticsServiceProvider).capture(AuthAnalyticsEvents.passwordResetRequested);
     } catch (e) {

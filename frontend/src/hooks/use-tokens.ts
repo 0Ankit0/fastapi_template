@@ -1,18 +1,12 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
-import type { TokenTracking, PaginatedResponse } from '@/types';
+import * as tokenApi from '@/lib/graphql/tokens';
 
 export function useTokens(params?: { skip?: number; limit?: number }) {
   return useQuery({
     queryKey: ['tokens', params],
-    queryFn: async () => {
-      const response = await apiClient.get<PaginatedResponse<TokenTracking>>('/tokens/', {
-        params,
-      });
-      return response.data;
-    },
+    queryFn: async () => tokenApi.tokens(params),
   });
 }
 
@@ -20,10 +14,7 @@ export function useRevokeToken() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (tokenId: string) => {
-      const response = await apiClient.post(`/tokens/revoke/${tokenId}`);
-      return response.data;
-    },
+    mutationFn: async (tokenId: string) => tokenApi.revokeToken(tokenId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tokens'] });
     },
@@ -34,10 +25,7 @@ export function useRevokeAllTokens() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async () => {
-      const response = await apiClient.post('/tokens/revoke-all');
-      return response.data;
-    },
+    mutationFn: async () => tokenApi.revokeAllTokens(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tokens'] });
     },

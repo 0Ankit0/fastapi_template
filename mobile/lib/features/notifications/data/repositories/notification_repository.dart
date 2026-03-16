@@ -1,13 +1,13 @@
 import '../../../../core/error/error_handler.dart';
-import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../../core/network/graphql_client.dart';
 import '../models/notification_list.dart';
 import '../models/notification_preference.dart';
 
 class NotificationRepository {
-  final DioClient _dioClient;
+  final GraphQLClient _graphql;
 
-  NotificationRepository(this._dioClient);
+  NotificationRepository(DioClient dioClient) : _graphql = GraphQLClient(dioClient.dio);
 
   Future<NotificationList> getNotifications({
     bool unreadOnly = false,
@@ -15,15 +15,30 @@ class NotificationRepository {
     int limit = 20,
   }) async {
     try {
-      final response = await _dioClient.dio.get(
-        ApiEndpoints.notifications,
-        queryParameters: {
-          'unread_only': unreadOnly,
-          'skip': skip,
-          'limit': limit,
+      final data = await _graphql.query(
+        r'''
+        query Notifications($input: NotificationsFilterInput) {
+          notifications(input: $input) {
+            items {
+              id
+              user_id
+              title
+              body
+              type
+              is_read
+              extra_data
+              created_at
+            }
+            total
+            unread_count
+          }
+        }
+        ''',
+        variables: {
+          'input': {'unread_only': unreadOnly, 'skip': skip, 'limit': limit}
         },
       );
-      return NotificationList.fromJson(response.data as Map<String, dynamic>);
+      return NotificationList.fromJson(data['notifications'] as Map<String, dynamic>);
     } catch (e) {
       throw ErrorHandler.handle(e);
     }
@@ -31,7 +46,14 @@ class NotificationRepository {
 
   Future<void> markRead(String id) async {
     try {
-      await _dioClient.dio.patch(ApiEndpoints.markNotificationRead(id));
+      await _graphql.mutation(
+        r'''
+        mutation MarkNotificationRead($id: Int!) {
+          markNotificationRead(id: $id) { id }
+        }
+        ''',
+        variables: {'id': int.tryParse(id)},
+      );
     } catch (e) {
       throw ErrorHandler.handle(e);
     }
@@ -39,7 +61,7 @@ class NotificationRepository {
 
   Future<void> markAllRead() async {
     try {
-      await _dioClient.dio.patch(ApiEndpoints.markAllNotificationsRead);
+      await _graphql.mutation(r'''mutation MarkAllRead { markAllNotificationsRead }''');
     } catch (e) {
       throw ErrorHandler.handle(e);
     }
@@ -47,7 +69,14 @@ class NotificationRepository {
 
   Future<void> deleteNotification(String id) async {
     try {
-      await _dioClient.dio.delete(ApiEndpoints.deleteNotification(id));
+      await _graphql.mutation(
+        r'''
+        mutation DeleteNotification($id: Int!) {
+          deleteNotification(id: $id)
+        }
+        ''',
+        variables: {'id': int.tryParse(id)},
+      );
     } catch (e) {
       throw ErrorHandler.handle(e);
     }
@@ -55,24 +84,48 @@ class NotificationRepository {
 
   Future<NotificationPreference> getPreferences() async {
     try {
-      final response =
-          await _dioClient.dio.get(ApiEndpoints.notificationPreferences);
+      final data = await _graphql.query(r'''
+        query NotificationPreferences {
+          notificationPreferences {
+            id
+            user_id
+            email_enabled
+            push_enabled
+            sms_enabled
+            websocket_enabled
+            push_endpoint
+          }
+        }
+      ''');
       return NotificationPreference.fromJson(
-          response.data as Map<String, dynamic>);
+        data['notificationPreferences'] as Map<String, dynamic>,
+      );
     } catch (e) {
       throw ErrorHandler.handle(e);
     }
   }
 
-  Future<NotificationPreference> updatePreferences(
-      Map<String, bool> updates) async {
+  Future<NotificationPreference> updatePreferences(Map<String, bool> updates) async {
     try {
-      final response = await _dioClient.dio.patch(
-        ApiEndpoints.notificationPreferences,
-        data: updates,
+      final data = await _graphql.mutation(
+        r'''
+        mutation UpdateNotificationPreferences($input: NotificationPreferenceUpdateInput!) {
+          updateNotificationPreferences(input: $input) {
+            id
+            user_id
+            email_enabled
+            push_enabled
+            sms_enabled
+            websocket_enabled
+            push_endpoint
+          }
+        }
+        ''',
+        variables: {'input': updates},
       );
       return NotificationPreference.fromJson(
-          response.data as Map<String, dynamic>);
+        data['updateNotificationPreferences'] as Map<String, dynamic>,
+      );
     } catch (e) {
       throw ErrorHandler.handle(e);
     }

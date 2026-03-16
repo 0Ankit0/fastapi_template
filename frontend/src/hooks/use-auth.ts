@@ -1,18 +1,16 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth-store';
+import * as authApi from '@/lib/graphql/auth';
 import { analytics } from '@/lib/analytics';
 import { AuthEvents } from '@/lib/analytics/events';
 import type {
   LoginCredentials,
   SignupData,
   AuthTokens,
-  User,
   OTPLoginResponse,
   VerifyOTPData,
-  OTPSetupResponse,
   ChangePasswordData,
   ResetPasswordRequestData,
   ResetPasswordConfirmData,
@@ -24,12 +22,7 @@ export function useAuth() {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginCredentials) => {
-      const response = await apiClient.post<AuthTokens | OTPLoginResponse>(
-        '/auth/login/',
-        credentials,
-        { params: { set_cookie: false } }
-      );
-      return response.data;
+      return authApi.login(credentials);
     },
     onSuccess: (data) => {
       if ('requires_otp' in data) return;
@@ -42,12 +35,7 @@ export function useAuth() {
 
   const signupMutation = useMutation({
     mutationFn: async (data: SignupData) => {
-      const response = await apiClient.post<AuthTokens>(
-        '/auth/signup/',
-        data,
-        { params: { set_cookie: false } }
-      );
-      return response.data;
+      return authApi.signup(data);
     },
     onSuccess: (data) => {
       setTokens(data.access, data.refresh);
@@ -59,8 +47,7 @@ export function useAuth() {
   const { data: currentUser, refetch: refetchUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: async () => {
-      const response = await apiClient.get<User>('/users/me/');
-      const u = response.data;
+      const u = await authApi.currentUser();
       setUser(u);
       analytics.identify(String(u.id), { email: u.email, username: u.username });
       return u;
@@ -70,7 +57,7 @@ export function useAuth() {
 
   const logout = async () => {
     try {
-      await apiClient.post('/auth/logout/');
+      await authApi.logout();
     } catch {
       // ignore logout errors
     } finally {
@@ -105,12 +92,7 @@ export function useVerifyOTP() {
 
   return useMutation({
     mutationFn: async (data: VerifyOTPData) => {
-      const response = await apiClient.post<AuthTokens>(
-        '/auth/otp/validate/',
-        data,
-        { params: { set_cookie: false } }
-      );
-      return response.data;
+      return authApi.verifyOtp(data);
     },
     onSuccess: (data) => {
       setTokens(data.access, data.refresh);
@@ -123,8 +105,7 @@ export function useVerifyOTP() {
 export function useEnableOTP() {
   return useMutation({
     mutationFn: async () => {
-      const response = await apiClient.post<OTPSetupResponse>('/auth/otp/enable/');
-      return response.data;
+      return authApi.enableOtp();
     },
   });
 }
@@ -134,8 +115,7 @@ export function useConfirmOTP() {
 
   return useMutation({
     mutationFn: async (otp_code: string) => {
-      const response = await apiClient.post('/auth/otp/verify/', { otp_code, temp_token: '' });
-      return response.data;
+      return authApi.confirmOtp(otp_code);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
@@ -149,8 +129,7 @@ export function useDisableOTP() {
 
   return useMutation({
     mutationFn: async (password: string) => {
-      const response = await apiClient.post('/auth/otp/disable/', { password });
-      return response.data;
+      return authApi.disableOtp(password);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
@@ -162,8 +141,7 @@ export function useDisableOTP() {
 export function useRequestPasswordReset() {
   return useMutation({
     mutationFn: async (data: ResetPasswordRequestData) => {
-      const response = await apiClient.post('/auth/password-reset-request/', data);
-      return response.data;
+      return authApi.requestPasswordReset(data);
     },
     onSuccess: () => {
       analytics.capture(AuthEvents.PASSWORD_RESET_REQUESTED);
@@ -174,8 +152,7 @@ export function useRequestPasswordReset() {
 export function useConfirmPasswordReset() {
   return useMutation({
     mutationFn: async (data: ResetPasswordConfirmData) => {
-      const response = await apiClient.post('/auth/password-reset-confirm/', data);
-      return response.data;
+      return authApi.confirmPasswordReset(data);
     },
     onSuccess: () => {
       analytics.capture(AuthEvents.PASSWORD_RESET_COMPLETED);
@@ -186,8 +163,7 @@ export function useConfirmPasswordReset() {
 export function useChangePassword() {
   return useMutation({
     mutationFn: async (data: ChangePasswordData) => {
-      const response = await apiClient.post('/auth/change-password/', data);
-      return response.data;
+      return authApi.changePassword(data);
     },
     onSuccess: () => {
       analytics.capture(AuthEvents.PASSWORD_CHANGED);
@@ -198,8 +174,7 @@ export function useChangePassword() {
 export function useVerifyEmail() {
   return useMutation({
     mutationFn: async (t: string) => {
-      const response = await apiClient.post('/auth/verify-email/', null, { params: { t } });
-      return response.data;
+      return authApi.verifyEmail(t);
     },
     onSuccess: () => {
       analytics.capture(AuthEvents.EMAIL_VERIFIED);
@@ -209,10 +184,6 @@ export function useVerifyEmail() {
 
 export function useResendVerification() {
   return useMutation({
-    mutationFn: async () => {
-      const response = await apiClient.post('/auth/resend-verification/');
-      return response.data;
-    },
+    mutationFn: async (email?: string) => authApi.resendVerification(email),
   });
 }
-
