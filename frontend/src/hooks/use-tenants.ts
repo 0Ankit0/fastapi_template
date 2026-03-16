@@ -1,46 +1,29 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
+import * as tenantApi from '@/lib/graphql/tenants';
 import { useAuthStore } from '@/store/auth-store';
 import { analytics } from '@/lib/analytics';
 import { TenantEvents } from '@/lib/analytics/events';
 import type {
   Tenant,
-  TenantWithMembers,
   TenantCreate,
-  TenantUpdate,
-  TenantMember,
-  TenantInvitation,
   TenantInvitationCreate,
   TenantRole,
-  PaginatedResponse,
+  TenantUpdate,
 } from '@/types';
-
-interface TenantsResponse {
-  items: Tenant[];
-  total: number;
-  skip: number;
-  limit: number;
-}
 
 export function useTenants(params?: { skip?: number; limit?: number }) {
   return useQuery({
     queryKey: ['tenants', params],
-    queryFn: async () => {
-      const response = await apiClient.get<TenantsResponse>('/tenants/', { params });
-      return response.data;
-    },
+    queryFn: async () => tenantApi.tenants(params),
   });
 }
 
 export function useTenant(id: string) {
   return useQuery({
     queryKey: ['tenants', id],
-    queryFn: async () => {
-      const response = await apiClient.get<TenantWithMembers>(`/tenants/${id}`);
-      return response.data;
-    },
+    queryFn: async () => tenantApi.tenant(id),
     enabled: !!id,
   });
 }
@@ -49,10 +32,7 @@ export function useCreateTenant() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: TenantCreate) => {
-      const response = await apiClient.post<Tenant>('/tenants/', data);
-      return response.data;
-    },
+    mutationFn: async (data: TenantCreate) => tenantApi.createTenant(data),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
       analytics.capture(TenantEvents.TENANT_CREATED, { name: data.name });
@@ -65,10 +45,8 @@ export function useUpdateTenant() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: TenantUpdate }) => {
-      const response = await apiClient.patch<Tenant>(`/tenants/${id}`, data);
-      return response.data;
-    },
+    mutationFn: async ({ id, data }: { id: string; data: TenantUpdate }) =>
+      tenantApi.updateTenant(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
       queryClient.invalidateQueries({ queryKey: ['tenants', variables.id] });
@@ -80,9 +58,7 @@ export function useDeleteTenant() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
-      await apiClient.delete(`/tenants/${id}`);
-    },
+    mutationFn: async (id: string) => tenantApi.deleteTenant(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
     },
@@ -92,13 +68,7 @@ export function useDeleteTenant() {
 export function useTenantMembers(tenantId: string, params?: { skip?: number; limit?: number }) {
   return useQuery({
     queryKey: ['tenants', tenantId, 'members', params],
-    queryFn: async () => {
-      const response = await apiClient.get<PaginatedResponse<TenantMember>>(
-        `/tenants/${tenantId}/members`,
-        { params }
-      );
-      return response.data;
-    },
+    queryFn: async () => tenantApi.tenantMembers(tenantId, params),
     enabled: !!tenantId,
   });
 }
@@ -115,13 +85,7 @@ export function useUpdateMemberRole() {
       tenantId: string;
       userId: string;
       role: TenantRole;
-    }) => {
-      const response = await apiClient.patch<TenantMember>(
-        `/tenants/${tenantId}/members/${userId}`,
-        { role }
-      );
-      return response.data;
-    },
+    }) => tenantApi.updateMemberRole(tenantId, userId, role),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['tenants', variables.tenantId, 'members'] });
     },
@@ -132,9 +96,8 @@ export function useRemoveMember() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ tenantId, userId }: { tenantId: string; userId: string }) => {
-      await apiClient.delete(`/tenants/${tenantId}/members/${userId}`);
-    },
+    mutationFn: async ({ tenantId, userId }: { tenantId: string; userId: string }) =>
+      tenantApi.removeMember(tenantId, userId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['tenants', variables.tenantId, 'members'] });
     },
@@ -144,13 +107,7 @@ export function useRemoveMember() {
 export function useTenantInvitations(tenantId: string, params?: { skip?: number; limit?: number }) {
   return useQuery({
     queryKey: ['tenants', tenantId, 'invitations', params],
-    queryFn: async () => {
-      const response = await apiClient.get<PaginatedResponse<TenantInvitation>>(
-        `/tenants/${tenantId}/invitations`,
-        { params }
-      );
-      return response.data;
-    },
+    queryFn: async () => tenantApi.tenantInvitations(tenantId, params),
     enabled: !!tenantId,
   });
 }
@@ -159,19 +116,8 @@ export function useCreateInvitation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      tenantId,
-      data,
-    }: {
-      tenantId: string;
-      data: TenantInvitationCreate;
-    }) => {
-      const response = await apiClient.post<TenantInvitation>(
-        `/tenants/${tenantId}/invitations`,
-        data
-      );
-      return response.data;
-    },
+    mutationFn: async ({ tenantId, data }: { tenantId: string; data: TenantInvitationCreate }) =>
+      tenantApi.createInvitation(tenantId, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['tenants', variables.tenantId, 'invitations'] });
       analytics.capture(TenantEvents.TENANT_MEMBER_INVITED, { tenant_id: variables.tenantId });
@@ -183,10 +129,7 @@ export function useAcceptInvitation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (token: string) => {
-      const response = await apiClient.post('/tenants/invitations/accept', { token });
-      return response.data;
-    },
+    mutationFn: async (token: string) => tenantApi.acceptInvitation(token),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
       analytics.capture(TenantEvents.TENANT_MEMBER_JOINED);
@@ -198,15 +141,8 @@ export function useDeleteInvitation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      tenantId,
-      invitationId,
-    }: {
-      tenantId: string;
-      invitationId: string;
-    }) => {
-      await apiClient.delete(`/tenants/${tenantId}/invitations/${invitationId}`);
-    },
+    mutationFn: async ({ tenantId, invitationId }: { tenantId: string; invitationId: string }) =>
+      tenantApi.deleteInvitation(tenantId, invitationId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['tenants', variables.tenantId, 'invitations'] });
     },

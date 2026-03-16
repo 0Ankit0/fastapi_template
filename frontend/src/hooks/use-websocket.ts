@@ -2,8 +2,7 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
-import type { WebSocketStats } from '@/types';
+import * as wsApi from '@/lib/graphql/websocket';
 
 interface WebSocketMessage {
   type: string;
@@ -73,7 +72,16 @@ export function useWebSocket({
     };
 
     wsRef.current = ws;
-  }, [url, onMessage, onOpen, onClose, onError, reconnect, reconnectInterval, maxReconnectAttempts]);
+  }, [
+    url,
+    onMessage,
+    onOpen,
+    onClose,
+    onError,
+    reconnect,
+    reconnectInterval,
+    maxReconnectAttempts,
+  ]);
 
   const disconnect = useCallback(() => {
     if (wsRef.current) {
@@ -130,10 +138,7 @@ export function useTenantWebSocket(tenantId: string | undefined) {
 export function useWSStats() {
   return useQuery({
     queryKey: ['ws-stats'],
-    queryFn: async () => {
-      const response = await apiClient.get<WebSocketStats>('/ws/stats/');
-      return response.data;
-    },
+    queryFn: async () => wsApi.wsStats(),
     refetchInterval: 30_000,
   });
 }
@@ -142,12 +147,7 @@ export function useWSStats() {
 export function useWSIsOnline(userId: number | undefined) {
   return useQuery({
     queryKey: ['ws-online', userId],
-    queryFn: async () => {
-      const response = await apiClient.get<{ user_id: number; online: boolean }>(
-        `/ws/online/${userId}/`
-      );
-      return response.data;
-    },
+    queryFn: async () => wsApi.wsIsOnline(userId as number),
     enabled: !!userId,
     refetchInterval: 15_000,
   });

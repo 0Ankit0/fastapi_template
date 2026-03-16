@@ -1,31 +1,24 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
-import type {
-  Notification,
-  NotificationList,
-  NotificationPreference,
-  NotificationPreferenceUpdate,
-} from '@/types';
+import * as notificationApi from '@/lib/graphql/notifications';
+import type { NotificationPreferenceUpdate } from '@/types';
 
-export function useNotifications(params?: { unread_only?: boolean; skip?: number; limit?: number }) {
+export function useNotifications(params?: {
+  unread_only?: boolean;
+  skip?: number;
+  limit?: number;
+}) {
   return useQuery({
     queryKey: ['notifications', params],
-    queryFn: async () => {
-      const response = await apiClient.get<NotificationList>('/notifications/', { params });
-      return response.data;
-    },
+    queryFn: async () => notificationApi.notifications(params),
   });
 }
 
 export function useGetNotification(id: number) {
   return useQuery({
     queryKey: ['notifications', id],
-    queryFn: async () => {
-      const response = await apiClient.get<Notification>(`/notifications/${id}/`);
-      return response.data;
-    },
+    queryFn: async () => notificationApi.notification(id),
     enabled: !!id,
   });
 }
@@ -33,10 +26,7 @@ export function useGetNotification(id: number) {
 export function useMarkNotificationRead() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: number) => {
-      const response = await apiClient.patch<Notification>(`/notifications/${id}/read/`);
-      return response.data;
-    },
+    mutationFn: async (id: number) => notificationApi.markNotificationRead(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
@@ -46,10 +36,7 @@ export function useMarkNotificationRead() {
 export function useMarkAllNotificationsRead() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async () => {
-      const response = await apiClient.patch('/notifications/read-all/');
-      return response.data;
-    },
+    mutationFn: async () => notificationApi.markAllNotificationsRead(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
@@ -59,58 +46,36 @@ export function useMarkAllNotificationsRead() {
 export function useDeleteNotification() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: number) => {
-      await apiClient.delete(`/notifications/${id}/`);
-    },
+    mutationFn: async (id: number) => notificationApi.deleteNotification(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 }
 
-/** Create a notification (superuser only). */
 export function useCreateNotification() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: {
-      user_id: number;
-      title: string;
-      body: string;
-      type?: string;
-    }) => {
-      const response = await apiClient.post('/notifications/', data);
-      return response.data;
-    },
+    mutationFn: async (data: { user_id: number; title: string; body: string; type?: string }) =>
+      notificationApi.createNotification(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 }
-
-// ── Notification Preferences ────────────────────────────────────────────────
 
 export function useNotificationPreferences() {
   return useQuery({
     queryKey: ['notification-preferences'],
-    queryFn: async () => {
-      const response = await apiClient.get<NotificationPreference>(
-        '/notifications/preferences/'
-      );
-      return response.data;
-    },
+    queryFn: async () => notificationApi.notificationPreferences(),
   });
 }
 
 export function useUpdateNotificationPreferences() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: NotificationPreferenceUpdate) => {
-      const response = await apiClient.patch<NotificationPreference>(
-        '/notifications/preferences/',
-        data
-      );
-      return response.data;
-    },
+    mutationFn: async (data: NotificationPreferenceUpdate) =>
+      notificationApi.updateNotificationPreferences(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
     },
@@ -120,13 +85,8 @@ export function useUpdateNotificationPreferences() {
 export function useRegisterPushSubscription() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { endpoint: string; p256dh: string; auth: string }) => {
-      const response = await apiClient.put<NotificationPreference>(
-        '/notifications/preferences/push-subscription/',
-        data
-      );
-      return response.data;
-    },
+    mutationFn: async (data: { endpoint: string; p256dh: string; auth: string }) =>
+      notificationApi.registerPushSubscription(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
     },
@@ -136,9 +96,7 @@ export function useRegisterPushSubscription() {
 export function useRemovePushSubscription() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async () => {
-      await apiClient.delete('/notifications/preferences/push-subscription/');
-    },
+    mutationFn: async () => notificationApi.removePushSubscription(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
     },

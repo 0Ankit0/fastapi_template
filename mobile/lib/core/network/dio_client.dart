@@ -45,15 +45,30 @@ class DioClient {
               }
 
               final response = await _dio.post(
-                '/auth/refresh/?set_cookie=false',
-                data: {'refresh_token': refreshToken},
+                '/graphql',
+                data: {
+                  'query': '''mutation RefreshToken(\$refreshToken: String!) {
+                    refreshToken(refreshToken: \$refreshToken) {
+                      access
+                      refresh
+                    }
+                  }''',
+                  'variables': {'refreshToken': refreshToken},
+                },
                 options: Options(
                   headers: {'Authorization': null},
                 ),
               );
 
-              final newAccessToken = response.data['access'] as String;
-              final newRefreshToken = response.data['refresh'] as String?;
+              final payload = response.data as Map<String, dynamic>;
+              final data = payload['data'] as Map<String, dynamic>?;
+              final tokens = data?['refreshToken'] as Map<String, dynamic>?;
+              if (tokens == null) {
+                throw Exception('Invalid refresh response');
+              }
+
+              final newAccessToken = tokens['access'] as String;
+              final newRefreshToken = tokens['refresh'] as String?;
               await _secureStorage.saveAccessToken(newAccessToken);
               if (newRefreshToken != null) {
                 await _secureStorage.saveRefreshToken(newRefreshToken);

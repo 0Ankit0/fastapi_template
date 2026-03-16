@@ -1,7 +1,8 @@
-import 'package:dio/dio.dart';
+import 'dart:convert';
+
 import '../../../../core/error/error_handler.dart';
-import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../../core/network/graphql_client.dart';
 import '../models/auth_response.dart';
 import '../models/login_request.dart';
 import '../models/otp_setup_response.dart';
@@ -9,17 +10,31 @@ import '../models/register_request.dart';
 import '../models/user.dart';
 
 class AuthRepository {
-  final DioClient _dioClient;
+  final GraphQLClient _graphql;
 
-  AuthRepository(this._dioClient);
+  AuthRepository(DioClient dioClient) : _graphql = GraphQLClient(dioClient.dio);
 
   Future<AuthResponse> login(LoginRequest request) async {
     try {
-      final response = await _dioClient.dio.post(
-        '${ApiEndpoints.login}?set_cookie=false',
-        data: request.toJson(),
+      final data = await _graphql.mutation(
+        r'''
+        mutation Login($input: LoginInput!) {
+          login(input: $input) {
+            ... on AuthTokens {
+              access
+              refresh
+              token_type
+            }
+            ... on OTPLoginResponse {
+              requires_otp
+              temp_token
+            }
+          }
+        }
+        ''',
+        variables: {'input': request.toJson()},
       );
-      return AuthResponse.fromJson(response.data as Map<String, dynamic>);
+      return AuthResponse.fromJson(data['login'] as Map<String, dynamic>);
     } catch (e) {
       throw ErrorHandler.handle(e);
     }
@@ -27,11 +42,19 @@ class AuthRepository {
 
   Future<AuthResponse> register(RegisterRequest request) async {
     try {
-      final response = await _dioClient.dio.post(
-        '${ApiEndpoints.register}?set_cookie=false',
-        data: request.toJson(),
+      final data = await _graphql.mutation(
+        r'''
+        mutation Signup($input: SignupInput!) {
+          signup(input: $input) {
+            access
+            refresh
+            token_type
+          }
+        }
+        ''',
+        variables: {'input': request.toJson()},
       );
-      return AuthResponse.fromJson(response.data as Map<String, dynamic>);
+      return AuthResponse.fromJson(data['signup'] as Map<String, dynamic>);
     } catch (e) {
       throw ErrorHandler.handle(e);
     }
@@ -39,7 +62,7 @@ class AuthRepository {
 
   Future<void> logout() async {
     try {
-      await _dioClient.dio.post(ApiEndpoints.logout);
+      await _graphql.mutation(r'''mutation Logout { logout }''');
     } catch (e) {
       throw ErrorHandler.handle(e);
     }
@@ -47,17 +70,60 @@ class AuthRepository {
 
   Future<User> getMe() async {
     try {
-      final response = await _dioClient.dio.get(ApiEndpoints.me);
-      return User.fromJson(response.data as Map<String, dynamic>);
+      final data = await _graphql.query(r'''
+        query CurrentUser {
+          currentUser {
+            id
+            username
+            email
+            is_confirmed: isConfirmed
+            is_active: isActive
+            is_superuser: isSuperuser
+            otp_enabled: otpEnabled
+            otp_verified: otpVerified
+            first_name: firstName
+            last_name: lastName
+            phone
+            image_url: imageUrl
+            created_at: createdAt
+            bio
+            roles
+          }
+        }
+      ''');
+      return User.fromJson(data['currentUser'] as Map<String, dynamic>);
     } catch (e) {
       throw ErrorHandler.handle(e);
     }
   }
 
-  Future<User> updateMe(Map<String, dynamic> data) async {
+  Future<User> updateMe(Map<String, dynamic> input) async {
     try {
-      final response = await _dioClient.dio.patch(ApiEndpoints.updateMe, data: data);
-      return User.fromJson(response.data as Map<String, dynamic>);
+      final data = await _graphql.mutation(
+        r'''
+        mutation UpdateProfile($input: UserUpdateInput!) {
+          updateProfile(input: $input) {
+            id
+            username
+            email
+            is_confirmed: isConfirmed
+            is_active: isActive
+            is_superuser: isSuperuser
+            otp_enabled: otpEnabled
+            otp_verified: otpVerified
+            first_name: firstName
+            last_name: lastName
+            phone
+            image_url: imageUrl
+            created_at: createdAt
+            bio
+            roles
+          }
+        }
+        ''',
+        variables: {'input': input},
+      );
+      return User.fromJson(data['updateProfile'] as Map<String, dynamic>);
     } catch (e) {
       throw ErrorHandler.handle(e);
     }
@@ -65,14 +131,38 @@ class AuthRepository {
 
   Future<User> uploadAvatar(List<int> fileBytes, String fileName) async {
     try {
-      final formData = FormData.fromMap({
-        'file': MultipartFile.fromBytes(fileBytes, filename: fileName),
-      });
-      final response = await _dioClient.dio.post(
-        ApiEndpoints.avatar,
-        data: formData,
+      final base64Data = base64Encode(fileBytes);
+      final data = await _graphql.mutation(
+        r'''
+        mutation UploadAvatar($input: AvatarUploadInput!) {
+          uploadAvatar(input: $input) {
+            id
+            username
+            email
+            is_confirmed: isConfirmed
+            is_active: isActive
+            is_superuser: isSuperuser
+            otp_enabled: otpEnabled
+            otp_verified: otpVerified
+            first_name: firstName
+            last_name: lastName
+            phone
+            image_url: imageUrl
+            created_at: createdAt
+            bio
+            roles
+          }
+        }
+        ''',
+        variables: {
+          'input': {
+            'fileName': fileName,
+            'contentType': 'image/*',
+            'base64Data': base64Data,
+          }
+        },
       );
-      return User.fromJson(response.data as Map<String, dynamic>);
+      return User.fromJson(data['uploadAvatar'] as Map<String, dynamic>);
     } catch (e) {
       throw ErrorHandler.handle(e);
     }
@@ -80,11 +170,19 @@ class AuthRepository {
 
   Future<AuthResponse> refreshToken(String refreshToken) async {
     try {
-      final response = await _dioClient.dio.post(
-        '${ApiEndpoints.refresh}?set_cookie=false',
-        data: {'refresh_token': refreshToken},
+      final data = await _graphql.mutation(
+        r'''
+        mutation RefreshToken($refreshToken: String!) {
+          refreshToken(refreshToken: $refreshToken) {
+            access
+            refresh
+            token_type
+          }
+        }
+        ''',
+        variables: {'refreshToken': refreshToken},
       );
-      return AuthResponse.fromJson(response.data as Map<String, dynamic>);
+      return AuthResponse.fromJson(data['refreshToken'] as Map<String, dynamic>);
     } catch (e) {
       throw ErrorHandler.handle(e);
     }
@@ -96,11 +194,20 @@ class AuthRepository {
     required String confirmPassword,
   }) async {
     try {
-      await _dioClient.dio.post(ApiEndpoints.changePassword, data: {
-        'current_password': currentPassword,
-        'new_password': newPassword,
-        'confirm_password': confirmPassword,
-      });
+      await _graphql.mutation(
+        r'''
+        mutation ChangePassword($input: ChangePasswordInput!) {
+          changePassword(input: $input)
+        }
+        ''',
+        variables: {
+          'input': {
+            'current_password': currentPassword,
+            'new_password': newPassword,
+            'confirm_password': confirmPassword,
+          }
+        },
+      );
     } catch (e) {
       throw ErrorHandler.handle(e);
     }
@@ -108,7 +215,14 @@ class AuthRepository {
 
   Future<void> passwordResetRequest(String email) async {
     try {
-      await _dioClient.dio.post(ApiEndpoints.passwordResetRequest, data: {'email': email});
+      await _graphql.mutation(
+        r'''
+        mutation RequestPasswordReset($email: String!) {
+          requestPasswordReset(email: $email)
+        }
+        ''',
+        variables: {'email': email},
+      );
     } catch (e) {
       throw ErrorHandler.handle(e);
     }
@@ -120,11 +234,20 @@ class AuthRepository {
     required String confirmPassword,
   }) async {
     try {
-      await _dioClient.dio.post(ApiEndpoints.passwordResetConfirm, data: {
-        'token': token,
-        'new_password': newPassword,
-        'confirm_password': confirmPassword,
-      });
+      await _graphql.mutation(
+        r'''
+        mutation ConfirmPasswordReset($input: ResetPasswordConfirmInput!) {
+          confirmPasswordReset(input: $input)
+        }
+        ''',
+        variables: {
+          'input': {
+            'token': token,
+            'new_password': newPassword,
+            'confirm_password': confirmPassword,
+          }
+        },
+      );
     } catch (e) {
       throw ErrorHandler.handle(e);
     }
@@ -132,8 +255,16 @@ class AuthRepository {
 
   Future<OtpSetupResponse> enableOtp() async {
     try {
-      final response = await _dioClient.dio.post(ApiEndpoints.otpEnable);
-      return OtpSetupResponse.fromJson(response.data as Map<String, dynamic>);
+      final data = await _graphql.mutation(r'''
+        mutation EnableOtp {
+          enableOtp {
+            otp_base32
+            otp_auth_url
+            qr_code
+          }
+        }
+      ''');
+      return OtpSetupResponse.fromJson(data['enableOtp'] as Map<String, dynamic>);
     } catch (e) {
       throw ErrorHandler.handle(e);
     }
@@ -141,10 +272,14 @@ class AuthRepository {
 
   Future<void> confirmOtpSetup(String otpCode, String tempToken) async {
     try {
-      await _dioClient.dio.post(ApiEndpoints.otpVerify, data: {
-        'otp_code': otpCode,
-        'temp_token': tempToken,
-      });
+      await _graphql.mutation(
+        r'''
+        mutation VerifyOtp($otpCode: String!, $tempToken: String!) {
+          verifyOtp(otpCode: $otpCode, tempToken: $tempToken)
+        }
+        ''',
+        variables: {'otpCode': otpCode, 'tempToken': tempToken},
+      );
     } catch (e) {
       throw ErrorHandler.handle(e);
     }
@@ -152,11 +287,21 @@ class AuthRepository {
 
   Future<AuthResponse> validateOtp(String otpCode, String tempToken) async {
     try {
-      final response = await _dioClient.dio.post(
-        '${ApiEndpoints.otpValidate}?set_cookie=false',
-        data: {'otp_code': otpCode, 'temp_token': tempToken},
+      final data = await _graphql.mutation(
+        r'''
+        mutation ValidateOtp($input: VerifyOtpInput!) {
+          validateOtp(input: $input) {
+            access
+            refresh
+            token_type
+          }
+        }
+        ''',
+        variables: {
+          'input': {'otp_code': otpCode, 'temp_token': tempToken}
+        },
       );
-      return AuthResponse.fromJson(response.data as Map<String, dynamic>);
+      return AuthResponse.fromJson(data['validateOtp'] as Map<String, dynamic>);
     } catch (e) {
       throw ErrorHandler.handle(e);
     }
@@ -164,7 +309,14 @@ class AuthRepository {
 
   Future<void> disableOtp(String password) async {
     try {
-      await _dioClient.dio.post(ApiEndpoints.otpDisable, data: {'password': password});
+      await _graphql.mutation(
+        r'''
+        mutation DisableOtp($password: String!) {
+          disableOtp(password: $password)
+        }
+        ''',
+        variables: {'password': password},
+      );
     } catch (e) {
       throw ErrorHandler.handle(e);
     }
@@ -172,11 +324,30 @@ class AuthRepository {
 
   Future<List<String>> getEnabledSocialProviders() async {
     try {
-      final response = await _dioClient.dio.get(ApiEndpoints.socialProviders);
-      final data = response.data as Map<String, dynamic>;
-      return List<String>.from(data['providers'] as List? ?? []);
-    } catch (e) {
+      final data = await _graphql.query(r'''
+        query SocialProviders {
+          socialProviders
+        }
+      ''');
+      final providers = data['socialProviders'] as List<dynamic>? ?? [];
+      return providers.map((e) => e.toString()).toList();
+    } catch (_) {
       return [];
+    }
+  }
+
+  Future<void> resendVerification([String? email]) async {
+    try {
+      await _graphql.mutation(
+        r'''
+        mutation ResendVerification($email: String) {
+          resendVerificationEmail(email: $email)
+        }
+        ''',
+        variables: {'email': email},
+      );
+    } catch (e) {
+      throw ErrorHandler.handle(e);
     }
   }
 }

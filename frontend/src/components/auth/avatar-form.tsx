@@ -2,14 +2,25 @@
 
 import { useState, useRef } from 'react';
 import { useAuthStore } from '@/store/auth-store';
-import { apiClient } from '@/lib/api-client';
-import { Button } from '@/components/ui/button';
+import * as userApi from '@/lib/graphql/users';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Camera, User, Loader2 } from 'lucide-react';
-import type { User as UserType } from '@/types';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const MAX_SIZE_MB = 5;
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const value = String(reader.result ?? '');
+      const base64 = value.includes(',') ? value.split(',')[1] : value;
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 export function AvatarForm() {
   const { user, setUser } = useAuthStore();
@@ -34,21 +45,20 @@ export function AvatarForm() {
     setError('');
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await apiClient.post<UserType>('/users/me/avatar', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      const base64Data = await fileToBase64(file);
+      const updatedUser = await userApi.uploadAvatar({
+        fileName: file.name,
+        contentType: file.type,
+        base64Data,
       });
 
       if (user) {
-        setUser({ ...user, image_url: response.data.image_url });
+        setUser({ ...user, image_url: updatedUser.image_url });
       }
     } catch {
       setError('Upload failed. Please try again.');
     } finally {
       setIsLoading(false);
-      // Reset input so the same file can be re-selected after an error
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -65,11 +75,7 @@ export function AvatarForm() {
         <div className="relative">
           <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
             {user?.image_url ? (
-              <img
-                src={user.image_url}
-                alt="Avatar"
-                className="w-full h-full object-cover"
-              />
+              <img src={user.image_url} alt="Avatar" className="w-full h-full object-cover" />
             ) : (
               <User className="h-10 w-10 text-gray-400" />
             )}
