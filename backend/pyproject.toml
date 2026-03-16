@@ -20,7 +20,9 @@ dependencies = [
     "aiosqlite>=0.20.0",
     "asyncpg>=0.30.0",
     "greenlet>=3.3.1",
+    "google-auth>=2.40.3",
     "alembic>=1.18.4",
+    "boto3>=1.40.0",
     "bcrypt>=4.0.0,<5.0.0",
     "casbin>=1.37.0",
     "casbin-sqlalchemy-adapter>=0.6.0",
@@ -51,7 +53,7 @@ test = [
 
 [tool.taskipy.tasks]
 start = "uvicorn src.main:app --reload"
-test = "pytest --cov=app tests/"
+test = "pytest --cov=src tests/"
 initial-migrate = 'alembic revision --autogenerate -m "init"'
 migrate = "alembic upgrade head"
 celery = "celery -A src.apps.core.celery_app worker --loglevel=info"

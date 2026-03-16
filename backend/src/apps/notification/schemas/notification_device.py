@@ -1,0 +1,50 @@
+from datetime import datetime
+from typing import Any, Optional
+
+from pydantic import BaseModel, model_validator
+
+from src.apps.notification.models.notification_device import (
+    NotificationDevicePlatform,
+    NotificationDeviceProvider,
+)
+
+
+class NotificationDeviceRead(BaseModel):
+    id: int
+    user_id: int
+    provider: NotificationDeviceProvider
+    platform: NotificationDevicePlatform
+    token: Optional[str] = None
+    endpoint: Optional[str] = None
+    subscription_id: Optional[str] = None
+    is_active: bool
+    last_seen_at: datetime
+    created_at: datetime
+    updated_at: datetime
+    device_metadata: Optional[Any] = None
+
+    model_config = {"from_attributes": True}
+
+
+class NotificationDeviceCreate(BaseModel):
+    provider: NotificationDeviceProvider
+    platform: NotificationDevicePlatform
+    token: Optional[str] = None
+    endpoint: Optional[str] = None
+    p256dh: Optional[str] = None
+    auth: Optional[str] = None
+    subscription_id: Optional[str] = None
+    device_metadata: Optional[Any] = None
+
+    @model_validator(mode="after")
+    def validate_payload(self) -> "NotificationDeviceCreate":
+        if self.provider == NotificationDeviceProvider.WEBPUSH:
+            if not all([self.endpoint, self.p256dh, self.auth]):
+                raise ValueError("webpush requires endpoint, p256dh, and auth")
+        elif self.provider == NotificationDeviceProvider.FCM:
+            if not self.token:
+                raise ValueError("fcm requires token")
+        elif self.provider == NotificationDeviceProvider.ONESIGNAL:
+            if not self.subscription_id:
+                raise ValueError("onesignal requires subscription_id")
+        return self

@@ -55,11 +55,12 @@ class TestCompleteAuthenticationFlow:
         assert login_response.status_code == 200
         login_data = login_response.json()
         access_token_login = login_data["access"]
+        refresh_token_login = login_data["refresh"]
         
         # Step 3: Refresh token
         refresh_response = await client.post(
             "/api/v1/auth/refresh/?set_cookie=false",
-            json={"refresh_token": refresh_token_1}
+            json={"refresh_token": refresh_token_login}
         )
         assert refresh_response.status_code == 200
         refresh_data = refresh_response.json()
@@ -74,8 +75,9 @@ class TestCompleteAuthenticationFlow:
             json={"username": "lifecycle_user", "password": "LifeCycle123!"}
         )
         assert login_response_2.status_code == 200
-        
+        login_data_2 = login_response_2.json()
+
         # Step 5: Logout
-        headers_2 = {"Authorization": f"Bearer {access_token_2}"}
+        headers_2 = {"Authorization": f"Bearer {login_data_2['access']}"}
         logout_response = await client.post("/api/v1/auth/logout/", headers=headers_2)
         assert logout_response.status_code == 200

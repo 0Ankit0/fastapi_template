@@ -255,3 +255,72 @@ class TestNotificationAPI:
         data = resp.json()
         assert data["title"] == "Hi"
         assert data["type"] == "success"
+
+    @pytest.mark.asyncio
+    async def test_register_and_list_notification_devices(
+        self, client: AsyncClient, db_session: AsyncSession
+    ):
+        await _make_user(db_session, username="apiuser8", email="api8@example.com")
+        token = await _login(client, "apiuser8")
+
+        create_resp = await client.post(
+            "/api/v1/notifications/devices/",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "provider": "webpush",
+                "platform": "web",
+                "endpoint": "https://push.example.com/subscription",
+                "p256dh": "test-p256dh",
+                "auth": "test-auth",
+            },
+        )
+        assert create_resp.status_code == 201, create_resp.text
+        assert create_resp.json()["provider"] == "webpush"
+
+        list_resp = await client.get(
+            "/api/v1/notifications/devices/",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert list_resp.status_code == 200
+        devices = list_resp.json()
+        assert len(devices) == 1
+        assert devices[0]["platform"] == "web"
+
+    @pytest.mark.asyncio
+    async def test_push_subscription_compatibility_wrapper_uses_device_registry(
+        self, client: AsyncClient, db_session: AsyncSession
+    ):
+        await _make_user(db_session, username="apiuser9", email="api9@example.com")
+        token = await _login(client, "apiuser9")
+
+        put_resp = await client.put(
+            "/api/v1/notifications/preferences/push-subscription/",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "endpoint": "https://push.example.com/subscription-2",
+                "p256dh": "compat-p256dh",
+                "auth": "compat-auth",
+            },
+        )
+        assert put_resp.status_code == 200, put_resp.text
+        assert put_resp.json()["push_enabled"] is True
+
+        devices_resp = await client.get(
+            "/api/v1/notifications/devices/",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert devices_resp.status_code == 200
+        assert len(devices_resp.json()) == 1
+
+        delete_resp = await client.delete(
+            "/api/v1/notifications/preferences/push-subscription/",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert delete_resp.status_code == 204
+
+        devices_after = await client.get(
+            "/api/v1/notifications/devices/",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert devices_after.status_code == 200
+        assert devices_after.json() == []

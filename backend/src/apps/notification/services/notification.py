@@ -1,5 +1,6 @@
-"""Notification service — persist + multi-channel delivery (WebSocket, email, push, SMS)."""
+"""Notification service — persistence plus multi-channel delivery."""
 import logging
+from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import and_, func, select
@@ -7,12 +8,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col
 
 from src.apps.notification.models.notification import Notification
-from src.apps.notification.models.notification_preference import NotificationPreference
-from src.apps.notification.schemas.notification import (
-    NotificationCreate,
-    NotificationList,
-    NotificationRead,
+from src.apps.notification.models.notification_device import (
+    NotificationDevice,
+    NotificationDevicePlatform,
+    NotificationDeviceProvider,
 )
+from src.apps.notification.models.notification_preference import NotificationPreference
+from src.apps.notification.schemas.notification import NotificationCreate, NotificationList, NotificationRead
+from src.apps.notification.schemas.notification_device import NotificationDeviceCreate
 from src.apps.notification.tasks import (
     send_notification_email_task,
     send_push_notification_task,
@@ -22,10 +25,7 @@ from src.apps.notification.tasks import (
 log = logging.getLogger(__name__)
 
 
-async def _get_or_create_preference(
-    db: AsyncSession, user_id: int
-) -> NotificationPreference:
-    """Return the user's NotificationPreference, creating a default row if absent."""
+async def get_or_create_preference(db: AsyncSession, user_id: int) -> NotificationPreference:
     result = await db.execute(
         select(NotificationPreference).where(col(NotificationPreference.user_id) == user_id)
     )
@@ -38,21 +38,110 @@ async def _get_or_create_preference(
     return pref
 
 
+async def list_devices(db: AsyncSession, user_id: int) -> list[NotificationDevice]:
+    result = await db.execute(
+        select(NotificationDevice)
+        .where(
+            and_(
+                col(NotificationDevice.user_id) == user_id,
+                col(NotificationDevice.is_active) == True,  # noqa: E712
+            )
+        )
+        .order_by(col(NotificationDevice.updated_at).desc())
+    )
+    return list(result.scalars().all())
+
+
+async def register_device(
+    db: AsyncSession,
+    user_id: int,
+    payload: NotificationDeviceCreate,
+) -> NotificationDevice:
+    existing_query = select(NotificationDevice).where(
+        NotificationDevice.user_id == user_id,
+        NotificationDevice.provider == payload.provider,
+    )
+    if payload.provider == NotificationDeviceProvider.WEBPUSH:
+        existing_query = existing_query.where(NotificationDevice.endpoint == payload.endpoint)
+    elif payload.provider == NotificationDeviceProvider.FCM:
+        existing_query = existing_query.where(NotificationDevice.token == payload.token)
+    else:
+        existing_query = existing_query.where(
+            NotificationDevice.subscription_id == payload.subscription_id
+        )
+    result = await db.execute(existing_query)
+    device = result.scalars().first()
+    if device is None:
+        device = NotificationDevice(user_id=user_id, provider=payload.provider, platform=payload.platform)
+    device.token = payload.token
+    device.endpoint = payload.endpoint
+    device.p256dh = payload.p256dh
+    device.auth = payload.auth
+    device.subscription_id = payload.subscription_id
+    device.device_metadata = payload.device_metadata
+    device.is_active = True
+    device.last_seen_at = datetime.now()
+    device.updated_at = datetime.now()
+    db.add(device)
+    await db.commit()
+    await db.refresh(device)
+    await _sync_preference_push_fields(db, user_id)
+    return device
+
+
+async def remove_device(db: AsyncSession, user_id: int, device_id: int) -> bool:
+    device = await db.get(NotificationDevice, device_id)
+    if not device or device.user_id != user_id:
+        return False
+    device.is_active = False
+    device.updated_at = datetime.now()
+    db.add(device)
+    await db.commit()
+    await _sync_preference_push_fields(db, user_id)
+    return True
+
+
+async def remove_webpush_subscription(db: AsyncSession, user_id: int) -> None:
+    result = await db.execute(
+        select(NotificationDevice).where(
+            NotificationDevice.user_id == user_id,
+            NotificationDevice.provider == NotificationDeviceProvider.WEBPUSH,
+            NotificationDevice.is_active == True,  # noqa: E712
+        )
+    )
+    for device in result.scalars().all():
+        device.is_active = False
+        device.updated_at = datetime.now()
+        db.add(device)
+    await db.commit()
+    await _sync_preference_push_fields(db, user_id)
+
+
+async def _sync_preference_push_fields(db: AsyncSession, user_id: int) -> NotificationPreference:
+    pref = await get_or_create_preference(db, user_id)
+    result = await db.execute(
+        select(NotificationDevice).where(
+            NotificationDevice.user_id == user_id,
+            NotificationDevice.provider == NotificationDeviceProvider.WEBPUSH,
+            NotificationDevice.is_active == True,  # noqa: E712
+        )
+    )
+    device = result.scalars().first()
+    pref.push_endpoint = device.endpoint if device else None
+    pref.push_p256dh = device.p256dh if device else None
+    pref.push_auth = device.auth if device else None
+    pref.push_enabled = pref.push_enabled if device else False
+    db.add(pref)
+    await db.commit()
+    await db.refresh(pref)
+    return pref
+
+
 async def create_notification(
     db: AsyncSession,
     data: NotificationCreate,
     push_ws: bool = True,
 ) -> Notification:
-    """
-    Persist a notification then dispatch it over every channel the user has
-    enabled in their NotificationPreference.
-
-    Channel behaviour:
-    - websocket — real-time; best-effort (silently skipped if offline)
-    - email     — queued via Celery; requires user email address
-    - push      — Web Push via pywebpush; requires stored push subscription
-    - sms       — Twilio SMS; requires user phone number
-    """
     notification = Notification(
         user_id=data.user_id,
         title=data.title,
@@ -64,17 +153,14 @@ async def create_notification(
     await db.commit()
     await db.refresh(notification)
 
-    pref = await _get_or_create_preference(db, data.user_id)
+    pref = await get_or_create_preference(db, data.user_id)
 
     if push_ws and pref.websocket_enabled:
         await _push_to_ws(notification)
-
     if pref.email_enabled:
         await _push_to_email(db, notification)
-
     if pref.push_enabled:
-        await _push_to_web_push(pref, notification)
-
+        await _push_to_devices(db, notification)
     if pref.sms_enabled:
         await _push_to_sms(db, notification)
 
@@ -82,7 +168,6 @@ async def create_notification(
 
 
 async def _push_to_ws(notification: Notification) -> None:
-    """Push notification to the user's active WebSocket connections (if any)."""
     try:
         from src.apps.websocket.manager import manager
 
@@ -104,17 +189,13 @@ async def _push_to_ws(notification: Notification) -> None:
 
 
 async def _push_to_email(db: AsyncSession, notification: Notification) -> None:
-    """Queue an email copy of the notification via Celery."""
     try:
         from src.apps.iam.models.user import User
 
-        result = await db.execute(
-            select(User).where(col(User.id) == notification.user_id)
-        )
+        result = await db.execute(select(User).where(col(User.id) == notification.user_id))
         user = result.scalars().first()
         if not user:
             return
-
         send_notification_email_task.delay(
             recipients=[{"name": user.username, "email": user.email}],
             subject=notification.title,
@@ -131,31 +212,33 @@ async def _push_to_email(db: AsyncSession, notification: Notification) -> None:
         log.warning("Email push failed for notification id=%s: %s", notification.id, exc)
 
 
-async def _push_to_web_push(
-    pref: NotificationPreference, notification: Notification
-) -> None:
-    """Dispatch a Web Push notification via Celery if a subscription is stored."""
-    if not (pref.push_endpoint and pref.push_p256dh and pref.push_auth):
-        log.debug(
-            "No push subscription stored for user_id=%s — skipping push",
-            notification.user_id,
-        )
-        return
-    try:
-        send_push_notification_task.delay(
-            endpoint=pref.push_endpoint,
-            p256dh=pref.push_p256dh,
-            auth=pref.push_auth,
-            title=notification.title,
-            body=notification.body,
-            extra_data=notification.extra_data if isinstance(notification.extra_data, dict) else None,
-        )
-    except Exception as exc:
-        log.warning("Push task enqueue failed for notification id=%s: %s", notification.id, exc)
+async def _push_to_devices(db: AsyncSession, notification: Notification) -> None:
+    devices = await list_devices(db, notification.user_id)
+    for device in devices:
+        try:
+            payload = {
+                "provider": device.provider.value,
+                "platform": device.platform.value,
+                "title": notification.title,
+                "body": notification.body,
+                "data": notification.extra_data if isinstance(notification.extra_data, dict) else None,
+                "token": device.token,
+                "endpoint": device.endpoint,
+                "p256dh": device.p256dh,
+                "auth": device.auth,
+                "subscription_id": device.subscription_id,
+            }
+            send_push_notification_task.delay(payload)
+        except Exception as exc:
+            log.warning(
+                "Push task enqueue failed for notification id=%s device=%s: %s",
+                notification.id,
+                device.id,
+                exc,
+            )
 
 
 async def _push_to_sms(db: AsyncSession, notification: Notification) -> None:
-    """Dispatch an SMS via Celery using the user's profile phone number."""
     try:
         from src.apps.iam.models.user import UserProfile
 
@@ -164,11 +247,7 @@ async def _push_to_sms(db: AsyncSession, notification: Notification) -> None:
         )
         profile = result.scalars().first()
         if not profile or not profile.phone:
-            log.debug(
-                "No phone number for user_id=%s — skipping SMS", notification.user_id
-            )
             return
-
         send_sms_notification_task.delay(
             to_number=profile.phone,
             body=f"{notification.title}: {notification.body}",
@@ -185,16 +264,12 @@ async def get_user_notifications(
     skip: int = 0,
     limit: int = 20,
 ) -> NotificationList:
-    """Return paginated notifications for a user."""
     base_query = select(Notification).where(col(Notification.user_id) == user_id)
     if unread_only:
         base_query = base_query.where(col(Notification.is_read) == False)  # noqa: E712
 
-    count_result = await db.execute(
-        select(func.count()).select_from(base_query.subquery())
-    )
+    count_result = await db.execute(select(func.count()).select_from(base_query.subquery()))
     total = count_result.scalar_one()
-
     unread_result = await db.execute(
         select(func.count()).select_from(
             select(Notification)
@@ -203,28 +278,24 @@ async def get_user_notifications(
         )
     )
     unread_count = unread_result.scalar_one()
-
     result = await db.execute(
         base_query.order_by(col(Notification.created_at).desc()).offset(skip).limit(limit)
     )
     items = result.scalars().all()
-
     return NotificationList(
-        items=[NotificationRead.model_validate(n) for n in items],
+        items=[NotificationRead.model_validate(item) for item in items],
         total=total,
         unread_count=unread_count,
     )
 
 
-async def get_notification(
-    db: AsyncSession,
-    notification_id: int,
-    user_id: int,
-) -> Optional[Notification]:
-    """Fetch a single notification belonging to the given user."""
+async def get_notification(db: AsyncSession, notification_id: int, user_id: int) -> Optional[Notification]:
     result = await db.execute(
         select(Notification).where(
-            and_(col(Notification.id) == notification_id, col(Notification.user_id) == user_id)
+            and_(
+                col(Notification.id) == notification_id,
+                col(Notification.user_id) == user_id,
+            )
         )
     )
     return result.scalars().first()
@@ -235,7 +306,6 @@ async def mark_as_read(
     notification_id: int,
     user_id: int,
 ) -> Optional[Notification]:
-    """Mark a single notification as read. Returns None if not found."""
     notification = await get_notification(db, notification_id, user_id)
     if not notification:
         return None
@@ -247,26 +317,20 @@ async def mark_as_read(
 
 
 async def mark_all_read(db: AsyncSession, user_id: int) -> int:
-    """Mark all unread notifications for a user as read. Returns the count updated."""
     result = await db.execute(
         select(Notification).where(
             and_(col(Notification.user_id) == user_id, col(Notification.is_read) == False)  # noqa: E712
         )
     )
     notifications = result.scalars().all()
-    for n in notifications:
-        n.is_read = True
-        db.add(n)
+    for notification in notifications:
+        notification.is_read = True
+        db.add(notification)
     await db.commit()
     return len(notifications)
 
 
-async def delete_notification(
-    db: AsyncSession,
-    notification_id: int,
-    user_id: int,
-) -> bool:
-    """Delete a notification. Returns True if deleted, False if not found."""
+async def delete_notification(db: AsyncSession, notification_id: int, user_id: int) -> bool:
     notification = await get_notification(db, notification_id, user_id)
     if not notification:
         return False

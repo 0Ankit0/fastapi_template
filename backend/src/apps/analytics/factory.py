@@ -35,12 +35,19 @@ def _build_provider() -> AnalyticsProvider | None:
             host=settings.POSTHOG_HOST,
         )
 
-    # ----------------------------------------------------------------
-    # Register additional providers here, e.g.:
-    #   if provider_name == "mixpanel":
-    #       from src.apps.analytics.adapters.mixpanel_adapter import MixpanelAdapter
-    #       return MixpanelAdapter(...)
-    # ----------------------------------------------------------------
+    if provider_name == "mixpanel":
+        if not settings.MIXPANEL_PROJECT_TOKEN:
+            logger.warning(
+                "ANALYTICS_ENABLED=true but MIXPANEL_PROJECT_TOKEN is empty — "
+                "analytics disabled."
+            )
+            return None
+        from src.apps.analytics.adapters.mixpanel_adapter import MixpanelAdapter
+
+        return MixpanelAdapter(
+            project_token=settings.MIXPANEL_PROJECT_TOKEN,
+            host=settings.MIXPANEL_API_HOST,
+        )
 
     logger.warning(
         "Unknown ANALYTICS_PROVIDER=%r — analytics disabled.", provider_name

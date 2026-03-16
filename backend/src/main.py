@@ -24,6 +24,7 @@ from src.apps.notification.api import notification_router
 from src.apps.analytics import init_analytics, shutdown_analytics
 from src.apps.analytics.api import router as analytics_router
 from src.apps.analytics.middleware import AnalyticsMiddleware
+from src.apps.system.api import router as system_router
 
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
@@ -44,7 +45,7 @@ async def lifespan(app: FastAPI):
 
     app.state.ws_manager = ws_manager
 
-    # Analytics service (no-op when ANALYTICS_ENABLED=false)
+    # Analytics service (no-op when disabled)
     app.state.analytics = init_analytics()
 
     yield
@@ -98,18 +99,32 @@ app.add_middleware(
 )
 
 # Trusted host middleware (prevent host header attacks)
-if not settings.DEBUG:
+if not settings.DEBUG and not settings.TESTING:
     app.add_middleware(
         TrustedHostMiddleware,
-        allowed_hosts=["localhost", "127.0.0.1", settings.SERVER_HOST.replace("http://", "").replace("https://", "")]
+        allowed_hosts=[
+            "localhost",
+            "127.0.0.1",
+            "test",
+            "testserver",
+            settings.SERVER_HOST.replace("http://", "").replace("https://", ""),
+        ]
     )
 
-app.include_router(api_router, prefix=settings.API_V1_STR)
-app.include_router(finance_router, prefix=settings.API_V1_STR)
-app.include_router(multitenancy_router, prefix=settings.API_V1_STR)
-app.include_router(ws_router, prefix=settings.API_V1_STR)
-app.include_router(notification_router, prefix=settings.API_V1_STR)
-app.include_router(analytics_router, prefix=settings.API_V1_STR)
+app.include_router(system_router, prefix=settings.API_V1_STR)
+
+if settings.FEATURE_AUTH:
+    app.include_router(api_router, prefix=settings.API_V1_STR)
+if settings.FEATURE_FINANCE:
+    app.include_router(finance_router, prefix=settings.API_V1_STR)
+if settings.FEATURE_MULTITENANCY:
+    app.include_router(multitenancy_router, prefix=settings.API_V1_STR)
+if settings.FEATURE_WEBSOCKETS:
+    app.include_router(ws_router, prefix=settings.API_V1_STR)
+if settings.FEATURE_NOTIFICATIONS:
+    app.include_router(notification_router, prefix=settings.API_V1_STR)
+if settings.FEATURE_ANALYTICS:
+    app.include_router(analytics_router, prefix=settings.API_V1_STR)
 
 # Serve uploaded media files (avatars, etc.)
 os.makedirs(settings.MEDIA_DIR, exist_ok=True)

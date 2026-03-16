@@ -12,6 +12,7 @@ class NotificationPreferenceRead(BaseModel):
     push_enabled: bool
     sms_enabled: bool
     push_endpoint: Optional[str] = None
+    push_provider: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

@@ -1,7 +1,7 @@
-"""Notification-specific Celery tasks (email copy, Web Push, SMS)."""
+"""Notification-specific Celery tasks (email copy, push, SMS)."""
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from celery import shared_task
 
@@ -33,23 +33,18 @@ def send_notification_email_task(
 
 
 @shared_task(name="send_push_notification_task")
-def send_push_notification_task(
-    endpoint: str,
-    p256dh: str,
-    auth: str,
-    title: str,
-    body: str,
-    extra_data: Optional[Dict[str, Any]] = None,
-) -> bool:
-    """Send a Web Push notification to a browser subscription."""
-    from src.apps.notification.services.push_service import send_push_notification
+def send_push_notification_task(payload: Dict[str, Any]) -> bool:
+    """Send a push notification through the configured communications layer."""
+    from src.apps.communications import get_communications_service
 
-    return send_push_notification(endpoint, p256dh, auth, title, body, extra_data)
+    result = get_communications_service().send_push(payload)
+    return result.success
 
 
 @shared_task(name="send_sms_notification_task")
 def send_sms_notification_task(to_number: str, body: str) -> bool:
-    """Send an SMS notification via Twilio."""
-    from src.apps.notification.services.sms_service import send_sms_notification
+    """Send an SMS notification through the configured communications layer."""
+    from src.apps.communications import get_communications_service
 
-    return send_sms_notification(to_number, body)
+    result = get_communications_service().send_sms(to_number=to_number, body=body)
+    return result.success

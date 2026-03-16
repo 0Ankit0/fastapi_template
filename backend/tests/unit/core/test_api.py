@@ -48,3 +48,20 @@ class TestHealthCheck:
         """Test that the application responds to requests."""
         response = await client.get("/", follow_redirects=True)
         assert response.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_system_capabilities(self, client: AsyncClient):
+        response = await client.get("/api/v1/system/capabilities/")
+        assert response.status_code == 200
+        payload = response.json()
+        assert "modules" in payload
+        assert "active_providers" in payload
+        assert "fallback_providers" in payload
+
+    @pytest.mark.asyncio
+    async def test_system_providers(self, client: AsyncClient):
+        response = await client.get("/api/v1/system/providers/")
+        assert response.status_code == 200
+        providers = response.json()["providers"]
+        channels = {item["channel"] for item in providers}
+        assert {"email", "push", "sms", "analytics"}.issubset(channels)
