@@ -1,37 +1,20 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
-import type {
-  Role,
-  Permission,
-  RoleCreate,
-  PermissionCreate,
-  RoleAssignment,
-  PermissionAssignment,
-  UserRolesResponse,
-  RolePermissionsResponse,
-  CheckPermissionResponse,
-  PaginatedResponse,
-} from '@/types';
+import * as rbacApi from '@/lib/graphql/rbac';
+import type { RoleCreate, PermissionCreate, RoleAssignment, PermissionAssignment } from '@/types';
 
 export function useRoles(params?: { skip?: number; limit?: number }) {
   return useQuery({
     queryKey: ['rbac', 'roles', params],
-    queryFn: async () => {
-      const response = await apiClient.get<PaginatedResponse<Role>>('/roles', { params });
-      return response.data;
-    },
+    queryFn: async () => rbacApi.roles(params),
   });
 }
 
 export function useRole(roleId: string) {
   return useQuery({
     queryKey: ['rbac', 'roles', roleId],
-    queryFn: async () => {
-      const response = await apiClient.get<Role>(`/roles/${roleId}`);
-      return response.data;
-    },
+    queryFn: async () => rbacApi.role(roleId),
     enabled: !!roleId,
   });
 }
@@ -39,10 +22,7 @@ export function useRole(roleId: string) {
 export function useCreateRole() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: RoleCreate) => {
-      const response = await apiClient.post<Role>('/roles', data);
-      return response.data;
-    },
+    mutationFn: async (data: RoleCreate) => rbacApi.createRole(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rbac', 'roles'] });
     },
@@ -52,20 +32,14 @@ export function useCreateRole() {
 export function usePermissions(params?: { skip?: number; limit?: number }) {
   return useQuery({
     queryKey: ['rbac', 'permissions', params],
-    queryFn: async () => {
-      const response = await apiClient.get<PaginatedResponse<Permission>>('/permissions', { params });
-      return response.data;
-    },
+    queryFn: async () => rbacApi.permissions(params),
   });
 }
 
 export function useCreatePermission() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: PermissionCreate) => {
-      const response = await apiClient.post<Permission>('/permissions', data);
-      return response.data;
-    },
+    mutationFn: async (data: PermissionCreate) => rbacApi.createPermission(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rbac', 'permissions'] });
     },
@@ -75,10 +49,7 @@ export function useCreatePermission() {
 export function useUserRoles(userId: string) {
   return useQuery({
     queryKey: ['rbac', 'user-roles', userId],
-    queryFn: async () => {
-      const response = await apiClient.get<UserRolesResponse>(`/users/${userId}/roles`);
-      return response.data;
-    },
+    queryFn: async () => rbacApi.userRoles(userId),
     enabled: !!userId,
   });
 }
@@ -86,10 +57,7 @@ export function useUserRoles(userId: string) {
 export function useAssignRole() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: RoleAssignment) => {
-      const response = await apiClient.post('/users/assign-role', data);
-      return response.data;
-    },
+    mutationFn: async (data: RoleAssignment) => rbacApi.assignRole(data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['rbac', 'user-roles', variables.user_id] });
     },
@@ -99,10 +67,7 @@ export function useAssignRole() {
 export function useRemoveRole() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: RoleAssignment) => {
-      const response = await apiClient.delete('/users/remove-role', { data });
-      return response.data;
-    },
+    mutationFn: async (data: RoleAssignment) => rbacApi.removeRole(data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['rbac', 'user-roles', variables.user_id] });
     },
@@ -112,10 +77,7 @@ export function useRemoveRole() {
 export function useRolePermissions(roleId: string) {
   return useQuery({
     queryKey: ['rbac', 'role-permissions', roleId],
-    queryFn: async () => {
-      const response = await apiClient.get<RolePermissionsResponse>(`/roles/${roleId}/permissions`);
-      return response.data;
-    },
+    queryFn: async () => rbacApi.rolePermissions(roleId),
     enabled: !!roleId,
   });
 }
@@ -123,10 +85,7 @@ export function useRolePermissions(roleId: string) {
 export function useAssignPermission() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: PermissionAssignment) => {
-      const response = await apiClient.post('/roles/assign-permission', data);
-      return response.data;
-    },
+    mutationFn: async (data: PermissionAssignment) => rbacApi.assignPermission(data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['rbac', 'role-permissions', variables.role_id] });
     },
@@ -136,10 +95,7 @@ export function useAssignPermission() {
 export function useRemovePermission() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: PermissionAssignment) => {
-      const response = await apiClient.delete('/roles/remove-permission', { data });
-      return response.data;
-    },
+    mutationFn: async (data: PermissionAssignment) => rbacApi.removePermission(data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['rbac', 'role-permissions', variables.role_id] });
     },
@@ -154,13 +110,7 @@ export function useCheckPermission(
 ) {
   return useQuery({
     queryKey: ['rbac', 'check-permission', userId, domain, resource, action],
-    queryFn: async () => {
-      const response = await apiClient.get<CheckPermissionResponse>(
-        `/check-permission/${userId}`,
-        { params: { resource, action, domain } }
-      );
-      return response.data;
-    },
+    queryFn: async () => rbacApi.checkPermission(userId, resource, action, domain),
     enabled: !!userId && !!resource && !!action,
   });
 }
@@ -168,13 +118,7 @@ export function useCheckPermission(
 export function useCasbinRoles(userId: string, domain = 'global') {
   return useQuery({
     queryKey: ['rbac', 'casbin-roles', userId, domain],
-    queryFn: async () => {
-      const response = await apiClient.get<{ user_id: number; domain: string; roles: string[] }>(
-        `/casbin/roles/${userId}`,
-        { params: { domain } }
-      );
-      return response.data;
-    },
+    queryFn: async () => rbacApi.casbinRoles(userId, domain),
     enabled: !!userId,
   });
 }
@@ -182,13 +126,7 @@ export function useCasbinRoles(userId: string, domain = 'global') {
 export function useCasbinPermissions(userId: string, domain = 'global') {
   return useQuery({
     queryKey: ['rbac', 'casbin-permissions', userId, domain],
-    queryFn: async () => {
-      const response = await apiClient.get<{ user_id: number; domain: string; permissions: string[][] }>(
-        `/casbin/permissions/${userId}`,
-        { params: { domain } }
-      );
-      return response.data;
-    },
+    queryFn: async () => rbacApi.casbinPermissions(userId, domain),
     enabled: !!userId,
   });
 }

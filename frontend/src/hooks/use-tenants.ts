@@ -7,14 +7,10 @@ import { analytics } from '@/lib/analytics';
 import { TenantEvents } from '@/lib/analytics/events';
 import type {
   Tenant,
-  TenantWithMembers,
   TenantCreate,
-  TenantUpdate,
-  TenantMember,
-  TenantInvitation,
   TenantInvitationCreate,
   TenantRole,
-  PaginatedResponse,
+  TenantUpdate,
 } from '@/types';
 
 const TENANTS_GRAPHQL_PATH = '/tenants';

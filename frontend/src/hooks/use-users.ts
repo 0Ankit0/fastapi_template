@@ -1,8 +1,8 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth-store';
+import * as userApi from '@/lib/graphql/users';
 import { analytics } from '@/lib/analytics';
 import { UserEvents } from '@/lib/analytics/events';
 import type { User, UserUpdate, PaginatedResponse } from '@/types';
@@ -13,9 +13,9 @@ export function useCurrentUser() {
   return useQuery({
     queryKey: ['currentUser'],
     queryFn: async () => {
-      const response = await apiClient.get<User>('/users/me/');
-      setUser(response.data);
-      return response.data;
+      const user = await (await import('@/lib/graphql/auth')).currentUser();
+      setUser(user);
+      return user;
     },
   });
 }
@@ -26,8 +26,7 @@ export function useUpdateProfile() {
 
   return useMutation({
     mutationFn: async (data: UserUpdate) => {
-      const response = await apiClient.patch<User>('/users/me', data);
-      return response.data;
+      return userApi.updateProfile(data);
     },
     onSuccess: (data) => {
       setUser(data);
@@ -37,12 +36,16 @@ export function useUpdateProfile() {
   });
 }
 
-export function useListUsers(params?: { skip?: number; limit?: number; search?: string; is_active?: boolean }) {
+export function useListUsers(params?: {
+  skip?: number;
+  limit?: number;
+  search?: string;
+  is_active?: boolean;
+}) {
   return useQuery({
     queryKey: ['users', params],
     queryFn: async () => {
-      const response = await apiClient.get<PaginatedResponse<User>>('/users/', { params });
-      return response.data;
+      return userApi.listUsers(params);
     },
   });
 }
@@ -51,8 +54,7 @@ export function useGetUser(userId: string) {
   return useQuery({
     queryKey: ['users', userId],
     queryFn: async () => {
-      const response = await apiClient.get<User>(`/users/${userId}`);
-      return response.data;
+      return userApi.getUser(userId);
     },
     enabled: !!userId,
   });
@@ -63,8 +65,7 @@ export function useUpdateUser() {
 
   return useMutation({
     mutationFn: async ({ userId, data }: { userId: string; data: UserUpdate }) => {
-      const response = await apiClient.patch<User>(`/users/${userId}`, data);
-      return response.data;
+      return userApi.updateUser(userId, data);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['users', variables.userId] });
@@ -78,7 +79,7 @@ export function useDeleteUser() {
 
   return useMutation({
     mutationFn: async (userId: string) => {
-      await apiClient.delete(`/users/${userId}`);
+      await userApi.deleteUser(userId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
