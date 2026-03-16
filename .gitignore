@@ -21,10 +21,9 @@ tmp/
 .hypothesis/
 htmlcov/
 
-# Temp files 
-*.md
-*.xml
+# Temp files
 .coverage
+coverage.xml
 
 # Media Files
 media/
