@@ -1,23 +1,38 @@
 import axios from 'axios';
 
-const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+const apiBaseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+const graphqlBaseURL =
+  process.env.NEXT_PUBLIC_GRAPHQL_URL ||
+  apiBaseURL.replace(/\/api\/v1\/?$/, '') + '/graphql';
 
 export const apiClient = axios.create({
-  baseURL,
+  baseURL: apiBaseURL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-apiClient.interceptors.request.use((config) => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-  }
-  return config;
+export const graphqlClient = axios.create({
+  baseURL: graphqlBaseURL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
+
+function attachAuthInterceptor(client: typeof apiClient) {
+  client.interceptors.request.use((config) => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    return config;
+  });
+}
+
+attachAuthInterceptor(apiClient);
+attachAuthInterceptor(graphqlClient);
 
 let isRefreshing = false;
 let failedQueue: Array<{ resolve: (value: unknown) => void; reject: (reason?: unknown) => void }> = [];

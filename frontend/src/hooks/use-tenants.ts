@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
+import { graphqlClient } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth-store';
 import { analytics } from '@/lib/analytics';
 import { TenantEvents } from '@/lib/analytics/events';
@@ -17,19 +17,36 @@ import type {
   PaginatedResponse,
 } from '@/types';
 
+const TENANTS_GRAPHQL_PATH = '/tenants';
+
+async function graphqlRequest<T>(query: string, variables?: Record<string, unknown>) {
+  const response = await graphqlClient.post<{ data?: T; errors?: Array<{ message: string }> }>(
+    TENANTS_GRAPHQL_PATH,
+    { query, variables }
+  );
+
+  if (response.data.errors && response.data.errors.length > 0) {
+    throw new Error(response.data.errors[0].message);
+  }
+
+  return response.data.data as T;
+}
+
 interface TenantsResponse {
   items: Tenant[];
   total: number;
   skip: number;
   limit: number;
+  has_more: boolean;
 }
 
 export function useTenants(params?: { skip?: number; limit?: number }) {
   return useQuery({
     queryKey: ['tenants', params],
     queryFn: async () => {
-      const response = await apiClient.get<TenantsResponse>('/tenants/', { params });
-      return response.data;
+      const query = `query MyTenants($skip: Int, $limit: Int) { myTenants(skip: $skip, limit: $limit) { items { id name slug description is_active owner_id created_at updated_at members { id tenant_id user_id role is_active joined_at } } total skip limit has_more } }`;
+      const data = await graphqlRequest<{ myTenants: TenantsResponse }>(query, params);
+      return data.myTenants;
     },
   });
 }
@@ -38,8 +55,9 @@ export function useTenant(id: string) {
   return useQuery({
     queryKey: ['tenants', id],
     queryFn: async () => {
-      const response = await apiClient.get<TenantWithMembers>(`/tenants/${id}`);
-      return response.data;
+      const query = `query Tenant($tenantId: String!) { tenant(tenantId: $tenantId) { id name slug description is_active owner_id created_at updated_at members { id tenant_id user_id role is_active joined_at } } }`;
+      const data = await graphqlRequest<{ tenant: TenantWithMembers }>(query, { tenantId: id });
+      return data.tenant;
     },
     enabled: !!id,
   });
@@ -50,8 +68,9 @@ export function useCreateTenant() {
 
   return useMutation({
     mutationFn: async (data: TenantCreate) => {
-      const response = await apiClient.post<Tenant>('/tenants/', data);
-      return response.data;
+      const mutation = `mutation CreateTenant($data: TenantCreateInput!) { createTenant(data: $data) { id name slug description is_active owner_id created_at updated_at } }`;
+      const response = await graphqlRequest<{ createTenant: Tenant }>(mutation, { data });
+      return response.createTenant;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
@@ -66,8 +85,9 @@ export function useUpdateTenant() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: TenantUpdate }) => {
-      const response = await apiClient.patch<Tenant>(`/tenants/${id}`, data);
-      return response.data;
+      const mutation = `mutation UpdateTenant($tenantId: String!, $data: TenantUpdateInput!) { updateTenant(tenantId: $tenantId, data: $data) { id name slug description is_active owner_id created_at updated_at } }`;
+      const response = await graphqlRequest<{ updateTenant: Tenant }>(mutation, { tenantId: id, data });
+      return response.updateTenant;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
@@ -81,7 +101,8 @@ export function useDeleteTenant() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      await apiClient.delete(`/tenants/${id}`);
+      const mutation = `mutation DeleteTenant($tenantId: String!) { deleteTenant(tenantId: $tenantId) }`;
+      await graphqlRequest<{ deleteTenant: boolean }>(mutation, { tenantId: id });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
@@ -93,11 +114,12 @@ export function useTenantMembers(tenantId: string, params?: { skip?: number; lim
   return useQuery({
     queryKey: ['tenants', tenantId, 'members', params],
     queryFn: async () => {
-      const response = await apiClient.get<PaginatedResponse<TenantMember>>(
-        `/tenants/${tenantId}/members`,
-        { params }
-      );
-      return response.data;
+      const query = `query TenantMembers($tenantId: String!, $skip: Int, $limit: Int) { tenantMembers(tenantId: $tenantId, skip: $skip, limit: $limit) { items { id tenant_id user_id role is_active joined_at } total skip limit has_more } }`;
+      const data = await graphqlRequest<{ tenantMembers: PaginatedResponse<TenantMember> }>(query, {
+        tenantId,
+        ...params,
+      });
+      return data.tenantMembers;
     },
     enabled: !!tenantId,
   });
@@ -116,11 +138,13 @@ export function useUpdateMemberRole() {
       userId: string;
       role: TenantRole;
     }) => {
-      const response = await apiClient.patch<TenantMember>(
-        `/tenants/${tenantId}/members/${userId}`,
-        { role }
-      );
-      return response.data;
+      const mutation = `mutation UpdateMemberRole($tenantId: String!, $userId: String!, $role: TenantRole!) { updateMemberRole(tenantId: $tenantId, userId: $userId, data: { role: $role }) { id tenant_id user_id role is_active joined_at } }`;
+      const response = await graphqlRequest<{ updateMemberRole: TenantMember }>(mutation, {
+        tenantId,
+        userId,
+        role,
+      });
+      return response.updateMemberRole;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['tenants', variables.tenantId, 'members'] });
@@ -133,7 +157,8 @@ export function useRemoveMember() {
 
   return useMutation({
     mutationFn: async ({ tenantId, userId }: { tenantId: string; userId: string }) => {
-      await apiClient.delete(`/tenants/${tenantId}/members/${userId}`);
+      const mutation = `mutation RemoveMember($tenantId: String!, $userId: String!) { removeMember(tenantId: $tenantId, userId: $userId) }`;
+      await graphqlRequest<{ removeMember: boolean }>(mutation, { tenantId, userId });
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['tenants', variables.tenantId, 'members'] });
@@ -145,11 +170,12 @@ export function useTenantInvitations(tenantId: string, params?: { skip?: number;
   return useQuery({
     queryKey: ['tenants', tenantId, 'invitations', params],
     queryFn: async () => {
-      const response = await apiClient.get<PaginatedResponse<TenantInvitation>>(
-        `/tenants/${tenantId}/invitations`,
-        { params }
-      );
-      return response.data;
+      const query = `query TenantInvitations($tenantId: String!, $skip: Int, $limit: Int) { tenantInvitations(tenantId: $tenantId, skip: $skip, limit: $limit) { items { id tenant_id email role status invited_by expires_at created_at accepted_at } total skip limit has_more } }`;
+      const data = await graphqlRequest<{ tenantInvitations: PaginatedResponse<TenantInvitation> }>(query, {
+        tenantId,
+        ...params,
+      });
+      return data.tenantInvitations;
     },
     enabled: !!tenantId,
   });
@@ -166,11 +192,12 @@ export function useCreateInvitation() {
       tenantId: string;
       data: TenantInvitationCreate;
     }) => {
-      const response = await apiClient.post<TenantInvitation>(
-        `/tenants/${tenantId}/invitations`,
-        data
-      );
-      return response.data;
+      const mutation = `mutation InviteMember($tenantId: String!, $data: TenantInvitationCreateInput!) { inviteMember(tenantId: $tenantId, data: $data) { id tenant_id email role status invited_by expires_at created_at accepted_at } }`;
+      const response = await graphqlRequest<{ inviteMember: TenantInvitation }>(mutation, {
+        tenantId,
+        data,
+      });
+      return response.inviteMember;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['tenants', variables.tenantId, 'invitations'] });
@@ -184,8 +211,9 @@ export function useAcceptInvitation() {
 
   return useMutation({
     mutationFn: async (token: string) => {
-      const response = await apiClient.post('/tenants/invitations/accept', { token });
-      return response.data;
+      const mutation = `mutation AcceptInvitation($data: AcceptInvitationInput!) { acceptInvitation(data: $data) { id tenant_id user_id role is_active joined_at } }`;
+      const response = await graphqlRequest<{ acceptInvitation: TenantMember }>(mutation, { data: { token } });
+      return response.acceptInvitation;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
@@ -205,7 +233,8 @@ export function useDeleteInvitation() {
       tenantId: string;
       invitationId: string;
     }) => {
-      await apiClient.delete(`/tenants/${tenantId}/invitations/${invitationId}`);
+      const mutation = `mutation RevokeInvitation($tenantId: String!, $invitationId: String!) { revokeInvitation(tenantId: $tenantId, invitationId: $invitationId) }`;
+      await graphqlRequest<{ revokeInvitation: boolean }>(mutation, { tenantId, invitationId });
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['tenants', variables.tenantId, 'invitations'] });

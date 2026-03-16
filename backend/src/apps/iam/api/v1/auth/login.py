@@ -1,33 +1,118 @@
-from datetime import timedelta, datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlmodel import col, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from jose import jwt
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+import strawberry
+from strawberry.fastapi import GraphQLRouter
+from strawberry.types import Info
+from graphql import GraphQLError
+
 from src.apps.core.config import settings
 from src.apps.core import security
 from src.apps.core.security import TokenType
 from src.apps.core.cache import RedisCache
+from src.apps.core.utils import conditional_rate_limit
 from src.apps.iam.api.deps import get_current_user, get_db
 from src.apps.iam.models.user import User
 from src.apps.iam.models.login_attempt import LoginAttempt
 from src.apps.iam.models.token_tracking import TokenTracking
-from src.apps.iam.schemas.token import Token
 from src.apps.iam.schemas.user import LoginRequest
-
+from src.apps.iam.schemas.token import Token
+from src.apps.iam.schemas.graphql_auth import AuthPayload
 from src.apps.iam.utils.ip_access import revoke_tokens_for_ip, get_client_ip
 from src.apps.analytics.dependencies import get_analytics
 from src.apps.analytics.service import AnalyticsService
 from src.apps.analytics.events import AuthEvents
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
+
+
+@strawberry.type
+class Mutation:
+    @strawberry.mutation
+    async def login(self, info: Info, username: str, password: str) -> AuthPayload:
+        ctx = info.context
+        db: AsyncSession = ctx["db"]
+        request = ctx.get("request")
+        analytics: AnalyticsService = ctx.get("analytics")
+
+        ip_address = get_client_ip(request) if request else ""
+        user_agent = request.headers.get("user-agent", "unknown") if request else ""
+
+        result = await db.execute(select(User).where(User.username == username))
+        user = result.scalars().first()
+        if not user:
+            raise GraphQLError("Incorrect username or password")
+
+        if settings.REQUIRE_EMAIL_VERIFICATION and not user.is_confirmed:
+            raise GraphQLError("Email verification is required before signing in")
+
+        if not user.hashed_password:
+            raise GraphQLError("Account uses social login")
+
+        if not security.verify_password(password, user.hashed_password):
+            raise GraphQLError("Incorrect username or password")
+
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = security.create_access_token(user.id, expires_delta=access_token_expires)
+        refresh_token = security.create_refresh_token(user.id)
+
+        access_payload = jwt.decode(access_token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
+        refresh_payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
+
+        access_token_tracking = TokenTracking(
+            user_id=user.id,
+            token_jti=access_payload["jti"],
+            token_type=TokenType.ACCESS,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            expires_at=datetime.fromtimestamp(access_payload["exp"], tz=timezone.utc),
+        )
+        db.add(access_token_tracking)
+
+        refresh_token_tracking = TokenTracking(
+            user_id=user.id,
+            token_jti=refresh_payload["jti"],
+            token_type=TokenType.REFRESH,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            expires_at=datetime.fromtimestamp(refresh_payload["exp"], tz=timezone.utc),
+        )
+        db.add(refresh_token_tracking)
+        await db.commit()
+
+        if analytics:
+            await analytics.capture(
+                str(user.id),
+                AuthEvents.LOGGED_IN,
+                {"ip_address": ip_address, "user_agent": user_agent, "method": "password"},
+            )
+
+        return AuthPayload(
+            access=access_token,
+            refresh=refresh_token,
+            token_type=TokenType.BEARER.value,
+        )
+
+
+@strawberry.type
+class Query:
+    """Minimal query type required by Strawberry (unused)."""
+
+    @strawberry.field
+    def ping(self) -> str:
+        return "pong"
+
+schema = strawberry.Schema(query=Query, mutation=Mutation)
+graphql_router = GraphQLRouter(schema)
+login_graphql_router = graphql_router
 
 
 @router.post("/login/")
-@limiter.limit("5/minute")
+@conditional_rate_limit("5/minute")
 async def login_access_token(
     request: Request,
     response: Response,
@@ -36,13 +121,12 @@ async def login_access_token(
     db: AsyncSession = Depends(get_db),
     analytics: AnalyticsService = Depends(get_analytics),
 ) -> Token | dict[str, Any]:
-    """
-    OAuth2 compatible token login, get an access token for future requests
-    """
+    """OAuth2 compatible token login, get an access token for future requests"""
+
     ip_address = get_client_ip(request)
     user_agent = request.headers.get("user-agent", "unknown")
     user = None
-    
+
     try:
         result = await db.execute(
             select(User).where(User.username == login_data.username)
@@ -55,19 +139,19 @@ async def login_access_token(
                 ip_address=ip_address,
                 user_agent=user_agent,
                 success=False,
-                failure_reason="User not found"
+                failure_reason="User not found",
             )
             db.add(login_attempt)
             await db.commit()
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Incorrect username or password"
+                detail="Incorrect username or password",
             )
 
         if settings.REQUIRE_EMAIL_VERIFICATION and not user.is_confirmed:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Email verification is required before signing in"
+                detail="Email verification is required before signing in",
             )
 
         if settings.MAX_LOGIN_ATTEMPTS > 0 and settings.ACCOUNT_LOCKOUT_DURATION_MINUTES > 0:
@@ -90,70 +174,70 @@ async def login_access_token(
                     remaining_minutes = (remaining_seconds + 59) // 60
                     raise HTTPException(
                         status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                        detail=f"Too many login attempts. Try again in {remaining_minutes} minutes."
+                        detail=f"Too many login attempts. Try again in {remaining_minutes} minutes.",
                     )
 
         if not user.hashed_password:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"This account uses {user.social_provider or 'social'} login. Please sign in with your social provider."
+                detail=f"This account uses {user.social_provider or 'social'} login. Please sign in with your social provider.",
             )
-        
+
         if not security.verify_password(login_data.password, user.hashed_password):
             login_attempt = LoginAttempt(
                 user_id=user.id,
                 ip_address=ip_address,
                 user_agent=user_agent,
                 success=False,
-                failure_reason="Incorrect password"
+                failure_reason="Incorrect password",
             )
             db.add(login_attempt)
             await db.commit()
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Incorrect username or password"
+                detail="Incorrect username or password",
             )
-        
+
         if not user.is_active:
             login_attempt = LoginAttempt(
                 user_id=user.id,
                 ip_address=ip_address,
                 user_agent=user_agent,
                 success=False,
-                failure_reason="User account is inactive"
+                failure_reason="User account is inactive",
             )
             db.add(login_attempt)
             await db.commit()
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Inactive user"
+                detail="Inactive user",
             )
-        
+
         # Check if OTP is enabled for this user
         if user.otp_enabled and user.otp_verified:
             temp_token = security.create_temp_auth_token(user.id)
             return {
                 "requires_otp": True,
                 "temp_token": temp_token,
-                "message": "Please provide OTP code"
+                "message": "Please provide OTP code",
             }
-        
+
         # Successful login
         login_attempt = LoginAttempt(
             user_id=user.id,
             ip_address=ip_address,
             user_agent=user_agent,
             success=True,
-            failure_reason=""
+            failure_reason="",
         )
         db.add(login_attempt)
-        
+
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = security.create_access_token(
             user.id, expires_delta=access_token_expires
         )
         refresh_token = security.create_refresh_token(user.id)
-        
+
         # Decode tokens to get JTI
         access_payload = jwt.decode(access_token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
         refresh_payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
@@ -168,10 +252,10 @@ async def login_access_token(
             token_type=TokenType.ACCESS,
             ip_address=ip_address,
             user_agent=user_agent,
-            expires_at=datetime.fromtimestamp(access_payload["exp"], tz=timezone.utc)
+            expires_at=datetime.fromtimestamp(access_payload["exp"], tz=timezone.utc),
         )
         db.add(access_token_tracking)
-        
+
         # Track refresh token
         refresh_token_tracking = TokenTracking(
             user_id=user.id,
@@ -179,7 +263,7 @@ async def login_access_token(
             token_type=TokenType.REFRESH,
             ip_address=ip_address,
             user_agent=user_agent,
-            expires_at=datetime.fromtimestamp(refresh_payload["exp"], tz=timezone.utc)
+            expires_at=datetime.fromtimestamp(refresh_payload["exp"], tz=timezone.utc),
         )
         db.add(refresh_token_tracking)
         await db.commit()
@@ -197,14 +281,14 @@ async def login_access_token(
                 httponly=True,
                 secure=settings.SECURE_COOKIES,
                 samesite="lax",
-                max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+                max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
             )
             return {"message": "Logged in successfully"}
-        
+
         return Token(
             access=access_token,
             refresh=refresh_token,
-            token_type=TokenType.BEARER.value
+            token_type=TokenType.BEARER.value,
         )
     except HTTPException:
         raise
@@ -214,13 +298,13 @@ async def login_access_token(
             ip_address=ip_address,
             user_agent=user_agent,
             success=False,
-            failure_reason=f"Server error: {str(ex)}"
+            failure_reason=f"Server error: {str(ex)}",
         )
         db.add(login_attempt)
         await db.commit()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred during login"
+            detail="An error occurred during login",
         )
 
 
@@ -232,48 +316,46 @@ async def logout(
     db: AsyncSession = Depends(get_db),
     analytics: AnalyticsService = Depends(get_analytics),
 ) -> dict[str, str]:
-    """
-    Logout user by clearing cookies and revoking current session token only
-    """
+    """Logout user by clearing cookies and revoking current session token only"""
     try:
         # Get the current token
         auth_header = request.headers.get("Authorization")
         token = None
-        
+
         if auth_header and auth_header.startswith("Bearer "):
             token = auth_header.split(" ")[1]
         else:
             token = request.cookies.get(settings.ACCESS_TOKEN_COOKIE)
-        
+
         if token:
             # Decode to get JTI
             try:
                 payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
                 jti = payload.get("jti")
                 ip_address = get_client_ip(request)
-                
+
                 if jti:
                     # Revoke only tokens from current IP/device
                     result = await db.execute(
                         select(TokenTracking).where(
                             TokenTracking.user_id == current_user.id,
                             TokenTracking.ip_address == ip_address,
-                            TokenTracking.is_active
+                            TokenTracking.is_active,
                         )
                     )
                     tokens = result.scalars().all()
-                    
+
                     for token_tracking in tokens:
                         token_tracking.is_active = False
                         token_tracking.revoked_at = datetime.now(timezone.utc)
                         token_tracking.revoke_reason = "User logout from this device"
-                    
+
                     await db.commit()
                     # Invalidate cached token list so revoked tokens are not served from cache
                     await RedisCache.clear_pattern(f"tokens:active:{current_user.id}:*")
             except Exception:
                 pass
-        
+
         response.delete_cookie(key=settings.ACCESS_TOKEN_COOKIE)
         response.delete_cookie(key=settings.REFRESH_TOKEN_COOKIE)
         await analytics.capture(str(current_user.id), AuthEvents.LOGGED_OUT)
@@ -281,5 +363,5 @@ async def logout(
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred during logout"
+            detail="An error occurred during logout",
         )

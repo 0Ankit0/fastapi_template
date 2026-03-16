@@ -258,38 +258,57 @@ class TestWSRestEndpoints:
 
     @pytest.mark.unit
     async def test_stats_requires_auth(self, client: AsyncClient):
-        resp = await client.get("/api/v1/ws/stats/")
+        resp = await client.post(
+            "/graphql/ws",
+            json={
+                "query": "query { wsStats { total_connections } }",
+            },
+        )
         assert resp.status_code == 401
 
     @pytest.mark.unit
     async def test_online_requires_auth(self, client: AsyncClient):
-        resp = await client.get("/api/v1/ws/online/1/")
+        resp = await client.post(
+            "/graphql/ws",
+            json={
+                "query": "query { wsIsOnline(userId: 1) }",
+            },
+        )
         assert resp.status_code == 401
 
     @pytest.mark.unit
     async def test_stats_returns_structure(self, client: AsyncClient, db_session: AsyncSession):
         token, _ = await self._get_token(client, db_session)
-        resp = await client.get(
-            "/api/v1/ws/stats/",
+        resp = await client.post(
+            "/graphql/ws",
             headers={"Authorization": f"Bearer {token}"},
+            json={
+                "query": "query { wsStats { total_connections rooms users_online } }",
+            },
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert "total_connections" in data
-        assert "rooms" in data
-        assert "users_online" in data
+        assert "data" in data
+        assert "wsStats" in data["data"]
+        stats = data["data"]["wsStats"]
+        assert "total_connections" in stats
+        assert "rooms" in stats
+        assert "users_online" in stats
 
     @pytest.mark.unit
     async def test_online_check(self, client: AsyncClient, db_session: AsyncSession):
         token, user = await self._get_token(client, db_session)
-        resp = await client.get(
-            f"/api/v1/ws/online/{user.id}/",
+        resp = await client.post(
+            "/graphql/ws",
             headers={"Authorization": f"Bearer {token}"},
+            json={
+                "query": "query ($userId: Int!) { wsIsOnline(userId: $userId) }",
+                "variables": {"userId": user.id},
+            },
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["user_id"] == user.id
-        assert data["online"] is False  # not connected via WS in this test
+        assert data["data"]["wsIsOnline"] is False  # not connected via WS in this test
 
 
 # ──────────────────────────────────────────────────────────────────────────────

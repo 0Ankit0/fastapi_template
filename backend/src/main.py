@@ -12,17 +12,24 @@ from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from src.apps.core.config import settings
 from src.apps.core.handler import rate_limit_exceeded_handler
 from src.apps.core.middleware import SecurityHeadersMiddleware
-from src.apps.iam.api import api_router
-from src.apps.finance.api import finance_router
-from src.apps.multitenancy.api import multitenancy_router
+# IAM GraphQL routers
+from src.apps.iam.api.v1.users import graphql_router as users_graphql_router
+from src.apps.iam.api.v1.token_management import graphql_router as token_management_graphql_router
+from src.apps.iam.api.v1.auth.password import graphql_router as password_graphql_router
+from src.apps.iam.api.v1.auth.otp import graphql_router as otp_graphql_router
+from src.apps.iam.api.v1.auth.login import graphql_router as login_graphql_router
+from src.apps.iam.api.v1.auth.signup import graphql_router as signup_graphql_router
+from src.apps.finance.api.v1.payment import graphql_router as finance_graphql_router
+from src.apps.multitenancy.api.v1.tenant_graphql import graphql_router as multitenancy_graphql_router
 from src.db.session import engine, init_db
 from src.apps.iam.casbin_enforcer import CasbinEnforcer
 from src.apps.websocket.api import ws_router
+from src.apps.websocket.api.v1.ws_graphql import graphql_router as ws_graphql_router
 from src.apps.websocket.manager import manager as ws_manager
 from src.apps.core.cache import RedisCache
-from src.apps.notification.api import notification_router
+from src.apps.notification.api.v1.notifications import graphql_router as notification_graphql_router
 from src.apps.analytics import init_analytics, shutdown_analytics
-from src.apps.analytics.api import router as analytics_router
+from src.apps.analytics.api import graphql_router as analytics_graphql_router
 from src.apps.analytics.middleware import AnalyticsMiddleware
 
 # Rate limiter
@@ -104,12 +111,22 @@ if not settings.DEBUG:
         allowed_hosts=["localhost", "127.0.0.1", settings.SERVER_HOST.replace("http://", "").replace("https://", "")]
     )
 
-app.include_router(api_router, prefix=settings.API_V1_STR)
-app.include_router(finance_router, prefix=settings.API_V1_STR)
-app.include_router(multitenancy_router, prefix=settings.API_V1_STR)
+# app.include_router(api_router, prefix=settings.API_V1_STR)  # REST IAM router removed
+app.include_router(finance_graphql_router, prefix="/graphql/finance")
+app.include_router(multitenancy_graphql_router, prefix="/graphql/tenants")
 app.include_router(ws_router, prefix=settings.API_V1_STR)
-app.include_router(notification_router, prefix=settings.API_V1_STR)
-app.include_router(analytics_router, prefix=settings.API_V1_STR)
+app.include_router(ws_graphql_router, prefix="/graphql/ws")
+app.include_router(analytics_graphql_router, prefix="/graphql/analytics")
+
+# GraphQL endpoints
+app.include_router(notification_graphql_router, prefix="/graphql/notifications")
+# IAM GraphQL endpoints
+app.include_router(users_graphql_router, prefix="/graphql/users")
+app.include_router(token_management_graphql_router, prefix="/graphql/tokens")
+app.include_router(password_graphql_router, prefix="/graphql/password")
+app.include_router(otp_graphql_router, prefix="/graphql/otp")
+app.include_router(login_graphql_router, prefix="/graphql/auth")
+app.include_router(signup_graphql_router, prefix="/graphql/auth")
 
 # Serve uploaded media files (avatars, etc.)
 os.makedirs(settings.MEDIA_DIR, exist_ok=True)

@@ -1,31 +1,141 @@
-from datetime import timedelta, datetime, timezone
+from datetime import datetime, timezone, timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from sqlmodel import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
 from jose import jwt
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+import strawberry
+from strawberry.fastapi import GraphQLRouter
+from strawberry.types import Info
+from graphql import GraphQLError
+
 from src.apps.core.config import settings
 from src.apps.core import security
 from src.apps.core.security import TokenType
+from src.apps.core.cache import RedisCache
+from src.apps.core.utils import conditional_rate_limit
+from src.apps.analytics.dependencies import get_analytics
 from src.apps.iam.api.deps import get_current_user, get_db
 from src.apps.iam.models.user import User, UserProfile
 from src.apps.iam.models.token_tracking import TokenTracking
-from src.apps.iam.schemas.token import Token
 from src.apps.iam.schemas.user import UserCreate
-from src.apps.core.cache import RedisCache
-
-from src.apps.iam.utils.ip_access import revoke_tokens_for_ip, get_client_ip
-from src.apps.analytics.dependencies import get_analytics
+from src.apps.iam.schemas.token import Token
+from src.apps.iam.schemas.graphql_auth import SignupInput, AuthPayload
+from src.apps.iam.utils.ip_access import get_client_ip, revoke_tokens_for_ip
 from src.apps.analytics.service import AnalyticsService
 from src.apps.analytics.events import AuthEvents
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
+
+
+@strawberry.type
+class Mutation:
+    @strawberry.mutation
+    async def signup(self, info: Info, input: SignupInput) -> AuthPayload:
+        ctx = info.context
+        db: AsyncSession = ctx["db"]
+        request = ctx.get("request")
+        analytics: AnalyticsService = ctx.get("analytics")
+
+        try:
+            user_create = UserCreate(**input.__dict__)
+        except Exception as e:
+            raise GraphQLError(str(e))
+
+        ip_address = get_client_ip(request) if request else ""
+        user_agent = request.headers.get("user-agent", "unknown") if request else ""
+
+        result = await db.execute(select(User).where(User.username == user_create.username))
+        user = result.scalars().first()
+        if user:
+            raise GraphQLError("Username already registered")
+
+        hashed_password = security.get_password_hash(user_create.password)
+        new_user = User(
+            username=user_create.username,
+            email=user_create.email,
+            hashed_password=hashed_password,
+            profile=None,
+        )
+        db.add(new_user)
+        await db.commit()
+        await db.refresh(new_user)
+
+        user_profile = UserProfile(
+            first_name=user_create.first_name or "",
+            last_name=user_create.last_name or "",
+            phone=user_create.phone or "",
+            user=new_user,
+        )
+        db.add(user_profile)
+        await db.commit()
+
+        # Invalidate users list cache
+        await RedisCache.clear_pattern("users:list:*")
+
+        from src.apps.iam.services.email import EmailService
+        await EmailService.send_welcome_email(new_user)
+
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = security.create_access_token(new_user.id, expires_delta=access_token_expires)
+        refresh_token = security.create_refresh_token(new_user.id)
+
+        # Revoke existing tokens and track
+        await revoke_tokens_for_ip(db, new_user.id, ip_address)
+
+        access_payload = jwt.decode(access_token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
+        refresh_payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
+
+        access_token_tracking = TokenTracking(
+            user_id=new_user.id,
+            token_jti=access_payload["jti"],
+            token_type=TokenType.ACCESS,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            expires_at=datetime.fromtimestamp(access_payload["exp"], tz=timezone.utc),
+        )
+        db.add(access_token_tracking)
+
+        refresh_token_tracking = TokenTracking(
+            user_id=new_user.id,
+            token_jti=refresh_payload["jti"],
+            token_type=TokenType.REFRESH,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            expires_at=datetime.fromtimestamp(refresh_payload["exp"], tz=timezone.utc),
+        )
+        db.add(refresh_token_tracking)
+        await db.commit()
+
+        if analytics:
+            await analytics.identify(
+                str(new_user.id),
+                {"email": new_user.email, "username": new_user.username, "created_at": str(new_user.created_at)},
+            )
+            await analytics.capture(
+                str(new_user.id),
+                AuthEvents.SIGNED_UP,
+                {"ip_address": ip_address, "user_agent": user_agent},
+            )
+
+        return AuthPayload(access=access_token, refresh=refresh_token, token_type=TokenType.BEARER.value)
+
+
+@strawberry.type
+class Query:
+    """Minimal query type required by Strawberry (unused)."""
+
+    @strawberry.field
+    def ping(self) -> str:
+        return "pong"
+
+schema = strawberry.Schema(query=Query, mutation=Mutation)
+graphql_router = GraphQLRouter(schema)
+signup_graphql_router = graphql_router
 
 
 @router.post("/signup/")
-@limiter.limit("3/hour")
+@conditional_rate_limit("3/hour")
 async def signup(
     request: Request,
     response: Response,
@@ -34,56 +144,53 @@ async def signup(
     db: AsyncSession = Depends(get_db),
     analytics: AnalyticsService = Depends(get_analytics),
 ) -> Token | dict[str, str]:
-    """
-    Create a new user account
-    """
+    """Create a new user account"""
+
     ip_address = get_client_ip(request)
-    
+
     try:
-        result = await db.execute(
-            select(User).where(User.username == login_data.username)
-        )
+        result = await db.execute(select(User).where(User.username == login_data.username))
         user = result.scalars().first()
 
         if user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Username already registered"
+                detail="Username already registered",
             )
 
         hashed_password = security.get_password_hash(login_data.password)
         new_user = User(
-           username=login_data.username,
-           email=login_data.email,
+            username=login_data.username,
+            email=login_data.email,
             hashed_password=hashed_password,
-            profile=None
+            profile=None,
         )
         user_profile = UserProfile(
             first_name=login_data.first_name or "",
             last_name=login_data.last_name or "",
             phone=login_data.phone or "",
-            user=new_user
+            user=new_user,
         )
-        
+
         db.add(new_user)
         db.add(user_profile)
         await db.commit()
-        
+
         # Invalidate users list cache
         await RedisCache.clear_pattern("users:list:*")
-        
+
         from src.apps.iam.services.email import EmailService
         await EmailService.send_welcome_email(new_user)
-        
+
         user_agent = request.headers.get("user-agent", "unknown")
-        
+
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = security.create_access_token(
             new_user.id, expires_delta=access_token_expires
         )
-        
+
         refresh_token = security.create_refresh_token(new_user.id)
-        
+
         # Decode tokens to get JTI
         access_payload = jwt.decode(access_token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
         refresh_payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
@@ -98,10 +205,10 @@ async def signup(
             token_type=TokenType.ACCESS,
             ip_address=ip_address,
             user_agent=user_agent,
-            expires_at=datetime.fromtimestamp(access_payload["exp"], tz=timezone.utc)
+            expires_at=datetime.fromtimestamp(access_payload["exp"], tz=timezone.utc),
         )
         db.add(access_token_tracking)
-        
+
         # Track refresh token
         refresh_token_tracking = TokenTracking(
             user_id=new_user.id,
@@ -109,7 +216,7 @@ async def signup(
             token_type=TokenType.REFRESH,
             ip_address=ip_address,
             user_agent=user_agent,
-            expires_at=datetime.fromtimestamp(refresh_payload["exp"], tz=timezone.utc)
+            expires_at=datetime.fromtimestamp(refresh_payload["exp"], tz=timezone.utc),
         )
         db.add(refresh_token_tracking)
         await db.commit()
@@ -131,14 +238,14 @@ async def signup(
                 httponly=True,
                 secure=settings.SECURE_COOKIES,
                 samesite="lax",
-                max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+                max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
             )
             return {"message": "Account created successfully"}
-        
+
         return Token(
             access=access_token,
             refresh=refresh_token,
-            token_type=TokenType.BEARER.value
+            token_type=TokenType.BEARER.value,
         )
     except HTTPException:
         raise
@@ -146,7 +253,7 @@ async def signup(
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred during signup"
+            detail="An error occurred during signup",
         )
 
 
@@ -157,43 +264,40 @@ async def verify_email(
     db: AsyncSession = Depends(get_db),
     analytics: AnalyticsService = Depends(get_analytics),
 ) -> dict[str, str]:
-    """
-    Verify user email with secure token sent via email
-    """
+    """Verify user email with secure token sent via email"""
     try:
         from src.apps.iam.models.used_token import UsedToken
-        
+
         # Decrypt and verify the secure URL token
         try:
             token_data = security.verify_secure_url_token(t)
         except Exception:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid or expired verification link"
+                detail="Invalid or expired verification link",
             )
-        
+
         user_id = token_data.get("user_id")
         jwt_token = token_data.get("token")
         purpose = token_data.get("purpose")
-        
+
         if not all([user_id, jwt_token]) or purpose != "email_verification":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid verification token data"
+                detail="Invalid verification token data",
             )
-        
-        
+
         # Verify the embedded JWT token
         payload = security.verify_token(str(jwt_token), token_type=TokenType.EMAIL_VERIFICATION)
         token_jti = payload.get("jti")
-        
+
         # Verify user_id matches
         if str(payload.get("sub")) != str(user_id):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Token data mismatch - possible tampering detected"
+                detail="Token data mismatch - possible tampering detected",
             )
-        
+
         # Check if token has already been used
         if token_jti:
             used_check = await db.execute(
@@ -202,42 +306,42 @@ async def verify_email(
             if used_check.scalars().first():
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="This verification link has already been used"
+                    detail="This verification link has already been used",
                 )
     except HTTPException:
         raise
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired verification token"
+            detail="Invalid or expired verification token",
         )
-    
+
     try:
         if not user_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid token data"
+                detail="Invalid token data",
             )
         result = await db.execute(select(User).where(User.id == int(user_id)))
         user = result.scalars().first()
-        
+
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                detail="User not found",
             )
-        
+
         user.is_confirmed = True
-        
+
         # Mark token as used
         if token_jti:
             used_token = UsedToken(
                 token_jti=token_jti,
                 user_id=int(user_id),
-                token_purpose="email_verification"
+                token_purpose="email_verification",
             )
             db.add(used_token)
-        
+
         await db.commit()
 
         # Invalidate user cache
@@ -252,34 +356,32 @@ async def verify_email(
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred during email verification"
+            detail="An error occurred during email verification",
         )
 
 
 @router.post("/resend-verification/")
 async def resend_verification_email(
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ) -> dict[str, str]:
-    """
-    Resend email verification link
-    """
+    """Resend email verification link"""
     try:
         if current_user.is_confirmed:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already verified"
+                detail="Email already verified",
             )
-        
+
         verification_token = security.create_email_verification_token(current_user.id)
-        
+
         from src.apps.iam.services.email import EmailService
         await EmailService.send_verification_email(current_user, verification_token)
-        
+
         return {"message": "Verification email sent"}
     except HTTPException:
         raise
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred sending verification email"
+            detail="An error occurred sending verification email",
         )

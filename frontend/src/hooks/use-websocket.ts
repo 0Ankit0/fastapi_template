@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, graphqlClient } from '@/lib/api-client';
 import type { WebSocketStats } from '@/types';
 
 interface WebSocketMessage {
@@ -131,8 +131,18 @@ export function useWSStats() {
   return useQuery({
     queryKey: ['ws-stats'],
     queryFn: async () => {
-      const response = await apiClient.get<WebSocketStats>('/ws/stats/');
-      return response.data;
+      const response = await graphqlClient.post('/ws', {
+        query: `
+          query WsStats {
+            wsStats {
+              total_connections
+              rooms
+              users_online
+            }
+          }
+        `,
+      });
+      return response.data.data.wsStats as WebSocketStats;
     },
     refetchInterval: 30_000,
   });
@@ -143,10 +153,15 @@ export function useWSIsOnline(userId: number | undefined) {
   return useQuery({
     queryKey: ['ws-online', userId],
     queryFn: async () => {
-      const response = await apiClient.get<{ user_id: number; online: boolean }>(
-        `/ws/online/${userId}/`
-      );
-      return response.data;
+      const response = await graphqlClient.post('/ws', {
+        query: `
+          query WsIsOnline($userId: Int!) {
+            wsIsOnline(userId: $userId)
+          }
+        `,
+        variables: { userId },
+      });
+      return { user_id: userId ?? 0, online: response.data.data.wsIsOnline as boolean };
     },
     enabled: !!userId,
     refetchInterval: 15_000,
