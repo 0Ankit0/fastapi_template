@@ -14,7 +14,7 @@ export default function AdminDashboardPage() {
 
   const totalUsers = usersData?.total ?? 0;
   const activeSessions = tokenData?.total ?? 0;
-  const totalRoles = rolesData?.length ?? 0;
+  const totalRoles = rolesData?.total ?? rolesData?.items.length ?? 0;
 
   const stats = [
     {

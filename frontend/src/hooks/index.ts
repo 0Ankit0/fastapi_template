@@ -22,7 +22,16 @@ export {
   useUpdateNotificationPreferences,
   useRegisterPushSubscription,
   useRemovePushSubscription,
+  useNotificationDevices,
+  useRegisterNotificationDevice,
+  useRemoveNotificationDevice,
 } from './use-notifications';
+
+export {
+  usePushConfig,
+  useSystemCapabilities,
+  useSystemProviders,
+} from './use-system';
 
 export {
   useTenants,

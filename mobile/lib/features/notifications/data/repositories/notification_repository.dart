@@ -2,7 +2,9 @@ import '../../../../core/error/error_handler.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/network/dio_client.dart';
 import '../models/notification_list.dart';
+import '../models/notification_device.dart';
 import '../models/notification_preference.dart';
+import '../models/push_config.dart';
 
 class NotificationRepository {
   final DioClient _dioClient;
@@ -73,6 +75,47 @@ class NotificationRepository {
       );
       return NotificationPreference.fromJson(
           response.data as Map<String, dynamic>);
+    } catch (e) {
+      throw ErrorHandler.handle(e);
+    }
+  }
+
+  Future<List<NotificationDevice>> getDevices() async {
+    try {
+      final response = await _dioClient.dio.get(ApiEndpoints.notificationDevices);
+      final data = response.data as List<dynamic>;
+      return data
+          .map((item) => NotificationDevice.fromJson(item as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      throw ErrorHandler.handle(e);
+    }
+  }
+
+  Future<NotificationDevice> registerDevice(Map<String, dynamic> payload) async {
+    try {
+      final response = await _dioClient.dio.post(
+        ApiEndpoints.notificationDevices,
+        data: payload,
+      );
+      return NotificationDevice.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      throw ErrorHandler.handle(e);
+    }
+  }
+
+  Future<void> deleteDevice(int id) async {
+    try {
+      await _dioClient.dio.delete('${ApiEndpoints.notificationDevices}$id/');
+    } catch (e) {
+      throw ErrorHandler.handle(e);
+    }
+  }
+
+  Future<PushConfig> getPushConfig() async {
+    try {
+      final response = await _dioClient.dio.get(ApiEndpoints.notificationPushConfig);
+      return PushConfig.fromJson(response.data as Map<String, dynamic>);
     } catch (e) {
       throw ErrorHandler.handle(e);
     }

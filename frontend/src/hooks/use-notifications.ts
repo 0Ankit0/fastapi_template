@@ -3,6 +3,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import type {
+  NotificationDevice,
+  NotificationDeviceCreate,
   Notification,
   NotificationList,
   NotificationPreference,
@@ -89,7 +91,7 @@ export function useCreateNotification() {
 
 // ── Notification Preferences ────────────────────────────────────────────────
 
-export function useNotificationPreferences() {
+export function useNotificationPreferences(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['notification-preferences'],
     queryFn: async () => {
@@ -98,6 +100,7 @@ export function useNotificationPreferences() {
       );
       return response.data;
     },
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -140,6 +143,44 @@ export function useRemovePushSubscription() {
       await apiClient.delete('/notifications/preferences/push-subscription/');
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
+    },
+  });
+}
+
+export function useNotificationDevices(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ['notification-devices'],
+    queryFn: async () => {
+      const response = await apiClient.get<NotificationDevice[]>('/notifications/devices/');
+      return response.data;
+    },
+    enabled: options?.enabled ?? true,
+  });
+}
+
+export function useRegisterNotificationDevice() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: NotificationDeviceCreate) => {
+      const response = await apiClient.post<NotificationDevice>('/notifications/devices/', data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notification-devices'] });
+      queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
+    },
+  });
+}
+
+export function useRemoveNotificationDevice() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await apiClient.delete(`/notifications/devices/${id}/`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notification-devices'] });
       queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
     },
   });

@@ -13,20 +13,25 @@ import {
   Key,
 } from 'lucide-react';
 import { OrgSwitcher } from './org-switcher';
+import { useSystemCapabilities } from '@/hooks/use-system';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Profile', href: '/profile', icon: User },
-  { name: 'Tenants', href: '/tenants', icon: Building2 },
-  { name: 'Payments', href: '/finances', icon: CreditCard },
-  { name: 'Notifications', href: '/notifications', icon: Bell },
-  { name: 'Roles & Permissions', href: '/rbac', icon: Shield },
-  { name: 'Active Sessions', href: '/tokens', icon: Key },
+  { name: 'Tenants', href: '/tenants', icon: Building2, feature: 'multitenancy' },
+  { name: 'Payments', href: '/finances', icon: CreditCard, feature: 'finance' },
+  { name: 'Notifications', href: '/notifications', icon: Bell, feature: 'notifications' },
+  { name: 'Roles & Permissions', href: '/rbac', icon: Shield, feature: 'auth' },
+  { name: 'Active Sessions', href: '/tokens', icon: Key, feature: 'auth' },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { data: capabilities } = useSystemCapabilities();
+  const visibleNavigation = navigation.filter(
+    (item) => !item.feature || capabilities?.modules[item.feature] !== false
+  );
 
   return (
     <aside className="fixed inset-y-0 left-0 z-10 w-64 bg-white border-r border-gray-200">
@@ -37,7 +42,7 @@ export function Sidebar() {
       </div>
       <OrgSwitcher />
       <nav className="flex flex-col gap-1 p-4 pt-0">
-        {navigation.map((item) => {
+        {visibleNavigation.map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (

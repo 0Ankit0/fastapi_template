@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import {
+  useNotificationDevices,
   useNotificationPreferences,
   useUpdateNotificationPreferences,
 } from '@/hooks/use-notifications';
-import { useResendVerification, useVerifyEmail } from '@/hooks/use-auth';
+import { usePushConfig, useSystemCapabilities } from '@/hooks/use-system';
+import { useResendVerification } from '@/hooks/use-auth';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button, Skeleton } from '@/components/ui';
 import {
@@ -66,6 +67,9 @@ export default function SettingsPage() {
 
   // ── Notifications ──────────────────────────────────────────────────────
   const { data: prefs, isLoading: prefsLoading } = useNotificationPreferences();
+  const { data: devices } = useNotificationDevices();
+  const { data: pushConfig } = usePushConfig();
+  const { data: capabilities } = useSystemCapabilities();
   const updatePref = useUpdateNotificationPreferences();
 
   // ── Email verification ─────────────────────────────────────────────────
@@ -229,7 +233,7 @@ export default function SettingsPage() {
                         {
                           key: 'push_enabled',
                           label: 'Browser push notifications',
-                          desc: 'Desktop or mobile push alerts',
+                          desc: 'Desktop or mobile push alerts using the active provider',
                         },
                         {
                           key: 'sms_enabled',
@@ -250,6 +254,41 @@ export default function SettingsPage() {
                         />
                       </div>
                     ))}
+                    <div className="py-3 last:pb-0">
+                      <p className="text-sm font-medium text-gray-900">Runtime status</p>
+                      <div className="mt-2 space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                        <p className="text-xs text-gray-600">
+                          Notifications module:
+                          <span className="ml-1 font-medium text-gray-900">
+                            {capabilities?.modules.notifications === false ? 'Disabled' : 'Enabled'}
+                          </span>
+                        </p>
+                        <p className="text-xs text-gray-600">
+                          Active push provider:
+                          <span className="ml-1 font-medium text-gray-900 uppercase">
+                            {pushConfig?.provider ?? 'none'}
+                          </span>
+                        </p>
+                        <p className="text-xs text-gray-600">
+                          Registered devices:
+                          <span className="ml-1 font-medium text-gray-900">
+                            {devices?.length ?? 0}
+                          </span>
+                        </p>
+                        {devices && devices.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {devices.map((device) => (
+                              <span
+                                key={device.id}
+                                className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-gray-700 ring-1 ring-gray-200"
+                              >
+                                {device.provider} · {device.platform}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <p className="text-sm text-gray-500">Unable to load preferences.</p>

@@ -6,6 +6,7 @@ class NotificationPreference {
   final bool smsEnabled;
   final bool websocketEnabled;
   final String? pushEndpoint;
+  final String? pushProvider;
 
   const NotificationPreference({
     this.id,
@@ -15,6 +16,7 @@ class NotificationPreference {
     required this.smsEnabled,
     required this.websocketEnabled,
     this.pushEndpoint,
+    this.pushProvider,
   });
 
   factory NotificationPreference.fromJson(Map<String, dynamic> json) {
@@ -26,6 +28,7 @@ class NotificationPreference {
       smsEnabled: json['sms_enabled'] as bool? ?? false,
       websocketEnabled: json['websocket_enabled'] as bool? ?? true,
       pushEndpoint: json['push_endpoint'] as String?,
+      pushProvider: json['push_provider'] as String?,
     );
   }
 
@@ -42,6 +45,7 @@ class NotificationPreference {
     bool? smsEnabled,
     bool? websocketEnabled,
     String? pushEndpoint,
+    String? pushProvider,
   }) {
     return NotificationPreference(
       id: id,
@@ -51,6 +55,7 @@ class NotificationPreference {
       smsEnabled: smsEnabled ?? this.smsEnabled,
       websocketEnabled: websocketEnabled ?? this.websocketEnabled,
       pushEndpoint: pushEndpoint ?? this.pushEndpoint,
+      pushProvider: pushProvider ?? this.pushProvider,
     );
   }
 }

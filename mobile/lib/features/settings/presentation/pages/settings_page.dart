@@ -6,6 +6,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/error/error_handler.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/providers/dio_provider.dart';
+import '../../../../core/providers/system_provider.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../notifications/presentation/providers/notification_provider.dart';
 
@@ -228,6 +229,9 @@ class _NotificationsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final prefsAsync = ref.watch(notificationPrefsProvider);
+    final devicesAsync = ref.watch(notificationDevicesProvider);
+    final pushConfigAsync = ref.watch(pushConfigProvider);
+    final capabilitiesAsync = ref.watch(systemCapabilitiesProvider);
 
     return prefsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -246,56 +250,107 @@ class _NotificationsTab extends ConsumerWidget {
           ],
         ),
       ),
-      data: (prefs) => SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const _SectionHeader(label: 'Notification Channels'),
-            Card(
-              child: Column(
-                children: [
-                  _ToggleTile(
-                    icon: Icons.web_outlined,
-                    title: 'In-App',
-                    subtitle: 'Receive notifications within the app',
-                    value: prefs.websocketEnabled,
-                    onChanged: (v) => _updatePref(
-                        ref, context, {'websocket_enabled': v}),
+      data: (prefs) {
+        final devices = devicesAsync.valueOrNull ?? const [];
+        final pushProvider = pushConfigAsync.valueOrNull?.provider ?? prefs.pushProvider ?? 'none';
+        final notificationsEnabled =
+            capabilitiesAsync.valueOrNull?.modules['notifications'] ?? true;
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _SectionHeader(label: 'Notification Channels'),
+              Card(
+                child: Column(
+                  children: [
+                    _ToggleTile(
+                      icon: Icons.web_outlined,
+                      title: 'In-App',
+                      subtitle: 'Receive notifications within the app',
+                      value: prefs.websocketEnabled,
+                      onChanged: (v) => _updatePref(
+                          ref, context, {'websocket_enabled': v}),
+                    ),
+                    const Divider(height: 1),
+                    _ToggleTile(
+                      icon: Icons.email_outlined,
+                      title: 'Email',
+                      subtitle: 'Receive notifications via email',
+                      value: prefs.emailEnabled,
+                      onChanged: (v) =>
+                          _updatePref(ref, context, {'email_enabled': v}),
+                    ),
+                    const Divider(height: 1),
+                    _ToggleTile(
+                      icon: Icons.phone_android_outlined,
+                      title: 'Push',
+                      subtitle: 'Receive push notifications through the active provider',
+                      value: prefs.pushEnabled,
+                      onChanged: (v) =>
+                          _updatePref(ref, context, {'push_enabled': v}),
+                    ),
+                    const Divider(height: 1),
+                    _ToggleTile(
+                      icon: Icons.sms_outlined,
+                      title: 'SMS',
+                      subtitle: 'Receive notifications via SMS',
+                      value: prefs.smsEnabled,
+                      onChanged: (v) =>
+                          _updatePref(ref, context, {'sms_enabled': v}),
+                    ),
+                  ],
+                ),
+              ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.05),
+              const SizedBox(height: 16),
+              const _SectionHeader(label: 'Runtime Status'),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _SettingsRow(
+                        icon: Icons.extension_outlined,
+                        label: 'Notifications Module',
+                        value: notificationsEnabled ? 'Enabled' : 'Disabled',
+                      ),
+                      const Divider(height: 16),
+                      _SettingsRow(
+                        icon: Icons.notifications_active_outlined,
+                        label: 'Active Push Provider',
+                        value: pushProvider.toUpperCase(),
+                      ),
+                      const Divider(height: 16),
+                      _SettingsRow(
+                        icon: Icons.devices_outlined,
+                        label: 'Registered Devices',
+                        value: devices.length.toString(),
+                      ),
+                      if (devices.isNotEmpty) ...[
+                        const Divider(height: 16),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: devices
+                              .map(
+                                (device) => Chip(
+                                  avatar: const Icon(Icons.smartphone, size: 16),
+                                  label: Text('${device.provider} • ${device.platform}'),
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ],
+                    ],
                   ),
-                  const Divider(height: 1),
-                  _ToggleTile(
-                    icon: Icons.email_outlined,
-                    title: 'Email',
-                    subtitle: 'Receive notifications via email',
-                    value: prefs.emailEnabled,
-                    onChanged: (v) =>
-                        _updatePref(ref, context, {'email_enabled': v}),
-                  ),
-                  const Divider(height: 1),
-                  _ToggleTile(
-                    icon: Icons.phone_android_outlined,
-                    title: 'Push',
-                    subtitle: 'Receive push notifications',
-                    value: prefs.pushEnabled,
-                    onChanged: (v) =>
-                        _updatePref(ref, context, {'push_enabled': v}),
-                  ),
-                  const Divider(height: 1),
-                  _ToggleTile(
-                    icon: Icons.sms_outlined,
-                    title: 'SMS',
-                    subtitle: 'Receive notifications via SMS',
-                    value: prefs.smsEnabled,
-                    onChanged: (v) =>
-                        _updatePref(ref, context, {'sms_enabled': v}),
-                  ),
-                ],
-              ),
-            ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.05),
-          ],
-        ),
-      ),
+                ),
+              ).animate().fadeIn(delay: 180.ms).slideY(begin: 0.05),
+            ],
+          ),
+        );
+      },
     );
   }
 }

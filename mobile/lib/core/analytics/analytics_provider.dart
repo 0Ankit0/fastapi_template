@@ -2,6 +2,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'analytics_interface.dart';
 import 'analytics_service.dart';
+import 'adapters/mixpanel_adapter.dart';
 import 'adapters/posthog_adapter.dart';
 
 /// Riverpod provider for [AnalyticsService].
@@ -50,8 +51,14 @@ Future<AnalyticsService> buildAnalyticsService() async {
       if (apiKey != null && apiKey.isNotEmpty) {
         adapter = await PostHogAnalyticsAdapter.init(apiKey: apiKey, host: host);
       }
-    // case 'mixpanel':
-    //   adapter = await MixpanelAnalyticsAdapter.init(...);
+      break;
+    case 'mixpanel':
+      final token = dotenv.env['MIXPANEL_PROJECT_TOKEN'];
+      final host = dotenv.env['MIXPANEL_API_HOST'];
+      if (token != null && token.isNotEmpty) {
+        adapter = await MixpanelAnalyticsAdapter.init(token: token, serverUrl: host);
+      }
+      break;
     default:
       break;
   }

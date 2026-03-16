@@ -27,6 +27,7 @@ export interface NotificationPreference {
   push_enabled: boolean;
   sms_enabled: boolean;
   push_endpoint?: string;
+  push_provider?: string | null;
 }
 
 export interface NotificationPreferenceUpdate {
@@ -34,4 +35,30 @@ export interface NotificationPreferenceUpdate {
   email_enabled?: boolean;
   push_enabled?: boolean;
   sms_enabled?: boolean;
+}
+
+export type NotificationDeviceProvider = 'webpush' | 'fcm' | 'onesignal';
+export type NotificationDevicePlatform = 'web' | 'android' | 'ios';
+
+export interface NotificationDevice {
+  id: number;
+  provider: NotificationDeviceProvider;
+  platform: NotificationDevicePlatform;
+  token?: string | null;
+  endpoint?: string | null;
+  subscription_id?: string | null;
+  is_active: boolean;
+  last_seen_at: string;
+  created_at: string;
+}
+
+export interface NotificationDeviceCreate {
+  provider: NotificationDeviceProvider;
+  platform: NotificationDevicePlatform;
+  token?: string;
+  endpoint?: string;
+  p256dh?: string;
+  auth?: string;
+  subscription_id?: string;
+  device_metadata?: Record<string, unknown>;
 }

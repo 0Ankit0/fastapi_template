@@ -30,6 +30,10 @@ class ApiEndpoints {
   static String deleteNotification(String id) => '/notifications/$id/';
   static const String markAllNotificationsRead = '/notifications/read-all/';
   static const String notificationPreferences = '/notifications/preferences/';
+  static const String notificationDevices = '/notifications/devices/';
+  static const String notificationPushConfig = '/notifications/push/config/';
+  static const String systemCapabilities = '/system/capabilities/';
+  static const String systemProviders = '/system/providers/';
 
   // IAM - Token tracking
   static const String tokens = '/tokens/';

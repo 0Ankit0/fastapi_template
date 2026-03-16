@@ -96,13 +96,10 @@ function buildService(): AnalyticsService {
     return new AnalyticsService(new PostHogAdapter(apiKey, host));
   }
 
-  // ----------------------------------------------------------------
-  // Register additional providers here, e.g.:
-  //   if (provider === 'mixpanel') {
-  //     const { MixpanelAdapter } = require('./adapters/mixpanel');
-  //     return new AnalyticsService(new MixpanelAdapter(apiKey));
-  //   }
-  // ----------------------------------------------------------------
+  if (provider === 'mixpanel') {
+    const { MixpanelAdapter } = require('./adapters/mixpanel') as typeof import('./adapters/mixpanel');
+    return new AnalyticsService(new MixpanelAdapter(apiKey, host));
+  }
 
   return new AnalyticsService(null);
 }
