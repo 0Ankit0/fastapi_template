@@ -18,6 +18,7 @@ from src.apps.core.config import settings
 from src.apps.analytics.dependencies import get_analytics
 from src.apps.analytics.service import AnalyticsService
 from src.apps.analytics.events import UserEvents
+from src.apps.iam.models.user import UserProfile
 
 router = APIRouter(prefix="/users")
 
@@ -329,23 +330,45 @@ async def update_user(
                 detail="Email already registered"
             )
         user.email = user_update.email
-    # if user_update.is_active is not None:
-    #     user.is_active = user_update.is_active
+    if user_update.is_active is not None:
+        user.is_active = user_update.is_active
+    if user_update.is_superuser is not None:
+        user.is_superuser = user_update.is_superuser
+
+    profile_result = await db.execute(select(UserProfile).where(UserProfile.user_id == uid))
+    profile = profile_result.scalars().first()
 
     # Update profile fields
-    if user.profile:
+    if profile:
         if user_update.first_name is not None:
-            user.profile.first_name = user_update.first_name
+            profile.first_name = user_update.first_name
         if user_update.last_name is not None:
-            user.profile.last_name = user_update.last_name
+            profile.last_name = user_update.last_name
         if user_update.phone is not None:
-            user.profile.phone = user_update.phone
-    
+            profile.phone = user_update.phone
+        db.add(profile)
+    elif any(
+        value is not None
+        for value in [user_update.first_name, user_update.last_name, user_update.phone]
+    ):
+        profile = UserProfile(
+            user_id=user.id,
+            first_name=user_update.first_name,
+            last_name=user_update.last_name,
+            phone=user_update.phone,
+        )
+        db.add(profile)
+
     db.add(user)
     await db.commit()
-    await db.refresh(user)
-    if user.profile:
-        await db.refresh(user.profile)
+    if profile:
+        await db.refresh(profile)
+        user.profile = profile
+    result = await db.execute(
+        select(User).options(selectinload(User.profile)).where(User.id == uid)  # type: ignore
+    )
+    user = result.scalars().first()
+    assert user is not None
     
     # Invalidate caches
     await RedisCache.delete(f"user:profile:{uid}")

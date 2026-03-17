@@ -229,6 +229,17 @@ class CommunicationsService:
             },
         }
 
+    def is_push_provider_available(self, provider_name: str) -> bool:
+        provider = self._push_providers.get(provider_name)
+        return bool(settings.PUSH_ENABLED and provider and provider.is_configured())
+
+    def get_available_push_providers(self) -> list[str]:
+        return [
+            name
+            for name, provider in self._push_providers.items()
+            if settings.PUSH_ENABLED and provider.is_configured()
+        ]
+
 
 def get_communications_service() -> CommunicationsService:
     global _service

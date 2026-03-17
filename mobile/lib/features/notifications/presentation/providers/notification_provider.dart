@@ -46,5 +46,12 @@ final notificationDevicesProvider = FutureProvider<List<NotificationDevice>>((re
 });
 
 final pushConfigProvider = FutureProvider<PushConfig>((ref) {
-  return ref.watch(notificationRepositoryProvider).getPushConfig();
+  return ref.watch(notificationRepositoryProvider).getPushConfig().catchError((_) {
+    return const PushConfig(
+      provider: null,
+      webpush: PushProviderConfig(enabled: false),
+      fcm: PushProviderConfig(enabled: false),
+      onesignal: PushProviderConfig(enabled: false),
+    );
+  });
 });

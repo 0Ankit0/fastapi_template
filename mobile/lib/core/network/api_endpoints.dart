@@ -31,6 +31,8 @@ class ApiEndpoints {
   static const String markAllNotificationsRead = '/notifications/read-all/';
   static const String notificationPreferences = '/notifications/preferences/';
   static const String notificationDevices = '/notifications/devices/';
+  static String notificationDevicesByProvider(String provider) =>
+      '/notifications/devices/$provider/';
   static const String notificationPushConfig = '/notifications/push/config/';
   static const String systemCapabilities = '/system/capabilities/';
   static const String systemProviders = '/system/providers/';

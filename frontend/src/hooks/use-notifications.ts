@@ -5,11 +5,23 @@ import { apiClient } from '@/lib/api-client';
 import type {
   NotificationDevice,
   NotificationDeviceCreate,
+  NotificationDeviceProvider,
   Notification,
   NotificationList,
   NotificationPreference,
   NotificationPreferenceUpdate,
 } from '@/types';
+
+function notificationDeviceEndpoint(provider: NotificationDeviceProvider): string {
+  switch (provider) {
+    case 'webpush':
+      return '/notifications/devices/webpush/';
+    case 'fcm':
+      return '/notifications/devices/fcm/';
+    case 'onesignal':
+      return '/notifications/devices/onesignal/';
+  }
+}
 
 export function useNotifications(params?: { unread_only?: boolean; skip?: number; limit?: number }) {
   return useQuery({
@@ -163,7 +175,10 @@ export function useRegisterNotificationDevice() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: NotificationDeviceCreate) => {
-      const response = await apiClient.post<NotificationDevice>('/notifications/devices/', data);
+      const response = await apiClient.post<NotificationDevice>(
+        notificationDeviceEndpoint(data.provider),
+        data
+      );
       return response.data;
     },
     onSuccess: () => {

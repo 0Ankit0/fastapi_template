@@ -5,10 +5,13 @@ import { useAuthStore } from '@/store/auth-store';
 import {
   useNotificationDevices,
   useNotificationPreferences,
+  useRegisterNotificationDevice,
+  useRemoveNotificationDevice,
   useUpdateNotificationPreferences,
 } from '@/hooks/use-notifications';
 import { usePushConfig, useSystemCapabilities } from '@/hooks/use-system';
 import { useResendVerification } from '@/hooks/use-auth';
+import { registerCurrentPushDevice } from '@/lib/push-registration';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button, Skeleton } from '@/components/ui';
 import {
@@ -20,6 +23,9 @@ import {
   Key,
   RefreshCw,
   ExternalLink,
+  Radio,
+  Smartphone,
+  Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -30,6 +36,47 @@ const TABS = [
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
+
+function DeviceRow({
+  device,
+  onRemove,
+  isPending,
+}: {
+  device: {
+    id: number;
+    provider: string;
+    platform: string;
+    last_seen_at: string;
+  };
+  onRemove: (id: number) => void;
+  isPending: boolean;
+}) {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+            <Smartphone className="h-4 w-4 text-gray-500" />
+            {device.provider.toUpperCase()} on {device.platform}
+          </p>
+          <p className="mt-1 text-xs text-gray-500">
+            Last seen {new Date(device.last_seen_at).toLocaleString()}
+          </p>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onRemove(device.id)}
+          disabled={isPending}
+          className="text-red-600 hover:bg-red-50 hover:text-red-700"
+        >
+          <Trash2 className="mr-1 h-3.5 w-3.5" />
+          Remove
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 // ── Toggle component ────────────────────────────────────────────────────────
 function Toggle({
@@ -71,6 +118,9 @@ export default function SettingsPage() {
   const { data: pushConfig } = usePushConfig();
   const { data: capabilities } = useSystemCapabilities();
   const updatePref = useUpdateNotificationPreferences();
+  const registerDevice = useRegisterNotificationDevice();
+  const removeDevice = useRemoveNotificationDevice();
+  const [pushActionError, setPushActionError] = useState<string | null>(null);
 
   // ── Email verification ─────────────────────────────────────────────────
   const resend = useResendVerification();
@@ -79,6 +129,26 @@ export default function SettingsPage() {
     resend.mutate(undefined, {
       onSuccess: () => setResentOk(true),
     });
+  };
+
+  const handleRegisterCurrentDevice = async () => {
+    if (!pushConfig?.provider) return;
+    setPushActionError(null);
+    try {
+      const payload = await registerCurrentPushDevice(pushConfig.provider, pushConfig);
+      if (!payload) {
+        setPushActionError(
+          'This browser could not generate a push subscription for the active provider.'
+        );
+        return;
+      }
+      registerDevice.mutate(payload, {
+        onError: (error) =>
+          setPushActionError(error instanceof Error ? error.message : 'Registration failed.'),
+      });
+    } catch (error) {
+      setPushActionError(error instanceof Error ? error.message : 'Registration failed.');
+    }
   };
 
   return (
@@ -270,23 +340,63 @@ export default function SettingsPage() {
                           </span>
                         </p>
                         <p className="text-xs text-gray-600">
+                          Provider readiness:
+                          <span className="ml-1 font-medium text-gray-900">
+                            {pushConfig?.provider
+                              ? pushConfig.providers[
+                                  pushConfig.provider as keyof typeof pushConfig.providers
+                                ]?.enabled
+                                ? 'Ready'
+                                : 'Unavailable'
+                              : 'No active provider'}
+                          </span>
+                        </p>
+                        <p className="text-xs text-gray-600">
                           Registered devices:
                           <span className="ml-1 font-medium text-gray-900">
                             {devices?.length ?? 0}
                           </span>
                         </p>
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleRegisterCurrentDevice}
+                            disabled={
+                              !prefs.push_enabled ||
+                              !pushConfig?.provider ||
+                              registerDevice.isPending
+                            }
+                            isLoading={registerDevice.isPending}
+                          >
+                            <Radio className="mr-1.5 h-3.5 w-3.5" />
+                            Register This Browser
+                          </Button>
+                        </div>
+                        {pushActionError ? (
+                          <p className="text-xs font-medium text-red-600">{pushActionError}</p>
+                        ) : null}
                         {devices && devices.length > 0 ? (
-                          <div className="flex flex-wrap gap-2">
+                          <div className="space-y-2">
                             {devices.map((device) => (
-                              <span
+                              <DeviceRow
                                 key={device.id}
-                                className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-gray-700 ring-1 ring-gray-200"
-                              >
-                                {device.provider} · {device.platform}
-                              </span>
+                                device={device}
+                                onRemove={(id) => removeDevice.mutate(id)}
+                                isPending={removeDevice.isPending}
+                              />
                             ))}
                           </div>
-                        ) : null}
+                        ) : (
+                          <div className="rounded-xl border border-dashed border-gray-300 bg-white p-4">
+                            <p className="text-sm font-medium text-gray-700">
+                              No registered push devices.
+                            </p>
+                            <p className="mt-1 text-xs text-gray-500">
+                              Enable push notifications, then register this browser or your mobile app.
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

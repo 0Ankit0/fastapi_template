@@ -94,8 +94,12 @@ class NotificationRepository {
 
   Future<NotificationDevice> registerDevice(Map<String, dynamic> payload) async {
     try {
+      final provider = payload['provider'] as String?;
+      final endpoint = provider == null
+          ? ApiEndpoints.notificationDevices
+          : ApiEndpoints.notificationDevicesByProvider(provider);
       final response = await _dioClient.dio.post(
-        ApiEndpoints.notificationDevices,
+        endpoint,
         data: payload,
       );
       return NotificationDevice.fromJson(response.data as Map<String, dynamic>);

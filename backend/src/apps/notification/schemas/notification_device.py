@@ -48,3 +48,49 @@ class NotificationDeviceCreate(BaseModel):
             if not self.subscription_id:
                 raise ValueError("onesignal requires subscription_id")
         return self
+
+
+class WebPushDeviceCreate(BaseModel):
+    platform: NotificationDevicePlatform = NotificationDevicePlatform.WEB
+    endpoint: str
+    p256dh: str
+    auth: str
+    device_metadata: Optional[Any] = None
+
+    def to_device_create(self) -> NotificationDeviceCreate:
+        return NotificationDeviceCreate(
+            provider=NotificationDeviceProvider.WEBPUSH,
+            platform=self.platform,
+            endpoint=self.endpoint,
+            p256dh=self.p256dh,
+            auth=self.auth,
+            device_metadata=self.device_metadata,
+        )
+
+
+class FcmDeviceCreate(BaseModel):
+    platform: NotificationDevicePlatform
+    token: str
+    device_metadata: Optional[Any] = None
+
+    def to_device_create(self) -> NotificationDeviceCreate:
+        return NotificationDeviceCreate(
+            provider=NotificationDeviceProvider.FCM,
+            platform=self.platform,
+            token=self.token,
+            device_metadata=self.device_metadata,
+        )
+
+
+class OneSignalDeviceCreate(BaseModel):
+    platform: NotificationDevicePlatform
+    subscription_id: str
+    device_metadata: Optional[Any] = None
+
+    def to_device_create(self) -> NotificationDeviceCreate:
+        return NotificationDeviceCreate(
+            provider=NotificationDeviceProvider.ONESIGNAL,
+            platform=self.platform,
+            subscription_id=self.subscription_id,
+            device_metadata=self.device_metadata,
+        )

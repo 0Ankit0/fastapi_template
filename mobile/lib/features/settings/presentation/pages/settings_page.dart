@@ -8,6 +8,7 @@ import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/providers/dio_provider.dart';
 import '../../../../core/providers/system_provider.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../notifications/data/services/push_registration_service.dart';
 import '../../../notifications/presentation/providers/notification_provider.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
@@ -226,6 +227,74 @@ class _NotificationsTab extends ConsumerWidget {
     }
   }
 
+  Future<void> _syncCurrentDevice(
+    WidgetRef ref,
+    BuildContext context,
+  ) async {
+    try {
+      final authState = ref.read(authNotifierProvider).valueOrNull;
+      final user = authState?.user;
+      if (user == null) {
+        throw Exception('Please sign in again to register this device.');
+      }
+      final repository = ref.read(notificationRepositoryProvider);
+      final config = await repository.getPushConfig();
+      final devices = await repository.getDevices();
+      final service = PushRegistrationService(repository);
+      await service.sync(
+        config: config,
+        existingDevices: devices,
+        userId: user.id,
+      );
+      ref.invalidate(notificationDevicesProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Device registration synced'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ErrorHandler.handle(e).message),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _removeDevice(
+    WidgetRef ref,
+    BuildContext context,
+    int deviceId,
+  ) async {
+    try {
+      await ref.read(notificationRepositoryProvider).deleteDevice(deviceId);
+      ref.invalidate(notificationDevicesProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Device removed'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ErrorHandler.handle(e).message),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final prefsAsync = ref.watch(notificationPrefsProvider);
@@ -328,19 +397,82 @@ class _NotificationsTab extends ConsumerWidget {
                         label: 'Registered Devices',
                         value: devices.length.toString(),
                       ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: prefs.pushEnabled
+                              ? () => _syncCurrentDevice(ref, context)
+                              : null,
+                          icon: const Icon(Icons.sync),
+                          label: const Text('Sync Current Device'),
+                        ),
+                      ),
                       if (devices.isNotEmpty) ...[
                         const Divider(height: 16),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
+                        Column(
                           children: devices
                               .map(
-                                (device) => Chip(
-                                  avatar: const Icon(Icons.smartphone, size: 16),
-                                  label: Text('${device.provider} • ${device.platform}'),
+                                (device) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: Colors.grey.shade200),
+                                    ),
+                                    padding: const EdgeInsets.all(12),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.smartphone, size: 18),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                '${device.provider.toUpperCase()} • ${device.platform}',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                'Last seen ${device.lastSeenAt.toLocal()}',
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        IconButton(
+                                          onPressed: () => _removeDevice(ref, context, device.id),
+                                          icon: const Icon(Icons.delete_outline),
+                                          color: Colors.red,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
                               )
                               .toList(),
+                        ),
+                      ] else ...[
+                        const Divider(height: 16),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: const Text(
+                            'No registered push devices yet.',
+                            style: TextStyle(fontSize: 13, color: Colors.grey),
+                          ),
                         ),
                       ],
                     ],

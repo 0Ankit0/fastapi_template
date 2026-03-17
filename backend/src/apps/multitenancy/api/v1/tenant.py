@@ -140,7 +140,7 @@ async def list_my_tenants(
     total = (
         await db.execute(
             select(func.count(col(Tenant.id)))
-            .join(TenantMember, TenantMember.tenant_id == Tenant.id)
+            .join(TenantMember, col(TenantMember.tenant_id == Tenant.id))
             .where(TenantMember.user_id == current_user.id, TenantMember.is_active == True)
         )
     ).scalar_one()
@@ -148,7 +148,7 @@ async def list_my_tenants(
     items = (
         await db.execute(
             select(Tenant)
-            .join(TenantMember, TenantMember.tenant_id == Tenant.id)
+            .join(TenantMember, col(TenantMember.tenant_id == Tenant.id))
             .where(TenantMember.user_id == current_user.id, TenantMember.is_active == True)
             .offset(skip)
             .limit(limit)
