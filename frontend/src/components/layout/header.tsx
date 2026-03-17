@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useNotifications, useMarkAllNotificationsRead, useMarkNotificationRead } from '@/hooks/use-notifications';
 import { LanguageSwitcher } from './language-switcher';
+import { ThemeSelector } from '@/components/theme/theme-selector';
 
 function useClickOutside(ref: React.RefObject<HTMLElement | null>, handler: () => void) {
   useEffect(() => {
@@ -62,6 +63,7 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-3">
+          <ThemeSelector />
           <LanguageSwitcher />
 
           {/* ── Notifications dropdown ── */}

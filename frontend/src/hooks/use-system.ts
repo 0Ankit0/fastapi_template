@@ -3,7 +3,12 @@
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { apiClient } from '@/lib/api-client';
-import type { CapabilitySummary, ProviderStatusResponse, PushConfigResponse } from '@/types';
+import type {
+  CapabilitySummary,
+  MapConfigResponse,
+  ProviderStatusResponse,
+  PushConfigResponse,
+} from '@/types';
 
 export function useSystemCapabilities() {
   return useQuery({
@@ -47,6 +52,17 @@ export function usePushConfig() {
         }
         throw error;
       }
+    },
+    staleTime: 60_000,
+  });
+}
+
+export function useMapConfig() {
+  return useQuery({
+    queryKey: ['maps-config'],
+    queryFn: async () => {
+      const response = await apiClient.get<MapConfigResponse>('/system/maps/config/');
+      return response.data;
     },
     staleTime: 60_000,
   });

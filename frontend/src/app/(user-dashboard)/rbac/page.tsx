@@ -10,11 +10,10 @@ import {
 } from '@/hooks/use-rbac';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button, Skeleton } from '@/components/ui';
-import { ShieldCheck, Key, Users, Plus, Settings2 } from 'lucide-react';
+import { ShieldCheck, Key, Plus, Settings2 } from 'lucide-react';
 import type { Role } from '@/types';
-import { UserRolesTab } from './user-roles-tab';
 
-type Tab = 'roles' | 'permissions' | 'user-roles';
+type Tab = 'roles' | 'permissions';
 
 // ── Role row ─────────────────────────────────────────────────────────────────
 function RoleRow({ role }: { role: Role }) {
@@ -29,7 +28,7 @@ function RoleRow({ role }: { role: Role }) {
       </td>
       <td className="px-4 py-3 text-right">
         <Link
-          href={`/rbac/${role.id}`}
+          href={`/admin/rbac/${role.id}`}
           className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors"
           title="Manage permissions"
         >
@@ -78,14 +77,13 @@ export default function RBACPage() {
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: 'roles', label: 'Roles', icon: <ShieldCheck className="h-4 w-4" /> },
     { id: 'permissions', label: 'Permissions', icon: <Key className="h-4 w-4" /> },
-    { id: 'user-roles', label: 'User Roles', icon: <Users className="h-4 w-4" /> },
   ];
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Roles & Permissions</h1>
-        <p className="text-gray-500">Manage access control for your application</p>
+        <p className="text-gray-500">Manage role and permission definitions for the platform</p>
       </div>
 
       <div className="flex gap-2 border-b border-gray-200">
@@ -249,8 +247,6 @@ export default function RBACPage() {
           </div>
         </div>
       )}
-
-      {activeTab === 'user-roles' && <UserRolesTab />}
     </div>
   );
 }

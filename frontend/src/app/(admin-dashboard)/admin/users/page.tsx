@@ -1,6 +1,12 @@
 'use client';
 
 import { useDeferredValue, useState } from 'react';
+import {
+  useAssignRole,
+  useRemoveRole,
+  useRoles,
+  useUserRoles,
+} from '@/hooks/use-rbac';
 import { useDeleteUser, useListUsers, useUpdateUser } from '@/hooks/use-users';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +21,7 @@ import {
   Search,
   Shield,
   ShieldAlert,
+  ShieldCheck,
   Trash2,
   UserCog,
   Users,
@@ -36,7 +43,7 @@ function StatCard({
   accent: string;
 }) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">{label}</p>
@@ -64,10 +71,20 @@ function UserEditor({
   const [phone, setPhone] = useState(user.phone ?? '');
   const [isActive, setIsActive] = useState(user.is_active);
   const [isSuperuser, setIsSuperuser] = useState(user.is_superuser);
+  const { data: availableRolesData } = useRoles({ limit: 200 });
+  const { data: userRolesData } = useUserRoles(user.id);
+  const assignRole = useAssignRole();
+  const removeRole = useRemoveRole();
+  const [selectedRoleId, setSelectedRoleId] = useState('');
+
+  const availableRoles = availableRolesData?.items ?? [];
+  const assignedRoles = userRolesData?.roles ?? [];
+  const assignedRoleIds = new Set(assignedRoles.map((role) => role.id));
+  const unassignedRoles = availableRoles.filter((role) => !assignedRoleIds.has(role.id));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-[28px] border border-white/40 bg-[#fcfbf8] p-6 shadow-2xl">
+      <div className="w-full max-w-3xl rounded-[28px] border border-white/40 bg-[#fcfbf8] p-6 shadow-[0_16px_40px_rgba(15,23,42,0.12)]">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
@@ -137,6 +154,72 @@ function UserEditor({
           </label>
         </div>
 
+        <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-gray-900">Assigned roles</p>
+              <p className="mt-1 text-xs text-gray-500">
+                Add or remove RBAC roles for this user directly from the admin dashboard.
+              </p>
+            </div>
+            <ShieldCheck className="h-5 w-5 text-blue-600" />
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {assignedRoles.length === 0 ? (
+              <span className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600">
+                No roles assigned
+              </span>
+            ) : (
+              assignedRoles.map((role) => (
+                <span
+                  key={role.id}
+                  className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700"
+                >
+                  {role.name}
+                  <button
+                    type="button"
+                    onClick={() => removeRole.mutate({ user_id: user.id, role_id: role.id })}
+                    disabled={removeRole.isPending}
+                    className="text-blue-500 transition-colors hover:text-red-600 disabled:opacity-50"
+                    aria-label={`Remove ${role.name}`}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </span>
+              ))
+            )}
+          </div>
+
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+            <select
+              value={selectedRoleId}
+              onChange={(event) => setSelectedRoleId(event.target.value)}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select a role to assign</option>
+              {unassignedRoles.map((role) => (
+                <option key={role.id} value={role.id}>
+                  {role.name}
+                </option>
+              ))}
+            </select>
+            <Button
+              variant="outline"
+              disabled={!selectedRoleId || assignRole.isPending}
+              isLoading={assignRole.isPending}
+              onClick={() =>
+                assignRole.mutate(
+                  { user_id: user.id, role_id: selectedRoleId },
+                  { onSuccess: () => setSelectedRoleId('') }
+                )
+              }
+            >
+              Assign role
+            </Button>
+          </div>
+        </div>
+
         <div className="mt-6 flex flex-wrap justify-end gap-2">
           <Button variant="outline" onClick={onClose}>
             Cancel
@@ -196,7 +279,7 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-[32px] border border-[#d8d2c7] bg-[linear-gradient(140deg,#f7f1e8_0%,#fcfbf8_55%,#eef3ff_100%)] p-6 shadow-sm">
+      <div className="rounded-[32px] border border-[#d8d2c7] bg-[linear-gradient(140deg,#f7f1e8_0%,#fcfbf8_55%,#eef3ff_100%)] p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
@@ -361,18 +444,35 @@ export default function AdminUsersPage() {
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm" onClick={() => setEditingUser(user)}>
-                            <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                            Edit
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditingUser(user)}
+                            title="Edit user"
+                            aria-label="Edit user"
+                            className="px-2.5"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditingUser(user)}
+                            title="Assign role"
+                            aria-label="Assign role"
+                            className="px-2.5"
+                          >
+                            <ShieldCheck className="h-3.5 w-3.5" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => setDeletingUser(user)}
-                            className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                            title="Delete user"
+                            aria-label="Delete user"
+                            className="px-2.5 text-red-600 hover:bg-red-50 hover:text-red-700"
                           >
-                            <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                            Delete
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       </td>

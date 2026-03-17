@@ -54,4 +54,44 @@ def test_send_email_falls_back_to_next_provider(monkeypatch: pytest.MonkeyPatch)
 def test_provider_statuses_include_analytics() -> None:
     service = CommunicationsService()
     channels = {status.channel for status in service.get_provider_statuses()}
-    assert {"email", "push", "sms", "analytics"}.issubset(channels)
+    assert {"email", "push", "sms", "analytics", "maps"}.issubset(channels)
+
+
+@pytest.mark.unit
+def test_map_public_config_respects_feature_flags(monkeypatch: pytest.MonkeyPatch) -> None:
+    service = CommunicationsService()
+
+    monkeypatch.setattr(settings, "FEATURE_MAPS", True)
+    monkeypatch.setattr(settings, "MAP_PROVIDER", "google")
+    monkeypatch.setattr(settings, "OSM_MAPS_ENABLED", True)
+    monkeypatch.setattr(settings, "GOOGLE_MAPS_ENABLED", True)
+    monkeypatch.setattr(settings, "GOOGLE_MAPS_API_KEY", "demo-key")
+    monkeypatch.setattr(settings, "GOOGLE_MAPS_MAP_ID", "demo-map")
+    monkeypatch.setattr(settings, "MAP_DEFAULT_LATITUDE", 27.7)
+    monkeypatch.setattr(settings, "MAP_DEFAULT_LONGITUDE", 85.3)
+    monkeypatch.setattr(settings, "MAP_DEFAULT_ZOOM", 12)
+
+    config = service.get_map_public_config()
+
+    assert config["enabled"] is True
+    assert config["provider"] == "google"
+    assert config["providers"]["osm"]["enabled"] is True
+    assert config["providers"]["google"]["enabled"] is True
+    assert config["providers"]["google"]["api_key"] == "demo-key"
+    assert config["default_center"]["latitude"] == 27.7
+
+
+@pytest.mark.unit
+def test_map_public_config_falls_back_when_google_not_configured(monkeypatch: pytest.MonkeyPatch) -> None:
+    service = CommunicationsService()
+
+    monkeypatch.setattr(settings, "FEATURE_MAPS", True)
+    monkeypatch.setattr(settings, "MAP_PROVIDER", "google")
+    monkeypatch.setattr(settings, "OSM_MAPS_ENABLED", True)
+    monkeypatch.setattr(settings, "GOOGLE_MAPS_ENABLED", True)
+    monkeypatch.setattr(settings, "GOOGLE_MAPS_API_KEY", "")
+
+    config = service.get_map_public_config()
+
+    assert config["provider"] == "osm"
+    assert config["providers"]["google"]["enabled"] is False

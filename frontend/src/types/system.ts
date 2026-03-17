@@ -39,3 +39,24 @@ export interface PushConfigResponse {
     onesignal: PushProviderConfig;
   };
 }
+
+export interface MapProviderConfig {
+  enabled: boolean;
+  label: string;
+  api_key?: string;
+  map_id?: string;
+}
+
+export interface MapConfigResponse {
+  enabled: boolean;
+  provider: 'osm' | 'google' | null;
+  default_center: {
+    latitude: number;
+    longitude: number;
+    zoom: number;
+  };
+  providers: {
+    osm: MapProviderConfig;
+    google: MapProviderConfig;
+  };
+}

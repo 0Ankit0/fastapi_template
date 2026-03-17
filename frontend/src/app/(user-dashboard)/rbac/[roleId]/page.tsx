@@ -68,7 +68,7 @@ export default function RoleManagePage({
       <div className="flex flex-col items-center justify-center py-24 gap-4">
         <ShieldCheck className="h-12 w-12 text-gray-300" />
         <p className="text-gray-500">Role not found.</p>
-        <Link href="/rbac">
+        <Link href="/admin/rbac">
           <Button variant="outline" size="sm">Back to Roles</Button>
         </Link>
       </div>
@@ -80,7 +80,7 @@ export default function RoleManagePage({
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <div className="flex items-start gap-4">
         <Link
-          href="/rbac"
+          href="/admin/rbac"
           className="mt-1 p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
         >
           <ArrowLeft className="h-5 w-5" />

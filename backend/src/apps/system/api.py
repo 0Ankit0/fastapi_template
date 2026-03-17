@@ -21,6 +21,11 @@ async def get_providers() -> dict:
     }
 
 
+@router.get("/maps/config/")
+async def get_maps_config() -> dict:
+    return get_communications_service().get_map_public_config()
+
+
 @router.get("/health/")
 async def health() -> dict:
     return {"status": "ok", "service": settings.PROJECT_NAME}

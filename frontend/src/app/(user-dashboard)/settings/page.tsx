@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAuthStore } from '@/store/auth-store';
+import { getAllThemes, type ThemeMode } from '@/lib/themes';
 import {
   useNotificationDevices,
   useNotificationPreferences,
@@ -12,6 +13,7 @@ import {
 import { usePushConfig, useSystemCapabilities } from '@/hooks/use-system';
 import { useResendVerification } from '@/hooks/use-auth';
 import { registerCurrentPushDevice } from '@/lib/push-registration';
+import { useThemeStore } from '@/store/theme-store';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button, Skeleton } from '@/components/ui';
 import {
@@ -26,11 +28,15 @@ import {
   Radio,
   Smartphone,
   Trash2,
+  Palette,
+  PaintBucket,
+  Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
 
 const TABS = [
   { id: 'account',       label: 'Account',       icon: Mail },
+  { id: 'appearance',    label: 'Appearance',    icon: Palette },
   { id: 'notifications', label: 'Notifications',  icon: Bell },
   { id: 'privacy',       label: 'Privacy',        icon: ShieldAlert },
 ] as const;
@@ -78,6 +84,33 @@ function DeviceRow({
   );
 }
 
+function ThemePreview({
+  name,
+  accent,
+  surface,
+}: {
+  name: string;
+  accent: string;
+  surface: string;
+}) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-gray-200">
+      <div className="h-16 px-4 py-3" style={{ backgroundColor: surface }}>
+        <div className="flex items-center gap-2">
+          <span className="h-3 w-3 rounded-full" style={{ backgroundColor: accent }} />
+          <span className="text-sm font-semibold" style={{ color: accent }}>
+            {name}
+          </span>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 border-t border-gray-200 bg-gray-50 px-4 py-3">
+        <span className="h-8 flex-1 rounded-lg" style={{ backgroundColor: accent }} />
+        <span className="h-8 w-10 rounded-lg bg-white" />
+      </div>
+    </div>
+  );
+}
+
 // ── Toggle component ────────────────────────────────────────────────────────
 function Toggle({
   checked,
@@ -111,6 +144,26 @@ function Toggle({
 export default function SettingsPage() {
   const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<TabId>('account');
+  const activeThemeId = useThemeStore((state) => state.activeThemeId);
+  const customThemes = useThemeStore((state) => state.customThemes);
+  const setActiveTheme = useThemeStore((state) => state.setActiveTheme);
+  const addCustomTheme = useThemeStore((state) => state.addCustomTheme);
+  const deleteCustomTheme = useThemeStore((state) => state.deleteCustomTheme);
+  const [themeDraft, setThemeDraft] = useState<{
+    name: string;
+    mode: ThemeMode;
+    background: string;
+    surface: string;
+    textPrimary: string;
+    accent: string;
+  }>({
+    name: 'Custom Aurora',
+    mode: 'light',
+    background: '#f7fafc',
+    surface: '#ffffff',
+    textPrimary: '#0f172a',
+    accent: '#7c3aed',
+  });
 
   // ── Notifications ──────────────────────────────────────────────────────
   const { data: prefs, isLoading: prefsLoading } = useNotificationPreferences();
@@ -125,6 +178,7 @@ export default function SettingsPage() {
   // ── Email verification ─────────────────────────────────────────────────
   const resend = useResendVerification();
   const [resentOk, setResentOk] = useState(false);
+  const allThemes = getAllThemes(customThemes);
   const handleResend = () => {
     resend.mutate(undefined, {
       onSuccess: () => setResentOk(true),
@@ -149,6 +203,20 @@ export default function SettingsPage() {
     } catch (error) {
       setPushActionError(error instanceof Error ? error.message : 'Registration failed.');
     }
+  };
+
+  const handleThemeDraftChange = (
+    key: keyof typeof themeDraft,
+    value: string
+  ) => {
+    setThemeDraft((current) => ({
+      ...current,
+      [key]: value,
+    }));
+  };
+
+  const handleCreateTheme = () => {
+    addCustomTheme(themeDraft);
   };
 
   return (
@@ -268,6 +336,205 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
             </>
+          )}
+
+          {/* ── Appearance tab ───────────────────────────────────────────── */}
+          {activeTab === 'appearance' && (
+            <div className="space-y-5">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Palette className="h-5 w-5" />
+                    Global Theme Selector
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    Choose a preset or custom theme. Your selection is applied across the
+                    dashboard and stays saved in this browser.
+                  </p>
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {allThemes.map((theme) => {
+                      const isActive = theme.id === activeThemeId;
+                      return (
+                        <button
+                          key={theme.id}
+                          type="button"
+                          onClick={() => setActiveTheme(theme.id)}
+                          className={`rounded-2xl border p-3 text-left transition-colors ${
+                            isActive
+                              ? 'border-blue-400 bg-blue-50'
+                              : 'border-gray-200 bg-white hover:border-blue-400 hover:bg-blue-50'
+                          }`}
+                        >
+                          <ThemePreview
+                            name={theme.name}
+                            accent={theme.palette.accent}
+                            surface={theme.palette.surface}
+                          />
+                          <div className="mt-3 flex items-center justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold text-gray-900">{theme.name}</p>
+                              <p className="text-xs text-gray-500">
+                                {theme.mode === 'dark' ? 'Dark theme' : 'Light theme'}
+                                {theme.isCustom ? ' • Custom' : ' • Preset'}
+                              </p>
+                            </div>
+                            {theme.isCustom ? (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  deleteCustomTheme(theme.id);
+                                }}
+                                className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                              >
+                                Remove
+                              </Button>
+                            ) : (
+                              <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
+                                Preset
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <PaintBucket className="h-5 w-5" />
+                    Custom Theme Builder
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <label className="space-y-2">
+                      <span className="text-sm font-medium text-gray-700">Theme name</span>
+                      <input
+                        value={themeDraft.name}
+                        onChange={(event) => handleThemeDraftChange('name', event.target.value)}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="My custom theme"
+                      />
+                    </label>
+
+                    <label className="space-y-2">
+                      <span className="text-sm font-medium text-gray-700">Theme mode</span>
+                      <select
+                        value={themeDraft.mode}
+                        onChange={(event) =>
+                          handleThemeDraftChange('mode', event.target.value as ThemeMode)
+                        }
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                      </select>
+                    </label>
+
+                    {(
+                      [
+                        ['background', 'Background'],
+                        ['surface', 'Surface'],
+                        ['textPrimary', 'Text'],
+                        ['accent', 'Accent'],
+                      ] as const
+                    ).map(([key, label]) => (
+                      <label key={key} className="space-y-2">
+                        <span className="text-sm font-medium text-gray-700">{label} color</span>
+                        <div className="flex items-center gap-3 rounded-lg border border-gray-300 px-3 py-2 shadow-sm">
+                          <input
+                            type="color"
+                            value={themeDraft[key]}
+                            onChange={(event) => handleThemeDraftChange(key, event.target.value)}
+                            className="h-10 w-12 rounded border-0 bg-transparent p-0"
+                          />
+                          <input
+                            value={themeDraft[key]}
+                            onChange={(event) => handleThemeDraftChange(key, event.target.value)}
+                            className="w-full bg-transparent text-sm text-gray-900 outline-none"
+                          />
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+                    <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4">
+                      <p className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                        <Sparkles className="h-4 w-4 text-[var(--accent)]" />
+                        Live preview
+                      </p>
+                      <div className="mt-4 rounded-2xl border border-gray-200 p-4" style={{ backgroundColor: themeDraft.background }}>
+                        <div
+                          className="rounded-2xl border p-4"
+                          style={{
+                            backgroundColor: themeDraft.surface,
+                            color: themeDraft.textPrimary,
+                            borderColor: themeDraft.accent,
+                          }}
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="text-lg font-semibold">{themeDraft.name || 'Custom Theme'}</p>
+                              <p className="text-sm opacity-70">Previewing your global dashboard theme</p>
+                            </div>
+                            <span
+                              className="rounded-full px-3 py-1 text-xs font-semibold"
+                              style={{
+                                backgroundColor: themeDraft.accent,
+                                color: themeDraft.mode === 'dark' ? '#020617' : '#ffffff',
+                              }}
+                            >
+                              Accent
+                            </span>
+                          </div>
+                          <div className="mt-4 grid gap-3 md:grid-cols-3">
+                            {[1, 2, 3].map((index) => (
+                              <div
+                                key={index}
+                                className="rounded-xl p-3"
+                                style={{
+                                  backgroundColor:
+                                    index === 1 ? themeDraft.accent : themeDraft.background,
+                                  color:
+                                    index === 1
+                                      ? themeDraft.mode === 'dark'
+                                        ? '#020617'
+                                        : '#ffffff'
+                                      : themeDraft.textPrimary,
+                                }}
+                              >
+                                <p className="text-xs opacity-80">Card {index}</p>
+                                <p className="mt-1 text-sm font-semibold">Theme sample</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-gray-200 bg-white p-4">
+                      <p className="text-sm font-semibold text-gray-900">Save this theme</p>
+                      <p className="mt-1 text-xs text-gray-500">
+                        When you save, the theme becomes available in the header selector and is
+                        immediately activated for this project in this browser.
+                      </p>
+                      <Button className="mt-4 w-full" onClick={handleCreateTheme}>
+                        Create custom theme
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {/* ── Notifications tab ────────────────────────────────────────── */}

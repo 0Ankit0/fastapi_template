@@ -61,17 +61,20 @@ class CommunicationsService:
                 "finance": settings.FEATURE_FINANCE,
                 "analytics": settings.FEATURE_ANALYTICS,
                 "social_auth": settings.FEATURE_SOCIAL_AUTH,
+                "maps": settings.FEATURE_MAPS,
             },
             active_providers={
                 "email": settings.EMAIL_PROVIDER if settings.EMAIL_ENABLED else None,
                 "push": settings.PUSH_PROVIDER if settings.PUSH_ENABLED else None,
                 "sms": settings.SMS_PROVIDER if settings.SMS_ENABLED else None,
                 "analytics": settings.ANALYTICS_PROVIDER if settings.ANALYTICS_ENABLED else None,
+                "maps": settings.MAP_PROVIDER if settings.FEATURE_MAPS else None,
             },
             fallback_providers={
                 "email": settings.EMAIL_FALLBACK_PROVIDERS,
                 "push": settings.PUSH_FALLBACK_PROVIDERS,
                 "sms": settings.SMS_FALLBACK_PROVIDERS,
+                "maps": [],
             },
         )
 
@@ -100,6 +103,20 @@ class CommunicationsService:
                     provider=name,
                     active=settings.ANALYTICS_ENABLED and name == settings.ANALYTICS_PROVIDER,
                     enabled=settings.ANALYTICS_ENABLED,
+                    configured=configured,
+                    fallback=False,
+                )
+            )
+        for name, configured in [
+            ("osm", settings.OSM_MAPS_ENABLED),
+            ("google", bool(settings.GOOGLE_MAPS_ENABLED and settings.GOOGLE_MAPS_API_KEY)),
+        ]:
+            statuses.append(
+                ProviderStatus(
+                    channel="maps",
+                    provider=name,
+                    active=settings.FEATURE_MAPS and name == settings.MAP_PROVIDER,
+                    enabled=settings.FEATURE_MAPS,
                     configured=configured,
                     fallback=False,
                 )
@@ -239,6 +256,41 @@ class CommunicationsService:
             for name, provider in self._push_providers.items()
             if settings.PUSH_ENABLED and provider.is_configured()
         ]
+
+    def get_map_public_config(self) -> dict[str, Any]:
+        maps_enabled = settings.FEATURE_MAPS
+        google_enabled = bool(
+            maps_enabled and settings.GOOGLE_MAPS_ENABLED and settings.GOOGLE_MAPS_API_KEY
+        )
+        osm_enabled = bool(maps_enabled and settings.OSM_MAPS_ENABLED)
+
+        active_provider = settings.MAP_PROVIDER if maps_enabled else None
+        if active_provider == "google" and not google_enabled:
+            active_provider = "osm" if osm_enabled else None
+        if active_provider == "osm" and not osm_enabled:
+            active_provider = "google" if google_enabled else None
+
+        return {
+            "enabled": maps_enabled,
+            "provider": active_provider,
+            "default_center": {
+                "latitude": settings.MAP_DEFAULT_LATITUDE,
+                "longitude": settings.MAP_DEFAULT_LONGITUDE,
+                "zoom": settings.MAP_DEFAULT_ZOOM,
+            },
+            "providers": {
+                "osm": {
+                    "enabled": osm_enabled,
+                    "label": "OpenStreetMap",
+                },
+                "google": {
+                    "enabled": google_enabled,
+                    "label": "Google Maps",
+                    "api_key": settings.GOOGLE_MAPS_API_KEY if google_enabled else "",
+                    "map_id": settings.GOOGLE_MAPS_MAP_ID,
+                },
+            },
+        }
 
 
 def get_communications_service() -> CommunicationsService:
