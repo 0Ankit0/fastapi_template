@@ -36,6 +36,7 @@ class ApiEndpoints {
   static const String notificationPushConfig = '/notifications/push/config/';
   static const String systemCapabilities = '/system/capabilities/';
   static const String systemProviders = '/system/providers/';
+  static const String systemGeneralSettings = '/system/general-settings/';
 
   // IAM - Token tracking
   static const String tokens = '/tokens/';

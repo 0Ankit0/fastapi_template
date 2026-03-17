@@ -10,6 +10,32 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 ENV_FILE_PATH = Path(__file__).resolve().parents[4] / ".env"
 GENERAL_SETTINGS_TABLE_NAME = "generalsetting"
 NON_RUNTIME_EDITABLE_SETTING_KEYS = frozenset({"DATABASE_URL", "SYNC_DATABASE_URL"})
+PUBLIC_GENERAL_SETTING_KEYS = frozenset(
+    {
+        "PROJECT_NAME",
+        "FEATURE_AUTH",
+        "FEATURE_MULTITENANCY",
+        "FEATURE_NOTIFICATIONS",
+        "FEATURE_WEBSOCKETS",
+        "FEATURE_FINANCE",
+        "FEATURE_ANALYTICS",
+        "FEATURE_SOCIAL_AUTH",
+        "FEATURE_MAPS",
+        "EMAIL_ENABLED",
+        "EMAIL_PROVIDER",
+        "PUSH_ENABLED",
+        "PUSH_PROVIDER",
+        "SMS_ENABLED",
+        "SMS_PROVIDER",
+        "ANALYTICS_ENABLED",
+        "ANALYTICS_PROVIDER",
+        "MAP_PROVIDER",
+        "KHALTI_ENABLED",
+        "ESEWA_ENABLED",
+        "STRIPE_ENABLED",
+        "PAYPAL_ENABLED",
+    }
+)
 
 
 def _parse_csv(value: str | list[str] | None) -> list[str]:
@@ -86,7 +112,7 @@ class Settings(BaseSettings):
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "password"
-    POSTGRES_DB: str = "mydatabase"
+    POSTGRES_DB: str = "app"
     DATABASE_URL: str | None = None
     SYNC_DATABASE_URL: str | None = None
 

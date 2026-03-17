@@ -65,3 +65,12 @@ class TestHealthCheck:
         providers = response.json()["providers"]
         channels = {item["channel"] for item in providers}
         assert {"email", "push", "sms", "analytics"}.issubset(channels)
+
+    @pytest.mark.asyncio
+    async def test_system_general_settings(self, client: AsyncClient):
+        response = await client.get("/api/v1/system/general-settings/")
+        assert response.status_code == 200
+        payload = response.json()
+        assert isinstance(payload, list)
+        assert any(item["key"] == "PROJECT_NAME" for item in payload)
+        assert all("effective_value" in item for item in payload)

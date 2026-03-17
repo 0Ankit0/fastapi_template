@@ -1,7 +1,11 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.apps.communications import get_communications_service
 from src.apps.core.config import settings
+from src.apps.core.settings_store import build_general_setting_payload, get_general_settings
+from src.apps.iam.api.deps import get_db
+from src.apps.system.schemas import GeneralSettingRead
 
 router = APIRouter(prefix="/system", tags=["system"])
 
@@ -19,6 +23,17 @@ async def get_providers() -> dict:
             for status in get_communications_service().get_provider_statuses()
         ]
     }
+
+
+@router.get("/general-settings/", response_model=list[GeneralSettingRead])
+async def get_general_settings_status(
+    db: AsyncSession = Depends(get_db),
+) -> list[GeneralSettingRead]:
+    rows = await get_general_settings(db)
+    return [
+        GeneralSettingRead.model_validate(item)
+        for item in build_general_setting_payload(rows, public_only=True)
+    ]
 
 
 @router.get("/maps/config/")

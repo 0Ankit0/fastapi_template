@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/error/error_handler.dart';
+import '../../../../core/models/general_setting.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/providers/dio_provider.dart';
 import '../../../../core/providers/system_provider.dart';
@@ -43,7 +44,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
           controller: _tabController,
           tabs: const [
             Tab(icon: Icon(Icons.person_outline), text: 'Account'),
-            Tab(icon: Icon(Icons.notifications_outlined), text: 'Notifications'),
+            Tab(
+                icon: Icon(Icons.notifications_outlined),
+                text: 'Notifications'),
             Tab(icon: Icon(Icons.security_outlined), text: 'Privacy'),
           ],
         ),
@@ -102,6 +105,7 @@ class _AccountTabState extends ConsumerState<_AccountTab> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider);
+    final generalSettingsAsync = ref.watch(systemGeneralSettingsProvider);
     final user = authState.valueOrNull?.user;
 
     if (user == null) {
@@ -138,7 +142,8 @@ class _AccountTabState extends ConsumerState<_AccountTab> {
                   const Divider(height: 16),
                   Row(
                     children: [
-                      const Icon(Icons.email_outlined, size: 20, color: Colors.grey),
+                      const Icon(Icons.email_outlined,
+                          size: 20, color: Colors.grey),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -164,14 +169,14 @@ class _AccountTabState extends ConsumerState<_AccountTab> {
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
-                        onPressed: _sendingVerification
-                            ? null
-                            : _resendVerification,
+                        onPressed:
+                            _sendingVerification ? null : _resendVerification,
                         icon: _sendingVerification
                             ? const SizedBox(
                                 width: 16,
                                 height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2))
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2))
                             : const Icon(Icons.send_outlined, size: 16),
                         label: const Text('Resend Verification Email'),
                       ),
@@ -196,6 +201,12 @@ class _AccountTabState extends ConsumerState<_AccountTab> {
               ),
             ),
           ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.05),
+          const SizedBox(height: 16),
+          const _SectionHeader(label: 'Runtime Configuration'),
+          _RuntimeSettingsCard(settingsAsync: generalSettingsAsync)
+              .animate()
+              .fadeIn(delay: 180.ms)
+              .slideY(begin: 0.05),
         ],
       ),
     );
@@ -321,7 +332,9 @@ class _NotificationsTab extends ConsumerWidget {
       ),
       data: (prefs) {
         final devices = devicesAsync.valueOrNull ?? const [];
-        final pushProvider = pushConfigAsync.valueOrNull?.provider ?? prefs.pushProvider ?? 'none';
+        final pushProvider = pushConfigAsync.valueOrNull?.provider ??
+            prefs.pushProvider ??
+            'none';
         final notificationsEnabled =
             capabilitiesAsync.valueOrNull?.modules['notifications'] ?? true;
 
@@ -339,8 +352,8 @@ class _NotificationsTab extends ConsumerWidget {
                       title: 'In-App',
                       subtitle: 'Receive notifications within the app',
                       value: prefs.websocketEnabled,
-                      onChanged: (v) => _updatePref(
-                          ref, context, {'websocket_enabled': v}),
+                      onChanged: (v) =>
+                          _updatePref(ref, context, {'websocket_enabled': v}),
                     ),
                     const Divider(height: 1),
                     _ToggleTile(
@@ -355,7 +368,8 @@ class _NotificationsTab extends ConsumerWidget {
                     _ToggleTile(
                       icon: Icons.phone_android_outlined,
                       title: 'Push',
-                      subtitle: 'Receive push notifications through the active provider',
+                      subtitle:
+                          'Receive push notifications through the active provider',
                       value: prefs.pushEnabled,
                       onChanged: (v) =>
                           _updatePref(ref, context, {'push_enabled': v}),
@@ -419,7 +433,8 @@ class _NotificationsTab extends ConsumerWidget {
                                     decoration: BoxDecoration(
                                       color: Colors.white,
                                       borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(color: Colors.grey.shade200),
+                                      border: Border.all(
+                                          color: Colors.grey.shade200),
                                     ),
                                     padding: const EdgeInsets.all(12),
                                     child: Row(
@@ -428,7 +443,8 @@ class _NotificationsTab extends ConsumerWidget {
                                         const SizedBox(width: 10),
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Text(
                                                 '${device.provider.toUpperCase()} • ${device.platform}',
@@ -448,8 +464,10 @@ class _NotificationsTab extends ConsumerWidget {
                                           ),
                                         ),
                                         IconButton(
-                                          onPressed: () => _removeDevice(ref, context, device.id),
-                                          icon: const Icon(Icons.delete_outline),
+                                          onPressed: () => _removeDevice(
+                                              ref, context, device.id),
+                                          icon:
+                                              const Icon(Icons.delete_outline),
                                           color: Colors.red,
                                         ),
                                       ],
@@ -522,7 +540,8 @@ class _PrivacyTab extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.warning_amber_outlined, color: Colors.red.shade700),
+                      Icon(Icons.warning_amber_outlined,
+                          color: Colors.red.shade700),
                       const SizedBox(width: 8),
                       Text(
                         'Revoke All Sessions',
@@ -578,8 +597,7 @@ class _PrivacyTab extends ConsumerWidget {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content:
-                                      Text(ErrorHandler.handle(e).message),
+                                  content: Text(ErrorHandler.handle(e).message),
                                   backgroundColor: Colors.red,
                                 ),
                               );
@@ -587,7 +605,8 @@ class _PrivacyTab extends ConsumerWidget {
                           }
                         }
                       },
-                      icon: const Icon(Icons.logout, color: Colors.red, size: 18),
+                      icon:
+                          const Icon(Icons.logout, color: Colors.red, size: 18),
                       label: const Text('Revoke All Sessions',
                           style: TextStyle(color: Colors.red)),
                       style: OutlinedButton.styleFrom(
@@ -622,6 +641,98 @@ class _SectionHeader extends StatelessWidget {
               color: Theme.of(context).colorScheme.primary,
               fontWeight: FontWeight.bold,
             ),
+      ),
+    );
+  }
+}
+
+class _RuntimeSettingsCard extends StatelessWidget {
+  const _RuntimeSettingsCard({required this.settingsAsync});
+
+  final AsyncValue<List<GeneralSetting>> settingsAsync;
+
+  static const Map<String, String> _labels = {
+    'PROJECT_NAME': 'Project',
+    'FEATURE_AUTH': 'Auth',
+    'FEATURE_MULTITENANCY': 'Multitenancy',
+    'FEATURE_NOTIFICATIONS': 'Notifications',
+    'FEATURE_FINANCE': 'Payments',
+    'FEATURE_ANALYTICS': 'Analytics',
+    'FEATURE_SOCIAL_AUTH': 'Social Login',
+    'FEATURE_MAPS': 'Maps',
+    'PUSH_PROVIDER': 'Push Provider',
+    'MAP_PROVIDER': 'Map Provider',
+  };
+
+  String _formatValue(String? value) {
+    if (value == null || value.isEmpty) return 'Not set';
+    if (value == 'True') return 'Enabled';
+    if (value == 'False') return 'Disabled';
+    return value;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: settingsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, _) => Text(
+            ErrorHandler.handle(err).message,
+            style: const TextStyle(color: Colors.red),
+          ),
+          data: (settings) {
+            final visibleSettings = settings
+                .where((item) => _labels.containsKey(item.key))
+                .toList();
+            final overrideCount =
+                settings.where((item) => item.source == 'database').length;
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SettingsRow(
+                  icon: Icons.storage_outlined,
+                  label: 'Database Overrides',
+                  value: overrideCount.toString(),
+                ),
+                const Divider(height: 16),
+                ...visibleSettings.asMap().entries.map((entry) {
+                  final item = entry.value;
+                  final showDivider = entry.key < visibleSettings.length - 1;
+
+                  return Column(
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: _SettingsRow(
+                              icon: item.source == 'database'
+                                  ? Icons.dns_outlined
+                                  : Icons.settings_ethernet_outlined,
+                              label: _labels[item.key] ?? item.key,
+                              value: _formatValue(item.effectiveValue),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          _StatusBadge(
+                            label: item.source == 'database' ? 'DB' : 'ENV',
+                            color: item.source == 'database'
+                                ? Colors.blue
+                                : Colors.grey,
+                          ),
+                        ],
+                      ),
+                      if (showDivider) const Divider(height: 16),
+                    ],
+                  );
+                }),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -683,8 +794,8 @@ class _StatusBadge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(
-            color: color, fontWeight: FontWeight.bold, fontSize: 12),
+        style:
+            TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12),
       ),
     );
   }
@@ -746,8 +857,7 @@ class _PrivacyCard extends StatelessWidget {
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
         trailing: TextButton(onPressed: onTap, child: Text(buttonLabel)),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       ),
     );
   }
