@@ -15,9 +15,9 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 def _apply_pepper(password: str) -> str:
     """Append a secret pepper to the password before hashing/verifying.
 
-    The pepper is an additional secret value stored in config (not the database),
-    so if an attacker obtains the password hashes they still need the pepper to
-    brute-force passwords.
+    The pepper is an additional secret value stored in the application
+    configuration layer, so if an attacker obtains the password hashes they
+    still need the pepper to brute-force passwords.
     """
     pepper = settings.PASSWORD_PEPPER or ""
     return password + pepper

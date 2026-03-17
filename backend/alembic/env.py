@@ -12,7 +12,11 @@ sys.path.append(str(Path(__file__).parent.parent))
 # Import your settings and models
 from src.apps.core.config import settings
 import sqlmodel
-from src.apps.iam.models import *  # ensures models are registered with metadata
+from src.apps.core.models import *  # noqa: F403,F401
+from src.apps.finance.models import *  # noqa: F403,F401
+from src.apps.iam.models import *  # noqa: F403,F401
+from src.apps.multitenancy.models import *  # noqa: F403,F401
+from src.apps.notification.models import *  # noqa: F403,F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
