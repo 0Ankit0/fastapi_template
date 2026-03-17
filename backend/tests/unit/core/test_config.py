@@ -1,5 +1,5 @@
 import pytest
-from src.apps.core.config import settings
+from src.apps.core.config import Settings, settings
 
 
 class TestSettings:
@@ -54,3 +54,39 @@ class TestSettings:
         assert all(output in {"console", "database", "web", "file"} for output in settings.LOG_OUTPUTS)
         assert len(settings.LOG_FILE_PATH) > 0
         assert settings.LOG_RETENTION_DAYS >= 1
+
+    def test_operational_settings(self):
+        """Test new operational defaults are configured."""
+        assert settings.APP_ENV in {"development", "staging", "production", "test"}
+        assert settings.COOKIE_SAMESITE in {"lax", "strict", "none"}
+        assert settings.STORAGE_BACKEND in {"local", "s3"}
+        assert settings.DB_POOL_SIZE >= 1
+        assert settings.HTTP_TIMEOUT_SECONDS > 0
+        assert settings.WS_HEARTBEAT_INTERVAL_SECONDS > 0
+        assert settings.WS_MAX_IDLE_SECONDS > settings.WS_HEARTBEAT_INTERVAL_SECONDS
+
+    def test_settings_parses_operational_lists_and_booleans(self):
+        parsed = Settings(
+            TRUSTED_HOSTS="api.example.com,example.com",
+            PROXY_TRUSTED_HOSTS="10.0.0.1,10.0.0.2",
+            FORWARDED_ALLOW_IPS="127.0.0.1,::1",
+            WS_ALLOWED_ORIGINS="https://app.example.com,https://admin.example.com",
+            S3_USE_PATH_STYLE="true",
+            COOKIE_SAMESITE="Strict",
+            STORAGE_BACKEND="S3",
+        )
+
+        assert parsed.TRUSTED_HOSTS == ["api.example.com", "example.com"]
+        assert parsed.PROXY_TRUSTED_HOSTS == ["10.0.0.1", "10.0.0.2"]
+        assert parsed.FORWARDED_ALLOW_IPS == ["127.0.0.1", "::1"]
+        assert parsed.WS_ALLOWED_ORIGINS == [
+            "https://app.example.com",
+            "https://admin.example.com",
+        ]
+        assert parsed.S3_USE_PATH_STYLE is True
+        assert parsed.COOKIE_SAMESITE == "strict"
+        assert parsed.STORAGE_BACKEND == "s3"
+
+    def test_media_base_url_defaults_to_server_media_path(self):
+        parsed = Settings(SERVER_HOST="https://api.example.com", MEDIA_URL="/uploads")
+        assert parsed.media_base_url == "https://api.example.com/uploads"

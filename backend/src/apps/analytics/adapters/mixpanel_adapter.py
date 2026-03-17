@@ -7,6 +7,7 @@ import httpx
 
 from src.apps.analytics.interface import AnalyticsProvider
 from src.apps.core.config import settings
+from src.apps.core.http import default_timeout, retry_async
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,13 @@ class MixpanelAdapter(AnalyticsProvider):
         }
         encoded = base64.b64encode(json.dumps(payload).encode()).decode()
         async with httpx.AsyncClient() as client:
-            await client.post(f"{self.host}/track", data={"data": encoded}, timeout=10)
+            await retry_async(
+                lambda: client.post(
+                    f"{self.host}/track",
+                    data={"data": encoded},
+                    timeout=default_timeout(),
+                )
+            )
 
     async def identify(
         self,

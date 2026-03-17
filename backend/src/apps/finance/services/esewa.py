@@ -29,6 +29,7 @@ import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.apps.core.config import settings
+from src.apps.core.http import default_timeout, retry_async
 from src.apps.finance.models.payment import PaymentProvider, PaymentStatus, PaymentTransaction
 from src.apps.finance.schemas.payment import (
     EsewaCallbackData,
@@ -192,14 +193,16 @@ class EsewaService(BasePaymentProvider):
             raise ValueError("transaction_uuid missing from eSewa callback")
 
         async with httpx.AsyncClient() as client:
-            resp = await client.get(
-                self.STATUS_URL,
-                params={
-                    "product_code": settings.ESEWA_MERCHANT_CODE,
-                    "transaction_uuid": transaction_uuid,
-                    "total_amount": cb.total_amount,
-                },
-                timeout=30,
+            resp = await retry_async(
+                lambda: client.get(
+                    self.STATUS_URL,
+                    params={
+                        "product_code": settings.ESEWA_MERCHANT_CODE,
+                        "transaction_uuid": transaction_uuid,
+                        "total_amount": cb.total_amount,
+                    },
+                    timeout=default_timeout(30),
+                )
             )
 
         esewa_status_data: dict = {}

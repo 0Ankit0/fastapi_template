@@ -9,6 +9,7 @@ from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType,
 from jinja2 import Environment, FileSystemLoader
 
 from src.apps.core.config import settings
+from src.apps.core.http import default_timeout, retry_sync
 
 from .interfaces import EmailProviderBase, PushProviderBase, SmsProviderBase
 from .types import DeliveryResult, EmailProvider, PushProvider, SmsProvider
@@ -78,20 +79,22 @@ class ResendEmailProvider(EmailProviderBase):
         html_body: str,
         text_body: str | None = None,
     ) -> DeliveryResult:
-        response = httpx.post(
-            "https://api.resend.com/emails",
-            headers={
-                "Authorization": f"Bearer {settings.RESEND_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "from": settings.RESEND_FROM_ADDRESS,
-                "to": [r["email"] for r in recipients],
-                "subject": subject,
-                "html": html_body,
-                "text": text_body or "",
-            },
-            timeout=15,
+        response = retry_sync(
+            lambda: httpx.post(
+                "https://api.resend.com/emails",
+                headers={
+                    "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "from": settings.RESEND_FROM_ADDRESS,
+                    "to": [r["email"] for r in recipients],
+                    "subject": subject,
+                    "html": html_body,
+                    "text": text_body or "",
+                },
+                timeout=default_timeout(),
+            )
         )
         response.raise_for_status()
         return DeliveryResult(
@@ -221,40 +224,44 @@ class FcmPushProvider(PushProviderBase):
     def send(self, payload: dict[str, Any]) -> DeliveryResult:
         access_token = self._access_token()
         if access_token and settings.FCM_PROJECT_ID:
-            response = httpx.post(
-                f"https://fcm.googleapis.com/v1/projects/{settings.FCM_PROJECT_ID}/messages:send",
-                headers={
-                    "Authorization": f"Bearer {access_token}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "message": {
-                        "token": payload["token"],
+            response = retry_sync(
+                lambda: httpx.post(
+                    f"https://fcm.googleapis.com/v1/projects/{settings.FCM_PROJECT_ID}/messages:send",
+                    headers={
+                        "Authorization": f"Bearer {access_token}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "message": {
+                            "token": payload["token"],
+                            "notification": {
+                                "title": payload["title"],
+                                "body": payload["body"],
+                            },
+                            "data": payload.get("data") or {},
+                        }
+                    },
+                    timeout=default_timeout(),
+                )
+            )
+        else:
+            response = retry_sync(
+                lambda: httpx.post(
+                    "https://fcm.googleapis.com/fcm/send",
+                    headers={
+                        "Authorization": f"key={settings.FCM_SERVER_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "to": payload["token"],
                         "notification": {
                             "title": payload["title"],
                             "body": payload["body"],
                         },
                         "data": payload.get("data") or {},
-                    }
-                },
-                timeout=15,
-            )
-        else:
-            response = httpx.post(
-                "https://fcm.googleapis.com/fcm/send",
-                headers={
-                    "Authorization": f"key={settings.FCM_SERVER_KEY}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "to": payload["token"],
-                    "notification": {
-                        "title": payload["title"],
-                        "body": payload["body"],
                     },
-                    "data": payload.get("data") or {},
-                },
-                timeout=15,
+                    timeout=default_timeout(),
+                )
             )
         response.raise_for_status()
         data = response.json()
@@ -275,20 +282,22 @@ class OneSignalPushProvider(PushProviderBase):
         )
 
     def send(self, payload: dict[str, Any]) -> DeliveryResult:
-        response = httpx.post(
-            "https://api.onesignal.com/notifications",
-            headers={
-                "Authorization": f"Key {settings.ONESIGNAL_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "app_id": settings.ONESIGNAL_APP_ID,
-                "include_subscription_ids": [payload["subscription_id"]],
-                "headings": {"en": payload["title"]},
-                "contents": {"en": payload["body"]},
-                "data": payload.get("data") or {},
-            },
-            timeout=15,
+        response = retry_sync(
+            lambda: httpx.post(
+                "https://api.onesignal.com/notifications",
+                headers={
+                    "Authorization": f"Key {settings.ONESIGNAL_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "app_id": settings.ONESIGNAL_APP_ID,
+                    "include_subscription_ids": [payload["subscription_id"]],
+                    "headings": {"en": payload["title"]},
+                    "contents": {"en": payload["body"]},
+                    "data": payload.get("data") or {},
+                },
+                timeout=default_timeout(),
+            )
         )
         response.raise_for_status()
         data = response.json()
@@ -339,16 +348,18 @@ class VonageSmsProvider(SmsProviderBase):
         )
 
     def send(self, *, to_number: str, body: str) -> DeliveryResult:
-        response = httpx.post(
-            "https://rest.nexmo.com/sms/json",
-            data={
-                "api_key": settings.VONAGE_API_KEY,
-                "api_secret": settings.VONAGE_API_SECRET,
-                "from": settings.VONAGE_FROM_NUMBER,
-                "to": to_number,
-                "text": body,
-            },
-            timeout=15,
+        response = retry_sync(
+            lambda: httpx.post(
+                "https://rest.nexmo.com/sms/json",
+                data={
+                    "api_key": settings.VONAGE_API_KEY,
+                    "api_secret": settings.VONAGE_API_SECRET,
+                    "from": settings.VONAGE_FROM_NUMBER,
+                    "to": to_number,
+                    "text": body,
+                },
+                timeout=default_timeout(),
+            )
         )
         response.raise_for_status()
         payload = response.json()

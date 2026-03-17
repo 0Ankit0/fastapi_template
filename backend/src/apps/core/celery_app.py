@@ -22,11 +22,12 @@ celery_app.conf.update(
     timezone='UTC',
     enable_utc=True,
     task_track_started=True,
-    task_time_limit=30 * 60,
-    result_expires=3600,
-    # In development, run tasks inline (no worker / broker needed)
-    task_always_eager=settings.DEBUG,
-    task_eager_propagates=settings.DEBUG,
+    task_time_limit=settings.CELERY_TASK_TIME_LIMIT,
+    result_expires=settings.CELERY_RESULT_EXPIRES,
+    task_default_queue=settings.CELERY_QUEUE_DEFAULT,
+    # In development, run tasks inline (no worker / broker needed) unless overridden.
+    task_always_eager=settings.CELERY_TASK_ALWAYS_EAGER,
+    task_eager_propagates=settings.CELERY_TASK_ALWAYS_EAGER,
 )
 
 if __name__ == '__main__':

@@ -1,7 +1,6 @@
 """
 User management endpoints with caching and pagination
 """
-import os
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +14,7 @@ from src.apps.iam.utils.hashid import decode_id_or_404
 from src.apps.core.schemas import PaginatedResponse
 from src.apps.core.cache import RedisCache
 from src.apps.core.config import settings
+from src.apps.core.storage import delete_media, save_media_bytes
 from src.apps.analytics.dependencies import get_analytics
 from src.apps.analytics.service import AnalyticsService
 from src.apps.analytics.events import UserEvents
@@ -149,22 +149,16 @@ async def upload_avatar(
 
     ext = file.filename.rsplit(".", 1)[-1].lower() if file.filename and "." in file.filename else "jpg"
     filename = f"{current_user.id}_{uuid.uuid4().hex[:8]}.{ext}"
-    avatars_dir = os.path.join(settings.MEDIA_DIR, "avatars")
-    os.makedirs(avatars_dir, exist_ok=True)
-    file_path = os.path.join(avatars_dir, filename)
+    relative_path = f"avatars/{filename}"
 
-    # Delete old avatar file if it exists locally
     if current_user.profile and current_user.profile.image_url:
-        old_url = current_user.profile.image_url
-        old_relative = old_url.replace(settings.SERVER_HOST, "").lstrip("/")
-        old_path = os.path.join(settings.MEDIA_DIR, *old_relative.split("/")[1:])
-        if os.path.isfile(old_path):
-            os.remove(old_path)
+        delete_media(current_user.profile.image_url)
 
-    with open(file_path, "wb") as f:
-        f.write(contents)
-
-    image_url = f"{settings.SERVER_HOST}{settings.MEDIA_URL}/avatars/{filename}"
+    image_url = save_media_bytes(
+        relative_path,
+        contents,
+        content_type=file.content_type,
+    )
 
     if current_user.profile:
         current_user.profile.image_url = image_url

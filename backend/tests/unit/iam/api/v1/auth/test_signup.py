@@ -3,6 +3,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
+from src.apps.core.config import settings
 from src.apps.iam.models.user import User
 from tests.factories import UserFactory
 
@@ -100,3 +101,5 @@ class TestSignup:
         assert response.status_code == 200
         assert response.json()["message"] == "Account created successfully"
         assert "access_token" in response.cookies
+        cookie_header = response.headers.get("set-cookie", "").lower()
+        assert f"samesite={settings.COOKIE_SAMESITE}" in cookie_header

@@ -7,6 +7,7 @@ from src.apps.core.config import settings
 from src.apps.core import security
 from src.apps.core.security import TokenType
 from src.apps.core.cache import RedisCache
+from src.apps.core.cookies import auth_cookie_options
 from src.apps.iam.api.deps import get_db
 from src.apps.iam.models.user import User
 from src.apps.iam.models.token_tracking import TokenTracking
@@ -146,18 +147,14 @@ async def refresh_token(
             response.set_cookie(
                 key=settings.ACCESS_TOKEN_COOKIE,
                 value=access_token,
-                httponly=True,
-                secure=settings.SECURE_COOKIES,
-                samesite="lax",
-                max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+                **auth_cookie_options(max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60),
             )
             response.set_cookie(
                 key=settings.REFRESH_TOKEN_COOKIE,
                 value=new_refresh_token,
-                httponly=True,
-                secure=settings.SECURE_COOKIES,
-                samesite="lax",
-                max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+                **auth_cookie_options(
+                    max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+                ),
             )
             return {"message": "Token refreshed successfully"}
         

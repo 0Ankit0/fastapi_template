@@ -11,6 +11,7 @@ import base64
 from src.apps.core.config import settings
 from src.apps.core import security
 from src.apps.core.security import TokenType
+from src.apps.core.cookies import auth_cookie_options
 from src.apps.iam.api.deps import get_current_user, get_db
 from src.apps.iam.models.user import User
 from src.apps.iam.models.login_attempt import LoginAttempt
@@ -364,10 +365,7 @@ async def validate_otp_login(
             response.set_cookie(
                 key=settings.ACCESS_TOKEN_COOKIE,
                 value=access_token,
-                httponly=True,
-                secure=settings.SECURE_COOKIES,
-                samesite="lax",
-                max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+                **auth_cookie_options(max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60),
             )
             return {"message": "OTP validated successfully"}
         

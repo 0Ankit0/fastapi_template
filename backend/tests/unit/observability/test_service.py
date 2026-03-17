@@ -1,8 +1,16 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
 
+from src.apps.core.config import settings
+from src.apps.iam.models.login_attempt import LoginAttempt
 from src.apps.observability.models import SecurityIncident
-from src.apps.observability.service import build_log_summary, create_log_entry, create_or_update_incident
+from src.apps.observability.service import (
+    build_log_summary,
+    create_log_entry,
+    create_or_update_incident,
+    evaluate_failed_login_burst,
+)
 
 
 @pytest.mark.unit
@@ -72,3 +80,53 @@ class TestObservabilityService:
         assert summary["error_logs_24h"] == 1
         assert summary["open_incidents"] == 1
         assert summary["critical_incidents"] == 1
+
+    @pytest.mark.asyncio
+    async def test_failed_login_burst_uses_configured_threshold(self, db_session: AsyncSession):
+        original_threshold = settings.FAILED_LOGIN_BURST_THRESHOLD
+        original_window = settings.FAILED_LOGIN_BURST_WINDOW_MINUTES
+        try:
+            settings.FAILED_LOGIN_BURST_THRESHOLD = 2
+            settings.FAILED_LOGIN_BURST_WINDOW_MINUTES = 30
+            db_session.add(
+                LoginAttempt(
+                    user_id=None,
+                    attempted_username="burst-threshold-user",
+                    ip_address="127.0.0.1",
+                    user_agent="pytest",
+                    success=False,
+                    failure_reason="bad password",
+                )
+            )
+            db_session.add(
+                LoginAttempt(
+                    user_id=None,
+                    attempted_username="burst-threshold-user",
+                    ip_address="127.0.0.1",
+                    user_agent="pytest",
+                    success=False,
+                    failure_reason="bad password",
+                )
+            )
+            await db_session.commit()
+
+            await evaluate_failed_login_burst(
+                db_session,
+                username="burst-threshold-user",
+                ip_address="127.0.0.1",
+                subject_user_id=None,
+                related_log_id=None,
+            )
+            await db_session.commit()
+
+            incidents = (
+                await db_session.execute(
+                    select(SecurityIncident).where(
+                        SecurityIncident.signal_type == "auth.failed_login_burst"
+                    )
+                )
+            ).scalars().all()
+            assert incidents
+        finally:
+            settings.FAILED_LOGIN_BURST_THRESHOLD = original_threshold
+            settings.FAILED_LOGIN_BURST_WINDOW_MINUTES = original_window

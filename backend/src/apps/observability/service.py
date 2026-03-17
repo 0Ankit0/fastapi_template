@@ -16,7 +16,6 @@ from src.apps.observability.models import ObservabilityLogEntry, SecurityInciden
 
 log = logging.getLogger(__name__)
 
-TOKEN_CHURN_WINDOW = timedelta(minutes=10)
 INCIDENT_ACTIVE_STATUSES = ("open", "acknowledged")
 LEVEL_ORDER = {
     "DEBUG": logging.DEBUG,
@@ -25,6 +24,22 @@ LEVEL_ORDER = {
     "ERROR": logging.ERROR,
     "CRITICAL": logging.CRITICAL,
 }
+
+
+def failed_login_window() -> timedelta:
+    return timedelta(minutes=settings.FAILED_LOGIN_BURST_WINDOW_MINUTES)
+
+
+def token_churn_window() -> timedelta:
+    return timedelta(minutes=settings.TOKEN_CHURN_WINDOW_MINUTES)
+
+
+def rate_limit_spike_window() -> timedelta:
+    return timedelta(minutes=settings.RATE_LIMIT_SPIKE_WINDOW_MINUTES)
+
+
+def error_spike_window() -> timedelta:
+    return timedelta(minutes=settings.ERROR_SPIKE_WINDOW_MINUTES)
 
 
 def utc_now() -> datetime:
@@ -250,7 +265,7 @@ async def evaluate_failed_login_burst(
     subject_user_id: int | None,
     related_log_id: int | None,
 ) -> None:
-    window_start = utc_now() - timedelta(minutes=settings.ACCOUNT_LOCKOUT_DURATION_MINUTES)
+    window_start = utc_now() - failed_login_window()
     username_count = (
         await db.execute(
             select(func.count(col(LoginAttempt.id))).where(
@@ -269,14 +284,17 @@ async def evaluate_failed_login_burst(
             )
         )
     ).scalar_one()
-    threshold = max(settings.MAX_LOGIN_ATTEMPTS, 5)
+    threshold = settings.FAILED_LOGIN_BURST_THRESHOLD
     if username_count >= threshold:
         await create_or_update_incident(
             db,
             signal_type="auth.failed_login_burst",
             severity="high",
             title="Repeated failed logins for username",
-            summary=f"{username_count} failed login attempts for {username} in the lockout window.",
+            summary=(
+                f"{username_count} failed login attempts for {username} "
+                f"in {settings.FAILED_LOGIN_BURST_WINDOW_MINUTES} minutes."
+            ),
             fingerprint=f"auth.failed_login_burst:username:{username}",
             subject_user_id=subject_user_id,
             ip_address=ip_address,
@@ -289,7 +307,10 @@ async def evaluate_failed_login_burst(
             signal_type="auth.failed_login_burst",
             severity="high",
             title="Repeated failed logins from IP",
-            summary=f"{ip_count} failed login attempts from {ip_address} in the lockout window.",
+            summary=(
+                f"{ip_count} failed login attempts from {ip_address} "
+                f"in {settings.FAILED_LOGIN_BURST_WINDOW_MINUTES} minutes."
+            ),
             fingerprint=f"auth.failed_login_burst:ip:{ip_address}",
             subject_user_id=subject_user_id,
             ip_address=ip_address,
@@ -405,7 +426,7 @@ async def evaluate_token_churn(
     ip_address: str,
     related_log_id: int | None,
 ) -> None:
-    window_start = utc_now() - TOKEN_CHURN_WINDOW
+    window_start = utc_now() - token_churn_window()
     churn_count = (
         await db.execute(
             select(func.count(col(ObservabilityLogEntry.id))).where(
@@ -416,13 +437,16 @@ async def evaluate_token_churn(
             )
         )
     ).scalar_one()
-    if churn_count >= 3:
+    if churn_count >= settings.TOKEN_CHURN_THRESHOLD:
         await create_or_update_incident(
             db,
             signal_type="auth.token_churn",
             severity="medium",
             title="High token churn detected",
-            summary=f"{churn_count} token lifecycle events were recorded for user {user_id} from {ip_address} in 10 minutes.",
+            summary=(
+                f"{churn_count} token lifecycle events were recorded for user "
+                f"{user_id} from {ip_address} in {settings.TOKEN_CHURN_WINDOW_MINUTES} minutes."
+            ),
             fingerprint=f"auth.token_churn:{user_id}:{ip_address}",
             subject_user_id=user_id,
             ip_address=ip_address,
@@ -538,7 +562,7 @@ async def evaluate_rate_limit_spike(
     ip_address: str,
     related_log_id: int | None,
 ) -> None:
-    window_start = utc_now() - timedelta(minutes=10)
+    window_start = utc_now() - rate_limit_spike_window()
     hit_count = (
         await db.execute(
             select(func.count(col(ObservabilityLogEntry.id))).where(
@@ -549,13 +573,16 @@ async def evaluate_rate_limit_spike(
             )
         )
     ).scalar_one()
-    if hit_count >= 10:
+    if hit_count >= settings.RATE_LIMIT_SPIKE_THRESHOLD:
         await create_or_update_incident(
             db,
             signal_type="ops.rate_limit_spike",
             severity="medium",
             title="Rate limit spike detected",
-            summary=f"{hit_count} rate limit hits were recorded for {path} from {ip_address} in 10 minutes.",
+            summary=(
+                f"{hit_count} rate limit hits were recorded for {path} from "
+                f"{ip_address} in {settings.RATE_LIMIT_SPIKE_WINDOW_MINUTES} minutes."
+            ),
             fingerprint=f"ops.rate_limit_spike:{path}:{ip_address}",
             ip_address=ip_address,
             related_log_id=related_log_id,
@@ -608,7 +635,7 @@ async def evaluate_error_spike(
     related_log_id: int | None,
     status_code: int,
 ) -> None:
-    window_start = utc_now() - timedelta(minutes=10)
+    window_start = utc_now() - error_spike_window()
     error_count = (
         await db.execute(
             select(func.count(col(ObservabilityLogEntry.id))).where(
@@ -618,13 +645,16 @@ async def evaluate_error_spike(
             )
         )
     ).scalar_one()
-    if error_count >= 5:
+    if error_count >= settings.ERROR_SPIKE_THRESHOLD:
         await create_or_update_incident(
             db,
             signal_type="ops.error_spike",
             severity="high",
             title="Repeated 5xx responses detected",
-            summary=f"{error_count} server errors were recorded for {path} in 10 minutes.",
+            summary=(
+                f"{error_count} server errors were recorded for {path} "
+                f"in {settings.ERROR_SPIKE_WINDOW_MINUTES} minutes."
+            ),
             fingerprint=f"ops.error_spike:{path}",
             related_log_id=related_log_id,
             metadata={"path": path, "status_code": status_code, "count": error_count},

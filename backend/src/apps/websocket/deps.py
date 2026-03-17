@@ -45,6 +45,14 @@ async def ws_get_current_user(
         await websocket.send_json({"type": "error", "code": 4001, "detail": detail})
         await websocket.close(code=4001)
 
+    origin = websocket.headers.get("origin")
+    if not isinstance(origin, str):
+        origin = None
+    allowed_origins = {item.strip() for item in settings.WS_ALLOWED_ORIGINS if item.strip()}
+    if origin and "*" not in allowed_origins and origin not in allowed_origins:
+        await _reject("WebSocket origin is not allowed")
+        raise RuntimeError("WS auth failed: origin not allowed")
+
     if not token:
         await _reject("Missing token")
         raise RuntimeError("WS auth failed: missing token")

@@ -11,6 +11,8 @@ from urllib.parse import urlencode
 
 from src.apps.core import security
 from src.apps.core.config import OAUTH_PROVIDERS, settings
+from src.apps.core.cookies import auth_cookie_options
+from src.apps.core.http import default_timeout, retry_async
 from src.apps.core.security import TokenType
 from src.apps.iam.api.deps import get_db
 from src.apps.iam.models.token_tracking import TokenTracking
@@ -112,20 +114,22 @@ async def social_callback(
     async with httpx.AsyncClient() as http:
         # Exchange authorization code for provider access token
         try:
-            token_resp = await http.post(
-                config["token_url"],
-                data={
-                    "client_id": client_id,
-                    "client_secret": client_secret,
-                    "code": code,
-                    "redirect_uri": callback_url,
-                    "grant_type": "authorization_code",
-                },
-                headers={"Accept": "application/json"},
-                timeout=10,
+            token_resp = await retry_async(
+                lambda: http.post(
+                    config["token_url"],
+                    data={
+                        "client_id": client_id,
+                        "client_secret": client_secret,
+                        "code": code,
+                        "redirect_uri": callback_url,
+                        "grant_type": "authorization_code",
+                    },
+                    headers={"Accept": "application/json"},
+                    timeout=default_timeout(),
+                )
             )
             token_resp.raise_for_status()
-        except httpx.HTTPStatusError:
+        except httpx.HTTPError:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail=f"Failed to obtain access token from {provider}",
@@ -140,18 +144,20 @@ async def social_callback(
 
         # Fetch user profile from provider
         try:
-            info_resp = await http.get(
-                config["userinfo_url"],
-                headers={
-                    "Authorization": f"Bearer {provider_token}",
-                    "Accept": "application/json",
-                    "User-Agent": "FastAPI-Template/1.0",
-                },
-                timeout=10,
+            info_resp = await retry_async(
+                lambda: http.get(
+                    config["userinfo_url"],
+                    headers={
+                        "Authorization": f"Bearer {provider_token}",
+                        "Accept": "application/json",
+                        "User-Agent": "FastAPI-Template/1.0",
+                    },
+                    timeout=default_timeout(),
+                )
             )
             info_resp.raise_for_status()
             user_info: dict[str, Any] = info_resp.json()
-        except httpx.HTTPStatusError:
+        except httpx.HTTPError:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail=f"Failed to fetch user info from {provider}",
@@ -160,14 +166,16 @@ async def social_callback(
         # GitHub may keep email private — fetch it from the dedicated emails endpoint
         if provider == "github" and not user_info.get("email"):
             try:
-                emails_resp = await http.get(
-                    config["emails_url"],
-                    headers={
-                        "Authorization": f"Bearer {provider_token}",
-                        "Accept": "application/json",
-                        "User-Agent": "FastAPI-Template/1.0",
-                    },
-                    timeout=10,
+                emails_resp = await retry_async(
+                    lambda: http.get(
+                        config["emails_url"],
+                        headers={
+                            "Authorization": f"Bearer {provider_token}",
+                            "Accept": "application/json",
+                            "User-Agent": "FastAPI-Template/1.0",
+                        },
+                        timeout=default_timeout(),
+                    )
                 )
                 emails_resp.raise_for_status()
                 primary = next(
@@ -256,10 +264,7 @@ async def social_callback(
         redirect_resp.set_cookie(
             key=settings.ACCESS_TOKEN_COOKIE,
             value=access_token,
-            httponly=True,
-            secure=settings.SECURE_COOKIES,
-            samesite="lax",
-            max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            **auth_cookie_options(max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60),
         )
         return redirect_resp
 

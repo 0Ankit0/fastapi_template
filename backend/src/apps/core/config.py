@@ -3,16 +3,59 @@ from __future__ import annotations
 from pathlib import Path
 from threading import Lock
 from typing import Any, Iterable, Mapping, Union
+from urllib.parse import urlparse
 
 from pydantic import AnyHttpUrl, SecretStr, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ENV_FILE_PATH = Path(__file__).resolve().parents[4] / ".env"
 GENERAL_SETTINGS_TABLE_NAME = "generalsetting"
-NON_RUNTIME_EDITABLE_SETTING_KEYS = frozenset({"DATABASE_URL", "SYNC_DATABASE_URL"})
+NON_RUNTIME_EDITABLE_SETTING_KEYS = frozenset(
+    {
+        "DATABASE_URL",
+        "SYNC_DATABASE_URL",
+        "SECRET_KEY",
+        "PASSWORD_PEPPER",
+        "POSTGRES_SERVER",
+        "POSTGRES_USER",
+        "POSTGRES_PASSWORD",
+        "POSTGRES_DB",
+        "REDIS_HOST",
+        "REDIS_PORT",
+        "REDIS_DB",
+        "REDIS_PASSWORD",
+        "REDIS_URL",
+        "CELERY_BROKER_URL",
+        "CELERY_RESULT_BACKEND",
+        "GOOGLE_MAPS_API_KEY",
+        "EMAIL_HOST_PASSWORD",
+        "RESEND_API_KEY",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "VAPID_PRIVATE_KEY",
+        "FCM_SERVER_KEY",
+        "FCM_API_KEY",
+        "FCM_SERVICE_ACCOUNT_JSON",
+        "FCM_SERVICE_ACCOUNT_FILE",
+        "ONESIGNAL_API_KEY",
+        "TWILIO_ACCOUNT_SID",
+        "TWILIO_AUTH_TOKEN",
+        "VONAGE_API_KEY",
+        "VONAGE_API_SECRET",
+        "KHALTI_SECRET_KEY",
+        "ESEWA_SECRET_KEY",
+        "STRIPE_SECRET_KEY",
+        "STRIPE_WEBHOOK_SECRET",
+        "PAYPAL_CLIENT_SECRET",
+        "GOOGLE_CLIENT_SECRET",
+        "GITHUB_CLIENT_SECRET",
+        "FACEBOOK_CLIENT_SECRET",
+    }
+)
 PUBLIC_GENERAL_SETTING_KEYS = frozenset(
     {
         "PROJECT_NAME",
+        "APP_ENV",
         "FEATURE_AUTH",
         "FEATURE_MULTITENANCY",
         "FEATURE_NOTIFICATIONS",
@@ -46,6 +89,20 @@ def _parse_csv(value: str | list[str] | None) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
+def _normalize_same_site(value: str) -> str:
+    normalized = value.strip().lower()
+    if normalized not in {"lax", "strict", "none"}:
+        raise ValueError("COOKIE_SAMESITE must be one of: lax, strict, none")
+    return normalized
+
+
+def _normalize_storage_backend(value: str) -> str:
+    normalized = value.strip().lower()
+    if normalized not in {"local", "s3"}:
+        raise ValueError("STORAGE_BACKEND must be one of: local, s3")
+    return normalized
+
+
 def serialize_setting_value(value: Any) -> str | None:
     if value is None:
         return None
@@ -65,6 +122,9 @@ class Settings(BaseSettings):
     )
 
     PROJECT_NAME: str = "FastAPI Template"
+    APP_ENV: str = "development"
+    APP_INSTANCE_NAME: str = "fastapi-template"
+    APP_REGION: str = "local"
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = "supersecretkey"
     PASSWORD_PEPPER: str | None = None
@@ -73,6 +133,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_COOKIE: str = "access_token"
     REFRESH_TOKEN_COOKIE: str = "refresh_token"
     SECURE_COOKIES: bool = False
+    COOKIE_DOMAIN: str | None = None
+    COOKIE_SAMESITE: str = "lax"
 
     MAX_LOGIN_ATTEMPTS: int = 5
     ACCOUNT_LOCKOUT_DURATION_MINUTES: int = 30
@@ -91,6 +153,14 @@ class Settings(BaseSettings):
     LOG_FILE_PATH: str = "logs/application.log"
     LOG_RETENTION_DAYS: int = 7
     LOG_SQL_QUERIES: bool = False
+    FAILED_LOGIN_BURST_THRESHOLD: int = 5
+    FAILED_LOGIN_BURST_WINDOW_MINUTES: int = 30
+    TOKEN_CHURN_THRESHOLD: int = 3
+    TOKEN_CHURN_WINDOW_MINUTES: int = 10
+    RATE_LIMIT_SPIKE_THRESHOLD: int = 10
+    RATE_LIMIT_SPIKE_WINDOW_MINUTES: int = 10
+    ERROR_SPIKE_THRESHOLD: int = 5
+    ERROR_SPIKE_WINDOW_MINUTES: int = 10
 
     FEATURE_AUTH: bool = True
     FEATURE_MULTITENANCY: bool = True
@@ -109,11 +179,22 @@ class Settings(BaseSettings):
     REDIS_URL: str | None = None
     CELERY_BROKER_URL: str | None = None
     CELERY_RESULT_BACKEND: str | None = None
+    CELERY_TASK_TIME_LIMIT: int = 30 * 60
+    CELERY_RESULT_EXPIRES: int = 3600
+    CELERY_TASK_ALWAYS_EAGER: bool | None = None
+    CELERY_QUEUE_DEFAULT: str = "default"
 
     BACKEND_CORS_ORIGINS: list[Union[str, AnyHttpUrl]] = [
         "http://localhost",
         "http://localhost:3000",
     ]
+    TRUSTED_HOSTS: list[str] = ["localhost", "127.0.0.1", "test", "testserver"]
+    PROXY_TRUSTED_HOSTS: list[str] = ["*"]
+    FORWARDED_ALLOW_IPS: list[str] = ["*"]
+    RATE_LIMIT_DEFAULT: str = "100/minute"
+    RATE_LIMIT_LOGIN: str = "5/minute"
+    RATE_LIMIT_SIGNUP: str = "3/hour"
+    RATE_LIMIT_PASSWORD_RESET: str = "3/hour"
 
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_USER: str = "postgres"
@@ -121,12 +202,28 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = "app"
     DATABASE_URL: str | None = None
     SYNC_DATABASE_URL: str | None = None
+    DB_POOL_SIZE: int = 10
+    DB_MAX_OVERFLOW: int = 20
+    DB_POOL_TIMEOUT: int = 30
+    DB_POOL_RECYCLE: int = 1800
 
     FRONTEND_URL: str = "http://localhost:3000"
     SERVER_HOST: str = "http://localhost:8000"
+    HTTP_TIMEOUT_SECONDS: float = 15.0
+    HTTP_RETRY_COUNT: int = 1
+    HTTP_BACKOFF_SECONDS: float = 0.5
+    WS_ALLOWED_ORIGINS: list[str] = ["http://localhost:3000"]
+    WS_HEARTBEAT_INTERVAL_SECONDS: int = 30
+    WS_MAX_IDLE_SECONDS: int = 90
 
     MEDIA_DIR: str = "media"
     MEDIA_URL: str = "/media"
+    STORAGE_BACKEND: str = "local"
+    MEDIA_BASE_URL: str = ""
+    S3_BUCKET: str = ""
+    S3_REGION: str = "us-east-1"
+    S3_ENDPOINT_URL: str = ""
+    S3_USE_PATH_STYLE: bool = False
     MAX_AVATAR_SIZE_MB: int = 5
 
     MAP_PROVIDER: str = "osm"
@@ -221,6 +318,7 @@ class Settings(BaseSettings):
     @field_validator(
         "DEBUG",
         "TESTING",
+        "SECURE_COOKIES",
         "FEATURE_AUTH",
         "FEATURE_MULTITENANCY",
         "FEATURE_NOTIFICATIONS",
@@ -232,9 +330,18 @@ class Settings(BaseSettings):
         "EMAIL_ENABLED",
         "PUSH_ENABLED",
         "SMS_ENABLED",
+        "ANALYTICS_ENABLED",
+        "KHALTI_ENABLED",
+        "ESEWA_ENABLED",
+        "STRIPE_ENABLED",
+        "PAYPAL_ENABLED",
+        "GOOGLE_ENABLED",
+        "GITHUB_ENABLED",
+        "FACEBOOK_ENABLED",
         "OSM_MAPS_ENABLED",
         "GOOGLE_MAPS_ENABLED",
         "LOG_SQL_QUERIES",
+        "S3_USE_PATH_STYLE",
         mode="before",
     )
     @classmethod
@@ -287,6 +394,21 @@ class Settings(BaseSettings):
         data = info.data
         return "cache+memory://" if data.get("DEBUG", True) else str(data.get("REDIS_URL"))
 
+    @field_validator("CELERY_TASK_ALWAYS_EAGER", mode="before")
+    @classmethod
+    def assemble_celery_task_always_eager(
+        cls,
+        value: bool | str | None,
+        info: ValidationInfo,
+    ) -> bool:
+        if isinstance(value, str):
+            parsed = cls.parse_bool_flags(value)
+            if isinstance(parsed, bool):
+                return parsed
+        if isinstance(value, bool):
+            return value
+        return bool(info.data.get("DEBUG", True))
+
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(
@@ -331,11 +453,49 @@ class Settings(BaseSettings):
         "PUSH_FALLBACK_PROVIDERS",
         "SMS_FALLBACK_PROVIDERS",
         "LOG_OUTPUTS",
+        "TRUSTED_HOSTS",
+        "PROXY_TRUSTED_HOSTS",
+        "FORWARDED_ALLOW_IPS",
+        "WS_ALLOWED_ORIGINS",
         mode="before",
     )
     @classmethod
     def parse_provider_lists(cls, value: str | list[str] | None) -> list[str]:
         return _parse_csv(value)
+
+    @field_validator("COOKIE_SAMESITE", mode="before")
+    @classmethod
+    def validate_cookie_samesite(cls, value: str) -> str:
+        return _normalize_same_site(value)
+
+    @field_validator("STORAGE_BACKEND", mode="before")
+    @classmethod
+    def validate_storage_backend(cls, value: str) -> str:
+        return _normalize_storage_backend(value)
+
+    @field_validator("APP_ENV", mode="before")
+    @classmethod
+    def normalize_app_env(cls, value: str) -> str:
+        return value.strip().lower()
+
+    @property
+    def media_base_url(self) -> str:
+        if self.MEDIA_BASE_URL:
+            return self.MEDIA_BASE_URL.rstrip("/")
+        if self.STORAGE_BACKEND == "s3" and self.S3_BUCKET:
+            if self.S3_ENDPOINT_URL:
+                endpoint = self.S3_ENDPOINT_URL.rstrip("/")
+                if self.S3_USE_PATH_STYLE:
+                    return f"{endpoint}/{self.S3_BUCKET}"
+                parsed = urlparse(endpoint)
+                if parsed.scheme and parsed.netloc:
+                    return (
+                        f"{parsed.scheme}://{self.S3_BUCKET}.{parsed.netloc}"
+                        f"{parsed.path.rstrip('/')}"
+                    )
+                return endpoint
+            return f"https://{self.S3_BUCKET}.s3.{self.S3_REGION}.amazonaws.com"
+        return f"{self.SERVER_HOST.rstrip('/')}{self.MEDIA_URL.rstrip('/')}"
 
 
 SETTING_FIELD_NAMES = frozenset(Settings.model_fields.keys())

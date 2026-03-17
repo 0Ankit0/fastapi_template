@@ -25,7 +25,7 @@ limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post("/password-reset-request/")
-@limiter.limit("3/hour")
+@limiter.limit(lambda: settings.RATE_LIMIT_PASSWORD_RESET)
 async def request_password_reset(
     request: Request,
     reset_data: ResetPasswordRequest,

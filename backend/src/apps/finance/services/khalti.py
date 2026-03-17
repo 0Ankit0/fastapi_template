@@ -18,6 +18,7 @@ import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.apps.core.config import settings
+from src.apps.core.http import default_timeout
 from src.apps.finance.models.payment import PaymentProvider, PaymentStatus, PaymentTransaction
 from src.apps.finance.schemas.payment import (
     InitiatePaymentRequest,
@@ -68,7 +69,7 @@ class KhaltiService(BasePaymentProvider):
                             "Authorization": f"Key {settings.KHALTI_SECRET_KEY}",
                             "Content-Type": "application/json",
                         },
-                        timeout=30,
+                        timeout=default_timeout(30),
                     )
             except httpx.HTTPError as exc:
                 last_error = _describe_http_error(exc)

@@ -73,4 +73,5 @@ class TestHealthCheck:
         payload = response.json()
         assert isinstance(payload, list)
         assert any(item["key"] == "PROJECT_NAME" for item in payload)
+        assert any(item["key"] == "APP_ENV" for item in payload)
         assert all("effective_value" in item for item in payload)

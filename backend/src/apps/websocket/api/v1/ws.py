@@ -20,6 +20,7 @@ Encryption handshake
        {"type": "<msg_type>", "iv": "<b64-nonce>", "data": "<b64-ciphertext>"}
    where ``data`` decrypts to the JSON of the actual message model.
 """
+import asyncio
 import json
 import logging
 
@@ -48,6 +49,12 @@ from src.apps.websocket.schemas.messages import (
 
 log = logging.getLogger(__name__)
 router = APIRouter()
+
+
+async def _heartbeat_loop(user_id: int) -> None:
+    while True:
+        await asyncio.sleep(settings.WS_HEARTBEAT_INTERVAL_SECONDS)
+        await manager.send_personal_model(user_id, WSPongMessage())
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -94,12 +101,24 @@ async def _handle_connection(
     if initial_room:
         await manager.join_room(user.id, initial_room)
 
+    heartbeat_task = asyncio.create_task(_heartbeat_loop(user.id))
+
     try:
         while True:
             # Receive and decrypt; closes connection on decryption failure
             try:
-                data = await manager.receive_and_decrypt(websocket, user.id)
+                data = await asyncio.wait_for(
+                    manager.receive_and_decrypt(websocket, user.id),
+                    timeout=settings.WS_MAX_IDLE_SECONDS,
+                )
             except (ValueError, RuntimeError):
+                break
+            except asyncio.TimeoutError:
+                await manager.send_personal_model(
+                    user.id,
+                    WSErrorMessage(code=4008, detail="WebSocket idle timeout"),
+                )
+                await websocket.close(code=4008)
                 break
 
             msg_type_raw = data.get("type", "")
@@ -167,6 +186,7 @@ async def _handle_connection(
     except WebSocketDisconnect:
         pass
     finally:
+        heartbeat_task.cancel()
         await manager.disconnect(websocket, user.id)
 
 

@@ -8,6 +8,7 @@ from slowapi.util import get_remote_address
 from src.apps.core.config import settings
 from src.apps.core import security
 from src.apps.core.security import TokenType
+from src.apps.core.cookies import auth_cookie_options
 from src.apps.iam.api.deps import get_current_user, get_db
 from src.apps.iam.models.user import User, UserProfile
 from src.apps.iam.models.token_tracking import TokenTracking
@@ -26,7 +27,7 @@ limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post("/signup/")
-@limiter.limit("3/hour")
+@limiter.limit(lambda: settings.RATE_LIMIT_SIGNUP)
 async def signup(
     request: Request,
     response: Response,
@@ -138,10 +139,7 @@ async def signup(
             response.set_cookie(
                 key=settings.ACCESS_TOKEN_COOKIE,
                 value=access_token,
-                httponly=True,
-                secure=settings.SECURE_COOKIES,
-                samesite="lax",
-                max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+                **auth_cookie_options(max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60),
             )
             return {"message": "Account created successfully"}
         

@@ -12,6 +12,7 @@ def test_general_settings_snapshot_includes_all_known_settings() -> None:
     snapshot = get_environment_settings_snapshot()
 
     assert "PROJECT_NAME" in snapshot
+    assert "APP_ENV" in snapshot
     assert "DATABASE_URL" in snapshot
     assert snapshot["PROJECT_NAME"] is not None
 
@@ -44,6 +45,7 @@ def test_build_effective_settings_ignores_non_runtime_editable_keys() -> None:
     )
 
     assert "DATABASE_URL" in NON_RUNTIME_EDITABLE_SETTING_KEYS
+    assert "SECRET_KEY" in NON_RUNTIME_EDITABLE_SETTING_KEYS
     assert resolved_settings.DATABASE_URL != "sqlite+aiosqlite:///./override.db"
 
 
@@ -63,6 +65,7 @@ def test_public_general_settings_payload_uses_safe_allowlist() -> None:
     keys = {item["key"] for item in payload}
 
     assert keys == PUBLIC_GENERAL_SETTING_KEYS
+    assert "APP_ENV" in keys
     project_name = next(item for item in payload if item["key"] == "PROJECT_NAME")
     assert project_name["effective_value"] == "Runtime Project"
     assert project_name["source"] == "database"
