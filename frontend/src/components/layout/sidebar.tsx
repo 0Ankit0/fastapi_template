@@ -32,6 +32,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { data: capabilities } = useSystemCapabilities();
   const user = useAuthStore((state) => state.user);
+  const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'Project Template';
 
   const visibleNavigation = mainNavigation.filter(
     (item) => !item.feature || capabilities?.modules[item.feature] !== false
@@ -42,7 +43,7 @@ export function Sidebar() {
     <aside className="fixed inset-y-0 left-0 z-10 w-64 bg-white border-r border-gray-200">
       <div className="flex h-16 items-center justify-center border-b border-gray-200">
         <Link href="/dashboard" className="text-xl font-bold text-blue-600">
-          FastAPI Template
+          {appName}
         </Link>
       </div>
       <OrgSwitcher />

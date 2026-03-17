@@ -3,7 +3,6 @@
 import { useState, useRef } from 'react';
 import { useAuthStore } from '@/store/auth-store';
 import { apiClient } from '@/lib/api-client';
-import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Camera, User, Loader2 } from 'lucide-react';
 import type { User as UserType } from '@/types';

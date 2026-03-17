@@ -71,8 +71,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     lifespan=lifespan,
-    title="fastapi_template",
-    description="A template for FastAPI applications",
+    title=settings.PROJECT_NAME,
+    description=f"{settings.PROJECT_NAME} API",
     version="0.1.0",
     swagger_ui_parameters={
         "syntaxHighlight.theme": "monokai",  # Syntax highlighting theme

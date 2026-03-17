@@ -6,9 +6,6 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}Starting FastAPI Template with Celery${NC}"
-echo ""
-
 # Check if .env exists
 if [ ! -f .env ]; then
     echo "Creating .env from .env.example..."
@@ -17,6 +14,14 @@ fi
 
 # Check DEBUG setting
 DEBUG=$(grep "^DEBUG=" .env | cut -d'=' -f2)
+PROJECT_NAME=$(grep "^PROJECT_NAME=" .env | cut -d'=' -f2-)
+
+if [ -z "$PROJECT_NAME" ]; then
+    PROJECT_NAME="Project Template"
+fi
+
+echo -e "${BLUE}Starting ${PROJECT_NAME} with Celery${NC}"
+echo ""
 
 if [ "$DEBUG" = "False" ]; then
     echo -e "${BLUE}Production mode detected. Checking Redis...${NC}"

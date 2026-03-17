@@ -21,7 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui';
 import {
   Building2, Plus, Check, Users, Mail, Pencil, Trash2,
-  ChevronDown, ChevronRight, UserMinus, Shield, Send, X,
+  ChevronDown, ChevronRight, UserMinus, Send, X,
 } from 'lucide-react';
 import type { Tenant, TenantRole } from '@/types';
 

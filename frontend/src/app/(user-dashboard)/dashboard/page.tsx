@@ -4,7 +4,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useTokens } from '@/hooks/use-tokens';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Bell, Shield, Key, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
+import { Bell, Shield, Key, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 
 export default function DashboardPage() {

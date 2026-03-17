@@ -23,7 +23,6 @@ import {
   ShieldAlert,
   ShieldCheck,
   Trash2,
-  UserCog,
   Users,
   X,
 } from 'lucide-react';
@@ -294,7 +293,7 @@ export default function AdminUsersPage() {
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
-            <StatCard label="Visible Users" value={users.length} icon={Users} accent="bg-blue-50 text-blue-700" />
+            <StatCard label="Active" value={activeCount} icon={Users} accent="bg-blue-50 text-blue-700" />
             <StatCard label="Admins" value={adminCount} icon={Shield} accent="bg-amber-50 text-amber-700" />
             <StatCard label="Inactive" value={inactiveCount} icon={ShieldAlert} accent="bg-rose-50 text-rose-700" />
           </div>

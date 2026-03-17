@@ -40,7 +40,7 @@ function AcceptInvitationPageInner() {
         setMessage(axiosErr?.response?.data?.detail || 'Failed to accept invitation.');
       },
     });
-  }, [token, isAuthenticated]);
+  }, [acceptInvitation, isAuthenticated, router, token]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50">

@@ -5,7 +5,7 @@ from src.apps.core.logging import configure_logging
 configure_logging()
 
 celery_app = Celery(
-    "fastapi_template",
+    settings.APP_INSTANCE_NAME,
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
     include=[

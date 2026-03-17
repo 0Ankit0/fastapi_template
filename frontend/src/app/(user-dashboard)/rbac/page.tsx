@@ -9,7 +9,7 @@ import {
   useCreatePermission,
 } from '@/hooks/use-rbac';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button, Skeleton } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { ShieldCheck, Key, Plus, Settings2 } from 'lucide-react';
 import type { Role } from '@/types';
 

@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { Bell, User, LogOut, Settings, ChevronRight, CheckCheck } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useAuthStore } from '@/store/auth-store';
-import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useNotifications, useMarkAllNotificationsRead, useMarkNotificationRead } from '@/hooks/use-notifications';
 import { LanguageSwitcher } from './language-switcher';

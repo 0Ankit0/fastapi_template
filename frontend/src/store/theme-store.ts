@@ -18,7 +18,7 @@ interface ThemeState {
 
 export const useThemeStore = create<ThemeState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       activeThemeId: DEFAULT_THEME_ID,
       customThemes: [],
       setActiveTheme: (activeThemeId) => set({ activeThemeId }),
