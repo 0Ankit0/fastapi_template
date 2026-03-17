@@ -28,10 +28,55 @@ from src.apps.finance.schemas.payment import (
 from src.apps.finance.services.base import BasePaymentProvider
 
 
+def _describe_http_error(exc: httpx.HTTPError) -> str:
+    """Build a stable error message for otherwise-empty httpx exceptions."""
+    error_type = exc.__class__.__name__
+    request_url = str(exc.request.url) if exc.request is not None else None
+    message = str(exc).strip() or repr(exc)
+    if request_url:
+        return f"{error_type} while calling {request_url}: {message}"
+    return f"{error_type}: {message}"
+
+
+def _normalize_base_url(url: str) -> str:
+    return url if url.endswith("/") else f"{url}/"
+
+
 class KhaltiService(BasePaymentProvider):
     """Khalti v2 payment provider."""
 
     BASE_URL: str = settings.KHALTI_BASE_URL
+
+    def _candidate_base_urls(self) -> list[str]:
+        """Return the configured Khalti base URL only."""
+        return [_normalize_base_url(self.BASE_URL)]
+
+    async def _post_khalti(
+        self,
+        path: str,
+        payload: dict,
+    ) -> httpx.Response:
+        """POST to Khalti, retrying on transport-level failures across known hosts."""
+        last_error: str | None = None
+        for base_url in self._candidate_base_urls():
+            try:
+                async with httpx.AsyncClient() as client:
+                    return await client.post(
+                        f"{base_url}{path}",
+                        json=payload,
+                        headers={
+                            "Authorization": f"Key {settings.KHALTI_SECRET_KEY}",
+                            "Content-Type": "application/json",
+                        },
+                        timeout=30,
+                    )
+            except httpx.HTTPError as exc:
+                last_error = _describe_http_error(exc)
+                continue
+        raise RuntimeError(
+            "Khalti request failed for the configured host. "
+            f"Last error: {last_error or 'Unknown transport error.'}"
+        )
 
     # ------------------------------------------------------------------ #
     # Initiate                                                             #
@@ -47,13 +92,16 @@ class KhaltiService(BasePaymentProvider):
 
         Returns the ``payment_url`` the client should redirect the user to.
         """
+        if request.amount < 1000:
+            raise ValueError("Khalti amount must be at least 1000 paisa (NPR 10).")
+
         customer_info: dict = {}
         if request.customer_name:
             customer_info["name"] = request.customer_name
         if request.customer_email:
             customer_info["email"] = request.customer_email
         if request.customer_phone:
-            customer_info["mobile"] = request.customer_phone
+            customer_info["phone"] = request.customer_phone
 
         payload: dict = {
             "return_url": request.return_url,
@@ -65,16 +113,10 @@ class KhaltiService(BasePaymentProvider):
         if customer_info:
             payload["customer_info"] = customer_info
 
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                f"{self.BASE_URL}epayment/initiate/",
-                json=payload,
-                headers={
-                    "Authorization": f"key {settings.KHALTI_SECRET_KEY}",
-                    "Content-Type": "application/json",
-                },
-                timeout=30,
-            )
+        try:
+            resp = await self._post_khalti("epayment/initiate/", payload)
+        except RuntimeError as exc:
+            raise RuntimeError(f"Khalti initiation request failed: {exc}") from exc
 
         if resp.status_code != 200:
             error_detail = resp.text
@@ -141,16 +183,10 @@ class KhaltiService(BasePaymentProvider):
         if not pidx:
             raise ValueError("pidx is required for Khalti verification")
 
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                f"{self.BASE_URL}epayment/lookup/",
-                json={"pidx": pidx},
-                headers={
-                    "Authorization": f"key {settings.KHALTI_SECRET_KEY}",
-                    "Content-Type": "application/json",
-                },
-                timeout=30,
-            )
+        try:
+            resp = await self._post_khalti("epayment/lookup/", {"pidx": pidx})
+        except RuntimeError as exc:
+            raise RuntimeError(f"Khalti lookup request failed: {exc}") from exc
 
         if resp.status_code != 200:
             raise ValueError(f"Khalti lookup failed ({resp.status_code}): {resp.text}")

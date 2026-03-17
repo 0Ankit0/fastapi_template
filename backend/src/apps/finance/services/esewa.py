@@ -13,8 +13,10 @@ Test eSewa account:
   OTP               : 123456
 
 Signature algorithm:
-  HMAC-SHA256( "total_amount,transaction_uuid,product_code", secret_key )
-  where the message is the comma-separated VALUES of signed_field_names.
+  HMAC-SHA256(
+      "total_amount=<value>,transaction_uuid=<value>,product_code=<value>",
+      secret_key,
+  )
 """
 import base64
 import hashlib
@@ -49,6 +51,19 @@ def _compute_esewa_signature(message: str, secret: str) -> str:
     return base64.b64encode(sig).decode("utf-8")
 
 
+def _build_esewa_signed_message(
+    signed_field_names: str,
+    payload: dict[str, object],
+    *,
+    include_field_names: bool = True,
+) -> str:
+    """Build the message string used for eSewa HMAC signing."""
+    fields = [field.strip() for field in signed_field_names.split(",") if field.strip()]
+    if include_field_names:
+        return ",".join(f"{field}={payload.get(field, '')}" for field in fields)
+    return ",".join(str(payload.get(field, "")) for field in fields)
+
+
 class EsewaService(BasePaymentProvider):
     """eSewa v2 payment provider."""
 
@@ -77,7 +92,12 @@ class EsewaService(BasePaymentProvider):
         total_amount = request.amount  # eSewa expects rupees (not paisa)
 
         signed_field_names = "total_amount,transaction_uuid,product_code"
-        message = f"{total_amount},{transaction_uuid},{settings.ESEWA_MERCHANT_CODE}"
+        signing_payload = {
+            "total_amount": total_amount,
+            "transaction_uuid": transaction_uuid,
+            "product_code": settings.ESEWA_MERCHANT_CODE,
+        }
+        message = _build_esewa_signed_message(signed_field_names, signing_payload)
         signature = _compute_esewa_signature(message, settings.ESEWA_SECRET_KEY)
 
         form_data = EsewaInitiateData(
@@ -155,10 +175,15 @@ class EsewaService(BasePaymentProvider):
 
         # ------ verify signature ------------------------------------------
         if cb.signed_field_names and cb.signature:
-            fields = [f.strip() for f in cb.signed_field_names.split(",")]
-            message = ",".join(str(decoded.get(f, "")) for f in fields)
+            message = _build_esewa_signed_message(cb.signed_field_names, decoded)
             expected_sig = _compute_esewa_signature(message, settings.ESEWA_SECRET_KEY)
-            if expected_sig != cb.signature:
+            legacy_message = _build_esewa_signed_message(
+                cb.signed_field_names,
+                decoded,
+                include_field_names=False,
+            )
+            legacy_sig = _compute_esewa_signature(legacy_message, settings.ESEWA_SECRET_KEY)
+            if cb.signature not in {expected_sig, legacy_sig}:
                 raise ValueError("eSewa callback signature verification failed")
 
         # ------ double-check via status API --------------------------------

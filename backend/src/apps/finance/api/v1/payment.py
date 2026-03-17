@@ -53,6 +53,14 @@ def _build_registry() -> dict[PaymentProvider, BasePaymentProvider]:
 _PROVIDERS: dict[PaymentProvider, BasePaymentProvider] = _build_registry()
 
 
+def _describe_exception(exc: Exception) -> str:
+    """Format exceptions so blank provider errors remain actionable."""
+    message = str(exc).strip()
+    if message:
+        return message
+    return f"{exc.__class__.__name__}: {exc!r}"
+
+
 def _get_provider(provider: PaymentProvider) -> BasePaymentProvider:
     svc = _PROVIDERS.get(provider)
     if svc is None:
@@ -116,7 +124,7 @@ async def initiate_payment(
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Payment provider error: {exc}",
+            detail=f"Payment provider error: {_describe_exception(exc)}",
         )
 
 
@@ -161,7 +169,7 @@ async def verify_payment(
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Payment provider error: {exc}",
+            detail=f"Payment provider error: {_describe_exception(exc)}",
         )
 
 
