@@ -12,6 +12,7 @@ This documentation set turns the repository into a reusable product template wit
 - `edge-cases/` records template-specific failure modes and operational concerns.
 - `implementation/` gives build, rollout, and testing playbooks.
 - `onboarding/` helps teams bootstrap a fresh project from the template.
+- `onboarding/project-orientation.md` explains how the whole project fits together before you start changing it.
 - `implementation/working-principles.md` explains the design rules the template follows.
 - `onboarding/configuration-management.md` explains how configuration moves through backend, web, and mobile.
 - `onboarding/modifying-the-template.md` gives a safe process for future modifications.
@@ -23,19 +24,22 @@ This documentation set turns the repository into a reusable product template wit
 - Multi-device notification registry across Web Push, FCM, and OneSignal.
 - Database-backed general settings with environment fallback and migration seeding.
 - Shared backend, web, and mobile runtime capability discovery, including public general settings.
+- Centralized operational configuration for logging, observability, rate limits, storage, Celery, cookies, hosts, and websocket behavior.
 - CI, environment, and release documentation for reuse across future projects.
 
 ## Getting Started
 
 1. Read [requirements/requirements.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/requirements/requirements.md).
-2. Follow [onboarding/local-setup.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/local-setup.md).
-3. Configure providers using [onboarding/provider-configuration.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/provider-configuration.md).
-4. Choose enabled modules and environment profile from [infrastructure/environment-configuration.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/infrastructure/environment-configuration.md).
-5. Validate docs with `python3 scripts/validate_documentation.py`.
+2. Read [onboarding/project-orientation.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/project-orientation.md).
+3. Follow [onboarding/local-setup.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/local-setup.md).
+4. Understand config flow with [onboarding/configuration-management.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/configuration-management.md).
+5. Configure providers using [onboarding/provider-configuration.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/provider-configuration.md).
+6. Choose enabled modules and environment profile from [infrastructure/environment-configuration.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/infrastructure/environment-configuration.md).
+7. Validate docs with `python3 scripts/validate_documentation.py`.
 
 ## Documentation Status
 
 - Phase coverage: requirements, analysis, design, infrastructure, edge cases, implementation, onboarding.
 - Diagram coverage: Mermaid-based system, process, architecture, and deployment views.
 - Validation coverage: enforced by `scripts/validate_documentation.py`.
-- Current status: template docs aligned with the Project-Ideas structure and extended for provider-driven runtime configuration plus database-backed settings overrides.
+- Current status: template docs aligned with the Project-Ideas structure and extended for provider-driven runtime configuration, database-backed settings overrides, and operational configuration guidance.
