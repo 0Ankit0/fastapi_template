@@ -21,7 +21,8 @@ This documentation set turns the repository into a reusable product template wit
 - Feature-flagged modules for auth, multi-tenancy, notifications, analytics, finance, and websockets.
 - Provider-driven outbound communications for email, push, SMS, analytics, and payments.
 - Multi-device notification registry across Web Push, FCM, and OneSignal.
-- Shared backend, web, and mobile runtime capability discovery.
+- Database-backed general settings with environment fallback and migration seeding.
+- Shared backend, web, and mobile runtime capability discovery, including public general settings.
 - CI, environment, and release documentation for reuse across future projects.
 
 ## Getting Started
@@ -37,4 +38,4 @@ This documentation set turns the repository into a reusable product template wit
 - Phase coverage: requirements, analysis, design, infrastructure, edge cases, implementation, onboarding.
 - Diagram coverage: Mermaid-based system, process, architecture, and deployment views.
 - Validation coverage: enforced by `scripts/validate_documentation.py`.
-- Current status: template docs aligned with the Project-Ideas structure and extended for provider-driven runtime configuration.
+- Current status: template docs aligned with the Project-Ideas structure and extended for provider-driven runtime configuration plus database-backed settings overrides.
