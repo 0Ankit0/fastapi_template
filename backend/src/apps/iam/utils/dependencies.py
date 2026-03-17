@@ -1,5 +1,3 @@
-from typing import Callable
-from functools import wraps
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.db.session import get_session

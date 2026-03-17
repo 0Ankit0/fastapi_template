@@ -31,6 +31,16 @@
 - Bootstrap-only keys such as `DATABASE_URL` and `SYNC_DATABASE_URL` are intentionally excluded from runtime DB override.
 - Startup-sensitive values may still require an application restart even when a database override exists.
 
+## Startup-Sensitive Groups
+
+These values are the most likely to require process restart even if they are runtime-editable:
+
+- middleware and ingress behavior: trusted hosts, proxy trust, CORS, cookies
+- worker bootstrap: Celery eager mode, broker wiring, default queue
+- database engine behavior: pool size, overflow, timeout, recycle
+- storage and filesystem mounting behavior
+- websocket process-level heartbeat and idle handling
+
 ## Recommended Mental Model
 
 - Environment/profile selection decides the baseline shape of a deployment.

@@ -2,7 +2,7 @@
 import logging
 from pathlib import Path
 from src.apps.core.config import settings
-from fastapi_mail import ConnectionConfig,FastMail,MessageSchema,MessageType, NameEmail
+from fastapi_mail import NameEmail
 from typing import Any,Dict,List
 from jinja2 import Environment,FileSystemLoader
 

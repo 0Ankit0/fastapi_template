@@ -5,7 +5,6 @@ embed PostHog API keys.  All endpoints require authentication.
 """
 from typing import Any
 from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.apps.analytics.dependencies import get_analytics
 from src.apps.analytics.service import AnalyticsService

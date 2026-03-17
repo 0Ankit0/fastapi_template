@@ -40,6 +40,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "celery-types>=0.24.0",
+    "ruff>=0.13.2",
     "watchfiles>=1.1.1",
 ]
 test = [
@@ -54,6 +55,13 @@ test = [
 [tool.taskipy.tasks]
 start = "uvicorn src.main:app --reload"
 test = "pytest --cov=src tests/"
+lint = "ruff check src tests"
 initial-migrate = 'alembic revision --autogenerate -m "init"'
 migrate = "alembic upgrade head"
 celery = "celery -A src.apps.core.celery_app worker --loglevel=info"
+
+[tool.ruff]
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["F"]

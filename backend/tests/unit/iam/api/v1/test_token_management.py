@@ -3,7 +3,6 @@ import uuid
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
-from datetime import datetime, timezone
 
 from src.apps.iam.models.login_attempt import LoginAttempt
 from src.apps.iam.models.user import User

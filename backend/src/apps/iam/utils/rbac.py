@@ -1,8 +1,6 @@
-from typing import Optional
-from fastapi import Depends, HTTPException, status
+from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
-from src.db.session import get_session
 from src.apps.iam.models import User, Role, UserRole, Permission, RolePermission
 from src.apps.iam.casbin_enforcer import CasbinEnforcer
 

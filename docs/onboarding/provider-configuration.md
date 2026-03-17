@@ -16,3 +16,4 @@ Provider selection is backend-driven. Clients should discover active providers f
 3. Verify `/api/v1/system/providers/` reflects the expected readiness state.
 4. If the provider needs client SDK setup, expose only the minimum safe public values.
 5. Test both the happy path and the fallback path if fallbacks are configured.
+6. Keep sandbox and production credentials separate, and validate callback or webhook verification before go-live.

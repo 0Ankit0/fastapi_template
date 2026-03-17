@@ -1,6 +1,4 @@
-import pytest
 from datetime import datetime, timedelta
-from hypothesis import given, strategies as st
 
 from src.apps.iam.models.user import User, UserProfile
 from src.apps.iam.models.login_attempt import LoginAttempt

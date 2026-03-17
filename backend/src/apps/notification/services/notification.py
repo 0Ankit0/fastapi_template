@@ -10,7 +10,6 @@ from sqlmodel import col
 from src.apps.notification.models.notification import Notification
 from src.apps.notification.models.notification_device import (
     NotificationDevice,
-    NotificationDevicePlatform,
     NotificationDeviceProvider,
 )
 from src.apps.notification.models.notification_preference import NotificationPreference

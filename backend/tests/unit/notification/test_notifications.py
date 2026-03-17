@@ -173,7 +173,7 @@ class TestNotificationAPI:
 
     @pytest.mark.asyncio
     async def test_list_notifications_empty(self, client: AsyncClient, db_session: AsyncSession):
-        user = await _make_user(db_session, username="apiuser1", email="api1@example.com")
+        await _make_user(db_session, username="apiuser1", email="api1@example.com")
         token = await _login(client, "apiuser1")
         resp = await client.get(
             "/api/v1/notifications/",
@@ -247,7 +247,7 @@ class TestNotificationAPI:
 
     @pytest.mark.asyncio
     async def test_delete_notification_not_found(self, client: AsyncClient, db_session: AsyncSession):
-        user = await _make_user(db_session, username="apiuser6", email="api6@example.com")
+        await _make_user(db_session, username="apiuser6", email="api6@example.com")
         token = await _login(client, "apiuser6")
         resp = await client.delete(
             "/api/v1/notifications/99999/",
@@ -269,9 +269,7 @@ class TestNotificationAPI:
     @pytest.mark.asyncio
     async def test_create_notification_as_superuser(self, client: AsyncClient, db_session: AsyncSession):
         target = await _make_user(db_session, username="target1", email="target1@example.com")
-        superuser = await _make_user(
-            db_session, username="suadmin", email="suadmin@example.com", is_superuser=True
-        )
+        await _make_user(db_session, username="suadmin", email="suadmin@example.com", is_superuser=True)
         token = await _login(client, "suadmin")
 
         with patch(

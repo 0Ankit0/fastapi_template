@@ -4,7 +4,7 @@ Includes generic schemas usable across all providers, plus provider-specific
 schemas for Khalti and eSewa.
 """
 from typing import Any, Optional
-from pydantic import BaseModel, HttpUrl, field_validator
+from pydantic import BaseModel, field_validator
 
 from src.apps.finance.models.payment import PaymentProvider, PaymentStatus
 

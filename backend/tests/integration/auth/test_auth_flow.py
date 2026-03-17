@@ -54,7 +54,7 @@ class TestCompleteAuthenticationFlow:
         )
         assert login_response.status_code == 200
         login_data = login_response.json()
-        access_token_login = login_data["access"]
+        assert login_data["access"]
         refresh_token_login = login_data["refresh"]
         
         # Step 3: Refresh token

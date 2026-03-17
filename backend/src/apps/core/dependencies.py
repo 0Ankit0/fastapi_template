@@ -1,5 +1,4 @@
 from typing import Optional
-from fastapi import Depends
 from redis.asyncio import Redis
 from src.apps.core.cache import RedisCache
 from src.apps.core.config import settings

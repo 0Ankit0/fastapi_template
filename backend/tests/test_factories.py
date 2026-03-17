@@ -1,5 +1,3 @@
-import pytest
-from datetime import datetime
 from hypothesis import given, settings as h_settings, strategies as st
 
 from tests.factories import (

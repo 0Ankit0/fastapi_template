@@ -3,7 +3,7 @@ from hypothesis import given, strategies as st, assume, settings as hypothesis_s
 from hypothesis import HealthCheck
 
 from src.apps.core import security
-from src.apps.iam.schemas.user import UserCreate, LoginRequest
+from src.apps.iam.schemas.user import UserCreate
 from pydantic import ValidationError
 
 

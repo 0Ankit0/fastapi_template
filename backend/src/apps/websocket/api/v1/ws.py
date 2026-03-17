@@ -21,12 +21,12 @@ Encryption handshake
    where ``data`` decrypts to the JSON of the actual message model.
 """
 import asyncio
-import json
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.apps.core.config import settings
 from src.apps.iam.api.deps import get_current_user, get_db
 from src.apps.iam.models.user import User
 from src.apps.websocket.crypto import session_key_b64

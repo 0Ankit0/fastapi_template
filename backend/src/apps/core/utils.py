@@ -1,7 +1,6 @@
 import uuid
 import os
 from datetime import datetime
-from functools import wraps
 from src.apps.core.config import settings
 
 def generate_unique_filename(instance, filename):

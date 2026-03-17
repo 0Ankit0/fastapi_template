@@ -29,7 +29,6 @@ from src.apps.multitenancy.schemas.tenant import (
     TenantUpdate,
     TenantWithMembersResponse,
 )
-from src.apps.iam.utils.hashid import decode_id_or_404
 from src.apps.core.cache import RedisCache
 from src.apps.core.schemas import PaginatedResponse
 from src.apps.analytics.dependencies import get_analytics
@@ -115,7 +114,7 @@ async def create_tenant(
     # Add Casbin grouping: owner gets "owner" role in tenant domain
     await CasbinEnforcer.add_role_for_user(str(current_user.id), TenantRole.OWNER, tenant.slug)
 
-    await RedisCache.clear_pattern(f"tenants:list:*")
+    await RedisCache.clear_pattern("tenants:list:*")
     await analytics.capture(
         str(current_user.id),
         TenantEvents.TENANT_CREATED,
@@ -203,7 +202,7 @@ async def update_tenant(
     await db.commit()
     await db.refresh(tenant)
 
-    await RedisCache.clear_pattern(f"tenants:list:*")
+    await RedisCache.clear_pattern("tenants:list:*")
     return tenant
 
 
@@ -218,7 +217,7 @@ async def delete_tenant(
     tenant = await _get_tenant_or_404(tenant_id, db)
     await db.delete(tenant)
     await db.commit()
-    await RedisCache.clear_pattern(f"tenants:list:*")
+    await RedisCache.clear_pattern("tenants:list:*")
 
 
 # ── Member management ─────────────────────────────────────────────────────────
@@ -487,7 +486,7 @@ async def accept_invitation(
 
     # Add Casbin role in tenant domain
     await CasbinEnforcer.add_role_for_user(str(current_user.id), invitation.role, tenant.slug)
-    await RedisCache.clear_pattern(f"tenants:list:*")
+    await RedisCache.clear_pattern("tenants:list:*")
     await analytics.capture(
         str(current_user.id),
         TenantEvents.TENANT_MEMBER_JOINED,

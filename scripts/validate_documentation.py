@@ -51,6 +51,7 @@ REQUIRED_FILES = {
         "cloud-architecture.md",
         "environment-configuration.md",
         "ci-cd.md",
+        "production-hardening-checklist.md",
     ],
     "edge-cases": [
         "README.md",
@@ -78,8 +79,33 @@ REQUIRED_FILES = {
         "configuration-management.md",
         "environment-profiles.md",
         "deployment.md",
+        "project-orientation.md",
         "start-a-new-project.md",
         "modifying-the-template.md",
+        "template-finalization-checklist.md",
+    ],
+}
+
+REQUIRED_DOC_HEADINGS = {
+    "docs/onboarding/project-orientation.md": [
+        "What This Template Is",
+        "The Configuration Flow",
+        "Recommended Reading Order",
+    ],
+    "docs/onboarding/local-setup.md": [
+        "Bootstrap Workflow",
+        "Run The Applications",
+        "Validate The Starter",
+    ],
+    "docs/onboarding/template-finalization-checklist.md": [
+        "Before You Rename Anything",
+        "Configuration Review",
+        "Production Readiness Review",
+    ],
+    "docs/infrastructure/production-hardening-checklist.md": [
+        "Secrets",
+        "Network and Proxy Trust",
+        "Providers and Callbacks",
     ],
 }
 
@@ -112,6 +138,16 @@ def main() -> int:
             if "diagram" in filename or filename.startswith("c4-"):
                 if path.exists() and "```mermaid" not in path.read_text(encoding="utf-8"):
                     errors.append(f"Diagram file missing Mermaid content: docs/{directory}/{filename}")
+
+    for relative_path, headings in REQUIRED_DOC_HEADINGS.items():
+        path = REPO_ROOT / relative_path
+        if not path.exists():
+            errors.append(f"Missing file required for heading validation: {relative_path}")
+            continue
+        text = path.read_text(encoding="utf-8")
+        for heading in headings:
+            if f"## {heading}" not in text:
+                errors.append(f"{relative_path} missing heading: {heading}")
 
     if errors:
         print("Documentation validation failed:")

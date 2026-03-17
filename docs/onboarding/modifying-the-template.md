@@ -43,6 +43,20 @@ Use this document when you already understand the project structure and want a s
   - client runtime hooks for browser or mobile-visible behavior
 - Decide whether the setting is env-only, runtime-editable, or public.
 
+### Switch From Local Storage To Object Storage
+
+- Set `STORAGE_BACKEND=s3`.
+- Fill in the bucket, region, endpoint, and path-style settings in `backend/.env`.
+- Verify the storage helper layer produces the URLs you expect before changing any client assumptions.
+- Keep `MEDIA_BASE_URL` explicit if your public asset domain differs from the API host.
+
+### Move From Local To Staging Or Production
+
+- Start with the profile guidance in [environment-configuration.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/infrastructure/environment-configuration.md).
+- Review the hardening steps in [production-hardening-checklist.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/infrastructure/production-hardening-checklist.md).
+- Replace local-friendly proxy, cookie, and provider defaults with environment-specific values.
+- Re-run `make ci` and `make health-check` after the environment is deployed.
+
 ### Change an Existing Public API
 
 - Preserve compatibility when possible.
@@ -61,6 +75,7 @@ Use this document when you already understand the project structure and want a s
 ## Do Not Skip
 
 - Update `backend/.env.example`
-- Update any root/runtime env handling notes if the loading path changes
+- Update `frontend/.env.local.example` or `mobile/.env.example` if the change affects those surfaces
+- Update any env handling notes if the loading path changes
 - Update `docs/`
-- Run backend, frontend, mobile, and docs checks
+- Run `make ci`

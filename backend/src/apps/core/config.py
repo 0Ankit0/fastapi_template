@@ -8,7 +8,8 @@ from urllib.parse import urlparse
 from pydantic import AnyHttpUrl, SecretStr, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-ENV_FILE_PATH = Path(__file__).resolve().parents[4] / ".env"
+BACKEND_ROOT = Path(__file__).resolve().parents[3]
+ENV_FILE_PATH = BACKEND_ROOT / ".env"
 GENERAL_SETTINGS_TABLE_NAME = "generalsetting"
 NON_RUNTIME_EDITABLE_SETTING_KEYS = frozenset(
     {

@@ -26,7 +26,6 @@ Plaintext frames (sent before the handshake completes):
     HANDSHAKE, PONG, ERROR  — never carry sensitive data.
 """
 import base64
-import hashlib
 import os
 
 from cryptography.hazmat.primitives import hashes

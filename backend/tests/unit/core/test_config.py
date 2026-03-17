@@ -1,5 +1,6 @@
-import pytest
-from src.apps.core.config import Settings, settings
+from pathlib import Path
+
+from src.apps.core.config import ENV_FILE_PATH, Settings, settings
 
 
 class TestSettings:
@@ -90,3 +91,6 @@ class TestSettings:
     def test_media_base_url_defaults_to_server_media_path(self):
         parsed = Settings(SERVER_HOST="https://api.example.com", MEDIA_URL="/uploads")
         assert parsed.media_base_url == "https://api.example.com/uploads"
+
+    def test_env_file_path_points_to_backend_env(self):
+        assert ENV_FILE_PATH == Path(__file__).resolve().parents[3] / ".env"

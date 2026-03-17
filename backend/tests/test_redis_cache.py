@@ -6,7 +6,6 @@ import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 from src.apps.core.cache import RedisCache
 from src.apps.core.dependencies import get_redis_cache, use_cache
-from src.apps.core.config import settings
 
 
 class TestRedisCacheProduction:

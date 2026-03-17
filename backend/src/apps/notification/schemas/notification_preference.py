@@ -1,7 +1,7 @@
 """Pydantic schemas for NotificationPreference."""
 from typing import Optional
 
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel
 
 
 class NotificationPreferenceRead(BaseModel):

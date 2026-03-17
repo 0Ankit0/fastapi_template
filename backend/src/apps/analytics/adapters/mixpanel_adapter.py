@@ -6,7 +6,6 @@ from typing import Any
 import httpx
 
 from src.apps.analytics.interface import AnalyticsProvider
-from src.apps.core.config import settings
 from src.apps.core.http import default_timeout, retry_async
 
 logger = logging.getLogger(__name__)

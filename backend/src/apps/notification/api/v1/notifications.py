@@ -14,7 +14,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.apps.iam.api.deps import get_current_active_superuser, get_current_user, get_db
 from src.apps.iam.models.user import User
-from src.apps.notification.models.notification import NotificationType
 from src.apps.notification.schemas.notification import (
     NotificationCreate,
     NotificationList,

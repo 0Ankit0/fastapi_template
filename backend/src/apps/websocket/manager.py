@@ -37,9 +37,7 @@ from src.apps.websocket.schemas.messages import (
     WSEncryptedFrame,
     WSErrorMessage,
     WSEventMessage,
-    WSMessageType,
     WSPresenceMessage,
-    WSRoomMessage,
     WSSystemMessage,
 )
 

@@ -1,4 +1,3 @@
-from typing import Sequence
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlmodel import select, desc, func, col
 from sqlalchemy.ext.asyncio import AsyncSession

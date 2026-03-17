@@ -1,5 +1,5 @@
 from src.apps.core.config import Settings, settings
-from src.apps.core.storage import build_media_url, extract_relative_media_path
+from src.apps.core.storage import extract_relative_media_path
 
 
 def test_build_media_url_uses_configured_media_base_url() -> None:

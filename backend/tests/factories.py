@@ -1,4 +1,3 @@
-import factory 
 from factory.faker import Faker
 from factory.base import Factory
 from datetime import datetime, timezone

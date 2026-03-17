@@ -7,8 +7,8 @@ This document explains where configuration lives, how the project chooses the ef
 ### Backend
 
 - Backend runtime settings are defined in [backend/src/apps/core/config.py](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/src/apps/core/config.py).
-- Values bootstrap from process environment and the repository-root `.env` file through `pydantic-settings`.
-- The template env files under `backend/.env` and `backend/.env.example` are reference templates for local setup and project onboarding.
+- Values bootstrap from process environment and `backend/.env` through `pydantic-settings`.
+- `backend/.env.example` is the committed template reference, while `backend/.env` is the primary local working file.
 - After the database is available, runtime setting reads can be overridden from the `generalsetting` table.
 - On startup, the backend syncs the current environment snapshot into `generalsetting.env_value`.
 - Feature flags such as `FEATURE_NOTIFICATIONS` control router registration and runtime behavior.
@@ -37,6 +37,17 @@ When the backend needs a setting, it resolves it in this order:
 
 That means the environment still defines the baseline, while the database can adjust selected runtime-safe values later.
 
+## Config Classification
+
+| Class | Stored in | Typical examples | Restart needed? |
+|---|---|---|---|
+| Bootstrap-only | `backend/.env`, deployment env, secret manager | database URLs, broker URLs, secret keys | yes |
+| Runtime-editable | env baseline plus `generalsetting` override | rate limits, observability thresholds, retry policy | sometimes |
+| Public runtime | backend allowlist and discovery APIs | `PROJECT_NAME`, `APP_ENV`, enabled features, active providers | client fetch, no rebuild when runtime-driven |
+| Secret-only | env / secret manager only | vendor credentials, signing keys, webhook secrets | yes |
+
+Runtime-editable does not always mean hot-reloadable. Anything consumed during process startup, middleware registration, worker bootstrap, or DB engine creation still requires a restart to fully apply.
+
 ### General Settings Table
 
 - Table name: `generalsetting`
@@ -56,14 +67,14 @@ That means the environment still defines the baseline, while the database can ad
 
 ### Frontend
 
-- Web configuration uses `NEXT_PUBLIC_*` variables for browser-safe values.
+- Web configuration uses `NEXT_PUBLIC_*` variables for browser-safe startup values and `frontend/.env.local` is the primary local file.
 - The frontend also fetches runtime config from `/api/v1/system/capabilities/` and `/api/v1/notifications/push/config/`.
 - The frontend should treat backend discovery APIs as the runtime source of truth for what is enabled.
 - If a value is secret or vendor-sensitive, it must stay on the backend and never be moved into `NEXT_PUBLIC_*`.
 
 ### Mobile
 
-- Flutter reads `.env` through `flutter_dotenv` for app startup values.
+- Flutter reads `mobile/.env` through `flutter_dotenv` for app startup values.
 - Mobile capability and push settings are also fetched from backend system APIs so the app can react to deployment-specific configuration.
 - Mobile now also reads `/api/v1/system/general-settings/` for a safe public subset of runtime configuration, including whether a value is currently coming from environment or database.
 
@@ -94,6 +105,7 @@ That means the environment still defines the baseline, while the database can ad
 
 1. Add or change the backend setting in `config.py`.
 2. Add the new variable to the env template used by the repo.
+   Use `backend/.env.example`, `frontend/.env.local.example`, or `mobile/.env.example` depending on the owning surface.
 3. Decide whether the key is:
    - bootstrap-only
    - runtime-editable
@@ -150,6 +162,7 @@ Examples:
 ## Common Mistakes To Avoid
 
 - Adding a setting to `config.py` but never wiring it into runtime behavior.
+- Keeping docs pointed at a different env file than the one the code actually loads.
 - Making a secret runtime-editable through `generalsetting`.
 - Exposing an operational backend-only setting to public system APIs.
 - Changing a feature flag without updating client visibility rules.

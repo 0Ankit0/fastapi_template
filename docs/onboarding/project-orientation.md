@@ -38,7 +38,7 @@ That design lets one template power different projects without each client needi
 This is the most important mental model in the project:
 
 1. A setting is defined in [config.py](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/src/apps/core/config.py).
-2. The backend loads bootstrap values from process environment and the repository-root `.env` file configured by `ENV_FILE_PATH`.
+2. The backend loads bootstrap values from process environment and `backend/.env`.
 3. During startup, the backend syncs the environment snapshot into the `generalsetting` table.
 4. For runtime-safe keys, the database can override the environment value when `use_db_value=true`.
 5. The effective settings are then used by the app, middleware, workers, services, and discovery APIs.
@@ -141,6 +141,7 @@ Only do that if the value is genuinely safe and useful in the browser or mobile 
 2. [project-orientation.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/project-orientation.md)
 3. [configuration-management.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/configuration-management.md)
 4. [modifying-the-template.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/modifying-the-template.md)
-5. [provider-configuration.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/provider-configuration.md)
+5. [template-finalization-checklist.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/template-finalization-checklist.md)
+6. [provider-configuration.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/provider-configuration.md)
 
 If you follow those in order, you should understand both how the template works today and how to change it without fighting the architecture.

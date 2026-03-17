@@ -16,6 +16,8 @@ This documentation set turns the repository into a reusable product template wit
 - `implementation/working-principles.md` explains the design rules the template follows.
 - `onboarding/configuration-management.md` explains how configuration moves through backend, web, and mobile.
 - `onboarding/modifying-the-template.md` gives a safe process for future modifications.
+- `onboarding/template-finalization-checklist.md` gives the handoff checklist for turning the starter into a real product.
+- `infrastructure/production-hardening-checklist.md` lists the deployment reviews that still belong to each downstream project.
 
 ## Key Features
 
@@ -33,9 +35,10 @@ This documentation set turns the repository into a reusable product template wit
 2. Read [onboarding/project-orientation.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/project-orientation.md).
 3. Follow [onboarding/local-setup.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/local-setup.md).
 4. Understand config flow with [onboarding/configuration-management.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/configuration-management.md).
-5. Configure providers using [onboarding/provider-configuration.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/provider-configuration.md).
-6. Choose enabled modules and environment profile from [infrastructure/environment-configuration.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/infrastructure/environment-configuration.md).
-7. Validate docs with `python3 scripts/validate_documentation.py`.
+5. Follow [onboarding/template-finalization-checklist.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/template-finalization-checklist.md) before you start deleting or renaming template features.
+6. Configure providers using [onboarding/provider-configuration.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/provider-configuration.md).
+7. Choose enabled modules and environment profile from [infrastructure/environment-configuration.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/infrastructure/environment-configuration.md).
+8. Validate docs with `python3 scripts/validate_documentation.py`.
 
 ## Documentation Status
 

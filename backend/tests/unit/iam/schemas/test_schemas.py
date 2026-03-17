@@ -4,7 +4,6 @@ from hypothesis import given, strategies as st
 
 from src.apps.iam.schemas.user import (
     UserCreate,
-    UserUpdate,
     LoginRequest,
     ChangePasswordRequest,
     ResetPasswordConfirm,
