@@ -21,6 +21,11 @@ from src.apps.iam.utils.ip_access import revoke_tokens_for_ip, get_client_ip
 from src.apps.analytics.dependencies import get_analytics
 from src.apps.analytics.service import AnalyticsService
 from src.apps.analytics.events import AuthEvents
+from src.apps.observability.service import (
+    record_failed_login_event,
+    record_successful_login_event,
+    record_token_event,
+)
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -51,13 +56,22 @@ async def login_access_token(
 
         if not user:
             login_attempt = LoginAttempt(
-                user_id=0,
+                user_id=None,
                 ip_address=ip_address,
+                attempted_username=login_data.username,
                 user_agent=user_agent,
                 success=False,
                 failure_reason="User not found"
             )
             db.add(login_attempt)
+            await db.commit()
+            await record_failed_login_event(
+                db,
+                username=login_data.username,
+                ip_address=ip_address,
+                failure_reason="User not found",
+                request=request,
+            )
             await db.commit()
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -103,11 +117,21 @@ async def login_access_token(
             login_attempt = LoginAttempt(
                 user_id=user.id,
                 ip_address=ip_address,
+                attempted_username=login_data.username,
                 user_agent=user_agent,
                 success=False,
                 failure_reason="Incorrect password"
             )
             db.add(login_attempt)
+            await db.commit()
+            await record_failed_login_event(
+                db,
+                username=login_data.username,
+                ip_address=ip_address,
+                failure_reason="Incorrect password",
+                request=request,
+                subject_user_id=user.id,
+            )
             await db.commit()
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -118,11 +142,21 @@ async def login_access_token(
             login_attempt = LoginAttempt(
                 user_id=user.id,
                 ip_address=ip_address,
+                attempted_username=login_data.username,
                 user_agent=user_agent,
                 success=False,
                 failure_reason="User account is inactive"
             )
             db.add(login_attempt)
+            await db.commit()
+            await record_failed_login_event(
+                db,
+                username=login_data.username,
+                ip_address=ip_address,
+                failure_reason="User account is inactive",
+                request=request,
+                subject_user_id=user.id,
+            )
             await db.commit()
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -142,6 +176,7 @@ async def login_access_token(
         login_attempt = LoginAttempt(
             user_id=user.id,
             ip_address=ip_address,
+            attempted_username=login_data.username,
             user_agent=user_agent,
             success=True,
             failure_reason=""
@@ -183,6 +218,22 @@ async def login_access_token(
         )
         db.add(refresh_token_tracking)
         await db.commit()
+        await record_successful_login_event(
+            db,
+            user_id=user.id,
+            ip_address=ip_address,
+            request=request,
+            method="password",
+        )
+        await record_token_event(
+            db,
+            user_id=user.id,
+            ip_address=ip_address,
+            action="issued",
+            request=request,
+            metadata={"issued_tokens": 2, "auth_method": "password"},
+        )
+        await db.commit()
 
         await analytics.capture(
             str(user.id),
@@ -210,13 +261,23 @@ async def login_access_token(
         raise
     except Exception as ex:
         login_attempt = LoginAttempt(
-            user_id=user.id if user else 0,
+            user_id=user.id if user else None,
             ip_address=ip_address,
+            attempted_username=login_data.username,
             user_agent=user_agent,
             success=False,
             failure_reason=f"Server error: {str(ex)}"
         )
         db.add(login_attempt)
+        await db.commit()
+        await record_failed_login_event(
+            db,
+            username=login_data.username,
+            ip_address=ip_address,
+            failure_reason=f"Server error: {str(ex)}",
+            request=request,
+            subject_user_id=user.id if user else None,
+        )
         await db.commit()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -268,6 +329,15 @@ async def logout(
                         token_tracking.revoked_at = datetime.now(timezone.utc)
                         token_tracking.revoke_reason = "User logout from this device"
                     
+                    await db.commit()
+                    await record_token_event(
+                        db,
+                        user_id=current_user.id,
+                        ip_address=ip_address,
+                        action="revoked",
+                        request=request,
+                        metadata={"reason": "logout", "count": len(tokens)},
+                    )
                     await db.commit()
                     # Invalidate cached token list so revoked tokens are not served from cache
                     await RedisCache.clear_pattern(f"tokens:active:{current_user.id}:*")

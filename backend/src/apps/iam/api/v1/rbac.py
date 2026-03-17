@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select, func, col
 from src.db.session import get_session
 from src.apps.iam.models import Role, Permission, User
+from src.apps.iam.api.deps import get_current_active_superuser
 from src.apps.iam.schemas.rbac import (
     RoleCreate,
     RoleResponse,
@@ -30,6 +31,7 @@ from src.apps.iam.casbin_enforcer import CasbinEnforcer
 from src.apps.iam.utils.hashid import decode_id_or_404
 from src.apps.core.schemas import PaginatedResponse
 from src.apps.core.cache import RedisCache
+from src.apps.observability.service import record_admin_role_change
 
 
 router = APIRouter()
@@ -40,9 +42,11 @@ router = APIRouter()
 @router.post("/roles", response_model=RoleResponse, status_code=status.HTTP_201_CREATED)
 async def create_role(
     role_data: RoleCreate,
+    current_user: User = Depends(get_current_active_superuser),
     session: AsyncSession = Depends(get_session),
 ):
     """Create a new role."""
+    del current_user
     role = Role(name=role_data.name, description=role_data.description)
     session.add(role)
     await session.commit()
@@ -55,9 +59,11 @@ async def create_role(
 async def list_roles(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=10, ge=1, le=100),
+    current_user: User = Depends(get_current_active_superuser),
     session: AsyncSession = Depends(get_session),
 ):
     """List all roles with pagination."""
+    del current_user
     cache_key = f"roles:list:{skip}:{limit}"
     cached = await RedisCache.get(cache_key)
     if cached:
@@ -73,8 +79,13 @@ async def list_roles(
 
 
 @router.get("/roles/{role_id}", response_model=RoleResponse)
-async def get_role(role_id: str, session: AsyncSession = Depends(get_session)):
+async def get_role(
+    role_id: str,
+    current_user: User = Depends(get_current_active_superuser),
+    session: AsyncSession = Depends(get_session),
+):
     """Get role details."""
+    del current_user
     rid = decode_id_or_404(role_id)
     cache_key = f"role:{rid}"
     cached = await RedisCache.get(cache_key)
@@ -95,9 +106,11 @@ async def get_role(role_id: str, session: AsyncSession = Depends(get_session)):
 @router.post("/permissions", response_model=PermissionResponse, status_code=status.HTTP_201_CREATED)
 async def create_permission(
     perm_data: PermissionCreate,
+    current_user: User = Depends(get_current_active_superuser),
     session: AsyncSession = Depends(get_session),
 ):
     """Create a new permission."""
+    del current_user
     permission = Permission(
         resource=perm_data.resource,
         action=perm_data.action,
@@ -114,9 +127,11 @@ async def create_permission(
 async def list_permissions(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=10, ge=1, le=100),
+    current_user: User = Depends(get_current_active_superuser),
     session: AsyncSession = Depends(get_session),
 ):
     """List all permissions with pagination."""
+    del current_user
     cache_key = f"permissions:list:{skip}:{limit}"
     cached = await RedisCache.get(cache_key)
     if cached:
@@ -136,6 +151,7 @@ async def list_permissions(
 @router.post("/users/assign-role", status_code=status.HTTP_200_OK)
 async def assign_role(
     assignment: RoleAssignment,
+    current_user: User = Depends(get_current_active_superuser),
     session: AsyncSession = Depends(get_session),
 ):
     """Assign a role to a user."""
@@ -148,12 +164,21 @@ async def assign_role(
     )
     await RedisCache.clear_pattern(f"user:{user_db_id}:roles*")
     await RedisCache.delete(f"casbin:roles:{user_db_id}")
+    await record_admin_role_change(
+        session,
+        actor_user_id=current_user.id,
+        subject_user_id=user_db_id,
+        action="assign_role",
+        metadata={"user_id": user_db_id, "role_id": role_db_id},
+    )
+    await session.commit()
     return {"message": "Role assigned to user", "user_role_id": user_role.id}
 
 
 @router.delete("/users/remove-role", status_code=status.HTTP_200_OK)
 async def remove_role(
     assignment: RoleAssignment,
+    current_user: User = Depends(get_current_active_superuser),
     session: AsyncSession = Depends(get_session),
 ):
     """Remove a role from a user."""
@@ -166,15 +191,25 @@ async def remove_role(
     )
     await RedisCache.clear_pattern(f"user:{user_db_id}:roles*")
     await RedisCache.delete(f"casbin:roles:{user_db_id}")
+    await record_admin_role_change(
+        session,
+        actor_user_id=current_user.id,
+        subject_user_id=user_db_id,
+        action="remove_role",
+        metadata={"user_id": user_db_id, "role_id": role_db_id},
+    )
+    await session.commit()
     return {"message": "Role removed from user", "success": result}
 
 
 @router.get("/users/{user_id}/roles", response_model=UserRolesResponse)
 async def get_user_roles_endpoint(
     user_id: str,
+    current_user: User = Depends(get_current_active_superuser),
     session: AsyncSession = Depends(get_session),
 ):
     """Get all roles for a user."""
+    del current_user
     uid = decode_id_or_404(user_id)
     cache_key = f"user:{uid}:roles"
     cached = await RedisCache.get(cache_key)
@@ -195,6 +230,7 @@ async def get_user_roles_endpoint(
 @router.post("/roles/assign-permission", status_code=status.HTTP_200_OK)
 async def assign_permission(
     assignment: PermissionAssignment,
+    current_user: User = Depends(get_current_active_superuser),
     session: AsyncSession = Depends(get_session),
 ):
     """Assign a permission to a role."""
@@ -206,12 +242,21 @@ async def assign_permission(
         session=session,
     )
     await RedisCache.clear_pattern(f"role:{role_db_id}:permissions*")
+    await record_admin_role_change(
+        session,
+        actor_user_id=current_user.id,
+        subject_user_id=None,
+        action="assign_permission",
+        metadata={"role_id": role_db_id, "permission_id": perm_db_id},
+    )
+    await session.commit()
     return {"message": "Permission assigned to role", "role_permission_id": role_permission.id}
 
 
 @router.delete("/roles/remove-permission", status_code=status.HTTP_200_OK)
 async def remove_permission(
     assignment: PermissionAssignment,
+    current_user: User = Depends(get_current_active_superuser),
     session: AsyncSession = Depends(get_session),
 ):
     """Remove a permission from a role."""
@@ -223,15 +268,25 @@ async def remove_permission(
         session=session,
     )
     await RedisCache.clear_pattern(f"role:{role_db_id}:permissions*")
+    await record_admin_role_change(
+        session,
+        actor_user_id=current_user.id,
+        subject_user_id=None,
+        action="remove_permission",
+        metadata={"role_id": role_db_id, "permission_id": perm_db_id},
+    )
+    await session.commit()
     return {"message": "Permission removed from role", "success": result}
 
 
 @router.get("/roles/{role_id}/permissions", response_model=RolePermissionsResponse)
 async def get_role_permissions_endpoint(
     role_id: str,
+    current_user: User = Depends(get_current_active_superuser),
     session: AsyncSession = Depends(get_session),
 ):
     """Get all permissions for a role."""
+    del current_user
     rid = decode_id_or_404(role_id)
     cache_key = f"role:{rid}:permissions"
     cached = await RedisCache.get(cache_key)
@@ -255,9 +310,11 @@ async def check_user_permission(
     resource: str,
     action: str,
     domain: str = Query(default="global", description="Domain (tenant slug or 'global')"),
+    current_user: User = Depends(get_current_active_superuser),
     session: AsyncSession = Depends(get_session),
 ):
     """Check if a user has a specific permission in a domain."""
+    del current_user
     uid = decode_id_or_404(user_id)
     cache_key = f"permission:check:{uid}:{domain}:{resource}:{action}"
     cached = await RedisCache.get(cache_key)
@@ -281,8 +338,10 @@ async def check_user_permission(
 async def get_casbin_roles(
     user_id: str,
     domain: str = Query(default="global"),
+    current_user: User = Depends(get_current_active_superuser),
 ):
     """Get roles from Casbin for a user in a domain."""
+    del current_user
     uid = decode_id_or_404(user_id)
     cache_key = f"casbin:roles:{uid}:{domain}"
     cached = await RedisCache.get(cache_key)
@@ -299,8 +358,10 @@ async def get_casbin_roles(
 async def get_casbin_permissions(
     user_id: str,
     domain: str = Query(default="global"),
+    current_user: User = Depends(get_current_active_superuser),
 ):
     """Get all permissions from Casbin for a user in a domain."""
+    del current_user
     uid = decode_id_or_404(user_id)
     cache_key = f"casbin:permissions:{uid}:{domain}"
     cached = await RedisCache.get(cache_key)
@@ -311,4 +372,3 @@ async def get_casbin_permissions(
     response = {"user_id": uid, "domain": domain, "permissions": permissions}
     await RedisCache.set(cache_key, response, ttl=300)
     return response
-

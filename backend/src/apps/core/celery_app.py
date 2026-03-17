@@ -1,5 +1,8 @@
 from celery import Celery
 from src.apps.core.config import settings
+from src.apps.core.logging import configure_logging
+
+configure_logging()
 
 celery_app = Celery(
     "fastapi_template",

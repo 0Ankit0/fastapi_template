@@ -13,7 +13,12 @@ class BaseLoginAttempt(SQLModel):
     ip_address: str = Field(
         max_length=45,
         description="IP address from which the login attempt was made"
-    )  
+    )
+    attempted_username: str = Field(
+        default="",
+        max_length=150,
+        description="Username submitted during the login attempt"
+    )
     user_agent: str = Field(
         max_length=255,
         description="User agent string from the login attempt"

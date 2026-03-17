@@ -11,6 +11,7 @@ from pydantic import ValidationError
 from jose import JWTError, jwt
 from src.apps.core.config import settings
 from src.apps.core import security
+from src.apps.core.logging import set_log_context
 from src.apps.iam.schemas.token import TokenPayload
 
 # HTTPBearer with auto_error=False so cookie fallback still works,
@@ -93,7 +94,9 @@ async def get_current_user(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="User is inactive"
         )
-    
+
+    request.state.current_user_id = user.id
+    set_log_context(user_id=user.id)
     return user
 
 async def get_current_active_superuser(

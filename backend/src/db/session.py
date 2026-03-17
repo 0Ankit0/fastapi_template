@@ -12,7 +12,7 @@ _is_sqlite = settings.DATABASE_URL.startswith("sqlite")
 
 engine = create_async_engine(
     url=settings.DATABASE_URL,
-    echo=True,
+    echo=settings.LOG_SQL_QUERIES,
     future=True,
     poolclass=NullPool if _is_sqlite else AsyncAdaptedQueuePool,
 )
@@ -27,6 +27,7 @@ async def init_db():
     import src.apps.multitenancy.models  # noqa: F401
     import src.apps.finance.models  # noqa: F401
     import src.apps.websocket.models  # noqa: F401
+    import src.apps.observability.models  # noqa: F401
 
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)

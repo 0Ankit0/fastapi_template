@@ -12,6 +12,7 @@ from src.apps.iam.models.user import User
 from src.apps.iam.models.token_tracking import TokenTracking
 from src.apps.iam.schemas.token import Token
 from src.apps.iam.utils.ip_access import revoke_tokens_for_ip, get_client_ip
+from src.apps.observability.service import record_token_event
 
 router = APIRouter()
 
@@ -119,6 +120,23 @@ async def refresh_token(
             expires_at=datetime.fromtimestamp(new_refresh_payload["exp"], tz=timezone.utc)
         )
         db.add(refresh_token_tracking)
+        await db.commit()
+        await record_token_event(
+            db,
+            user_id=user.id,
+            ip_address=ip_address,
+            action="issued",
+            request=request,
+            metadata={"issued_tokens": 2, "auth_method": "refresh"},
+        )
+        await record_token_event(
+            db,
+            user_id=user.id,
+            ip_address=ip_address,
+            action="revoked",
+            request=request,
+            metadata={"reason": "refresh_rotation"},
+        )
         await db.commit()
 
         # Old tokens revoked, new tokens saved — invalidate cached token list

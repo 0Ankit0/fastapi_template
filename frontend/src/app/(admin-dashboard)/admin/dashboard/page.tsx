@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { useListUsers } from '@/hooks/use-users';
 import { useTokens } from '@/hooks/use-tokens';
 import { useRoles } from '@/hooks/use-rbac';
+import { useObservabilitySummary } from '@/hooks/use-observability';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Activity,
@@ -12,6 +13,7 @@ import {
   CheckCircle2,
   Key,
   Shield,
+  ShieldAlert,
   UserCheck,
   UserX,
   Users,
@@ -22,6 +24,7 @@ export default function AdminDashboardPage() {
   const { data: usersData } = useListUsers({ limit: 100 });
   const { data: tokenData } = useTokens({ limit: 1 });
   const { data: rolesData } = useRoles();
+  const { data: observabilitySummary } = useObservabilitySummary();
 
   const users = usersData?.items ?? [];
   const totalUsers = usersData?.total ?? users.length;
@@ -60,6 +63,13 @@ export default function AdminDashboardPage() {
       href: '/admin/users',
       color: 'text-amber-600 bg-amber-50',
     },
+    {
+      name: 'Open Incidents',
+      value: String(observabilitySummary?.open_incidents ?? 0),
+      icon: ShieldAlert,
+      href: '/admin/security-review',
+      color: 'text-red-600 bg-red-50',
+    },
   ];
 
   const quickActions = [
@@ -78,18 +88,25 @@ export default function AdminDashboardPage() {
       color: 'text-green-600',
     },
     {
+      href: '/admin/logs',
+      icon: Activity,
+      label: 'Live Logs',
+      desc: 'Watch the persisted event stream',
+      color: 'text-blue-600',
+    },
+    {
+      href: '/admin/security-review',
+      icon: ShieldAlert,
+      label: 'Security Review',
+      desc: 'Triage suspicious activity',
+      color: 'text-red-600',
+    },
+    {
       href: '/tokens',
       icon: Key,
       label: 'Active Sessions',
       desc: 'Monitor and revoke tokens',
       color: 'text-purple-600',
-    },
-    {
-      href: '/settings',
-      icon: Activity,
-      label: 'Platform Settings',
-      desc: 'Adjust shared admin settings',
-      color: 'text-orange-600',
     },
   ];
 

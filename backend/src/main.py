@@ -11,7 +11,8 @@ from slowapi.errors import RateLimitExceeded
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from src.apps.core.config import settings
 from src.apps.core.handler import rate_limit_exceeded_handler
-from src.apps.core.middleware import SecurityHeadersMiddleware
+from src.apps.core.logging import configure_logging
+from src.apps.core.middleware import RequestContextMiddleware, SecurityHeadersMiddleware
 from src.apps.iam.api import api_router
 from src.apps.finance.api import finance_router
 from src.apps.multitenancy.api import multitenancy_router
@@ -25,6 +26,10 @@ from src.apps.analytics import init_analytics, shutdown_analytics
 from src.apps.analytics.api import router as analytics_router
 from src.apps.analytics.middleware import AnalyticsMiddleware
 from src.apps.system.api import router as system_router
+from src.apps.observability.api import router as observability_router
+from src.apps.observability.service import prune_old_log_entries
+
+configure_logging()
 
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
@@ -47,6 +52,11 @@ async def lifespan(app: FastAPI):
 
     # Analytics service (no-op when disabled)
     app.state.analytics = init_analytics()
+
+    from src.db.session import async_session_factory
+    async with async_session_factory() as session:
+        await prune_old_log_entries(session)
+        await session.commit()
 
     yield
 
@@ -86,6 +96,9 @@ app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 # Security headers middleware
 app.add_middleware(SecurityHeadersMiddleware)
 
+# Request context and persisted request logging
+app.add_middleware(RequestContextMiddleware)
+
 # Analytics request-tracking middleware
 app.add_middleware(AnalyticsMiddleware)
 
@@ -112,6 +125,7 @@ if not settings.DEBUG and not settings.TESTING:
     )
 
 app.include_router(system_router, prefix=settings.API_V1_STR)
+app.include_router(observability_router, prefix=settings.API_V1_STR)
 
 if settings.FEATURE_AUTH:
     app.include_router(api_router, prefix=settings.API_V1_STR)

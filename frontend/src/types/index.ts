@@ -8,3 +8,4 @@ export * from './payments';
 export * from './tokens';
 export * from './websocket';
 export * from './system';
+export * from './observability';

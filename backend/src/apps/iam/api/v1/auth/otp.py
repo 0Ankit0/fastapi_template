@@ -22,6 +22,11 @@ from src.apps.iam.utils.ip_access import revoke_tokens_for_ip, get_client_ip
 from src.apps.analytics.dependencies import get_analytics
 from src.apps.analytics.service import AnalyticsService
 from src.apps.analytics.events import AuthEvents
+from src.apps.observability.service import (
+    record_failed_login_event,
+    record_successful_login_event,
+    record_token_event,
+)
 
 router = APIRouter()
 
@@ -264,11 +269,21 @@ async def validate_otp_login(
             login_attempt = LoginAttempt(
                 user_id=user.id,
                 ip_address=ip_address,
+                attempted_username=user.username,
                 user_agent=user_agent,
                 success=False,
                 failure_reason="Invalid OTP code"
             )
             db.add(login_attempt)
+            await db.commit()
+            await record_failed_login_event(
+                db,
+                username=user.username,
+                ip_address=ip_address,
+                failure_reason="Invalid OTP code",
+                request=request,
+                subject_user_id=user.id,
+            )
             await db.commit()
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -279,6 +294,7 @@ async def validate_otp_login(
         login_attempt = LoginAttempt(
             user_id=user.id,
             ip_address=ip_address,
+            attempted_username=user.username,
             user_agent=user_agent,
             success=True,
             failure_reason=""
@@ -321,6 +337,22 @@ async def validate_otp_login(
         )
         db.add(refresh_token_tracking)
         await db.commit()
+        await record_successful_login_event(
+            db,
+            user_id=user.id,
+            ip_address=ip_address,
+            request=request,
+            method="otp",
+        )
+        await record_token_event(
+            db,
+            user_id=user.id,
+            ip_address=ip_address,
+            action="issued",
+            request=request,
+            metadata={"issued_tokens": 2, "auth_method": "otp"},
+        )
+        await db.commit()
 
         await analytics.capture(
             str(user.id),
@@ -351,11 +383,21 @@ async def validate_otp_login(
             login_attempt = LoginAttempt(
                 user_id=user.id,
                 ip_address=ip_address,
+                attempted_username=user.username,
                 user_agent=user_agent,
                 success=False,
                 failure_reason=f"Server error during OTP validation: {str(ex)}"
             )
             db.add(login_attempt)
+            await db.commit()
+            await record_failed_login_event(
+                db,
+                username=user.username,
+                ip_address=ip_address,
+                failure_reason=f"Server error during OTP validation: {str(ex)}",
+                request=request,
+                subject_user_id=user.id,
+            )
             await db.commit()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -3,7 +3,7 @@ User management endpoints with caching and pagination
 """
 import os
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlmodel import select, func, or_, col
@@ -19,6 +19,7 @@ from src.apps.analytics.dependencies import get_analytics
 from src.apps.analytics.service import AnalyticsService
 from src.apps.analytics.events import UserEvents
 from src.apps.iam.models.user import UserProfile
+from src.apps.observability.service import record_admin_privilege_change
 
 router = APIRouter(prefix="/users")
 
@@ -299,6 +300,7 @@ async def update_current_user(
 async def update_user(
     user_id: str,
     user_update: UserUpdate,
+    request: Request,
     current_user: User = Depends(get_current_active_superuser),
     db: AsyncSession = Depends(get_db)
 ):
@@ -330,9 +332,14 @@ async def update_user(
                 detail="Email already registered"
             )
         user.email = user_update.email
+    privilege_changes: dict[str, object] = {}
     if user_update.is_active is not None:
+        if user.is_active != user_update.is_active:
+            privilege_changes["is_active"] = {"from": user.is_active, "to": user_update.is_active}
         user.is_active = user_update.is_active
     if user_update.is_superuser is not None:
+        if user.is_superuser != user_update.is_superuser:
+            privilege_changes["is_superuser"] = {"from": user.is_superuser, "to": user_update.is_superuser}
         user.is_superuser = user_update.is_superuser
 
     profile_result = await db.execute(select(UserProfile).where(UserProfile.user_id == uid))
@@ -374,7 +381,16 @@ async def update_user(
     await RedisCache.delete(f"user:profile:{uid}")
     await RedisCache.clear_pattern("users:list:*")
     await RedisCache.clear_pattern(f"user:{uid}:*")
-    
+    if privilege_changes:
+        await record_admin_privilege_change(
+            db,
+            actor_user_id=current_user.id,
+            subject_user_id=uid,
+            changes=privilege_changes,
+            request=request,
+        )
+        await db.commit()
+
     return user
 
 

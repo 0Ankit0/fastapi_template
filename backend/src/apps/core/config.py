@@ -85,6 +85,12 @@ class Settings(BaseSettings):
 
     DEBUG: bool = True
     TESTING: bool = False
+    LOG_LEVEL: str = "INFO"
+    LOG_PERSIST_MIN_LEVEL: str = "INFO"
+    LOG_OUTPUTS: list[str] = ["console", "database", "web"]
+    LOG_FILE_PATH: str = "logs/application.log"
+    LOG_RETENTION_DAYS: int = 7
+    LOG_SQL_QUERIES: bool = False
 
     FEATURE_AUTH: bool = True
     FEATURE_MULTITENANCY: bool = True
@@ -228,6 +234,7 @@ class Settings(BaseSettings):
         "SMS_ENABLED",
         "OSM_MAPS_ENABLED",
         "GOOGLE_MAPS_ENABLED",
+        "LOG_SQL_QUERIES",
         mode="before",
     )
     @classmethod
@@ -323,6 +330,7 @@ class Settings(BaseSettings):
         "EMAIL_FALLBACK_PROVIDERS",
         "PUSH_FALLBACK_PROVIDERS",
         "SMS_FALLBACK_PROVIDERS",
+        "LOG_OUTPUTS",
         mode="before",
     )
     @classmethod

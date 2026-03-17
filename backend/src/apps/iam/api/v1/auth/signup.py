@@ -19,6 +19,7 @@ from src.apps.iam.utils.ip_access import revoke_tokens_for_ip, get_client_ip
 from src.apps.analytics.dependencies import get_analytics
 from src.apps.analytics.service import AnalyticsService
 from src.apps.analytics.events import AuthEvents
+from src.apps.observability.service import record_token_event
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -112,6 +113,15 @@ async def signup(
             expires_at=datetime.fromtimestamp(refresh_payload["exp"], tz=timezone.utc)
         )
         db.add(refresh_token_tracking)
+        await db.commit()
+        await record_token_event(
+            db,
+            user_id=new_user.id,
+            ip_address=ip_address,
+            action="issued",
+            request=request,
+            metadata={"issued_tokens": 2, "auth_method": "signup"},
+        )
         await db.commit()
 
         await analytics.identify(

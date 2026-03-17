@@ -45,3 +45,12 @@ class TestSettings:
     def test_debug_mode(self):
         """Test debug mode setting."""
         assert isinstance(settings.DEBUG, bool)
+
+    def test_logging_settings(self):
+        """Test logging defaults are configured."""
+        assert settings.LOG_LEVEL in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+        assert settings.LOG_PERSIST_MIN_LEVEL in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+        assert isinstance(settings.LOG_OUTPUTS, list)
+        assert all(output in {"console", "database", "web", "file"} for output in settings.LOG_OUTPUTS)
+        assert len(settings.LOG_FILE_PATH) > 0
+        assert settings.LOG_RETENTION_DAYS >= 1

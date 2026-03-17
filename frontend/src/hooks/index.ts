@@ -94,3 +94,12 @@ export {
 } from './use-websocket';
 
 export { useAnalytics } from './use-analytics';
+
+export {
+  useObservabilityLogs,
+  useLiveObservabilityLogs,
+  useObservabilitySummary,
+  useSecurityIncidents,
+  useSecurityIncident,
+  useUpdateSecurityIncident,
+} from './use-observability';

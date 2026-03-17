@@ -18,6 +18,7 @@ from src.apps.iam.utils.ip_access import revoke_tokens_for_ip, get_client_ip
 from src.apps.analytics.dependencies import get_analytics
 from src.apps.analytics.service import AnalyticsService
 from src.apps.analytics.events import AuthEvents
+from src.apps.observability.service import record_successful_login_event, record_token_event
 from src.apps.iam.utils.social import (
     extract_user_info,
     find_or_create_social_user,
@@ -223,6 +224,22 @@ async def social_callback(
         expires_at=datetime.fromtimestamp(refresh_payload["exp"], tz=timezone.utc),
     ))
     await db.commit()
+    await record_successful_login_event(
+        db,
+        user_id=user.id,
+        ip_address=ip_address,
+        request=request,
+        method=f"social:{provider}",
+    )
+    await record_token_event(
+        db,
+        user_id=user.id,
+        ip_address=ip_address,
+        action="issued",
+        request=request,
+        metadata={"issued_tokens": 2, "auth_method": f"social:{provider}"},
+    )
+    await db.commit()
 
     await analytics.capture(
         str(user.id),
@@ -250,4 +267,3 @@ async def social_callback(
         url=f"{frontend_callback}?access={access_token}&refresh={refresh_token}",
         status_code=302,
     )
-

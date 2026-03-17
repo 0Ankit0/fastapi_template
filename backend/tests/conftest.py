@@ -9,6 +9,7 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel
 
 from src.main import app
+from src.db import session as db_session_module
 from src.db.session import get_session
 
 # Set TESTING environment variable before importing settings
@@ -63,7 +64,16 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     # Provide a disabled (no-op) analytics service for tests
     _noop_analytics = AnalyticsService(provider=None)
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_session] = override_get_db
     app.dependency_overrides[get_analytics] = lambda: _noop_analytics
+
+    original_async_session_factory = db_session_module.async_session_factory
+    test_async_session = async_sessionmaker(
+        db_session.bind,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+    db_session_module.async_session_factory = test_async_session
     
     # Disable rate limiting for tests - handle both main limiter and route limiters
     if hasattr(app.state, 'limiter'):
@@ -101,4 +111,5 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     for limiter, was_enabled in limiters_to_restore:
         limiter.enabled = was_enabled
     
+    db_session_module.async_session_factory = original_async_session_factory
     app.dependency_overrides.clear()

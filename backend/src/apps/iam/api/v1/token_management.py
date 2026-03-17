@@ -1,5 +1,5 @@
 from typing import Sequence
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlmodel import select, desc, func, col
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone
@@ -13,6 +13,7 @@ from src.apps.core.cache import RedisCache
 from src.apps.analytics.dependencies import get_analytics
 from src.apps.analytics.service import AnalyticsService
 from src.apps.analytics.events import UserEvents
+from src.apps.observability.service import record_token_event
 
 router = APIRouter()
 
@@ -78,6 +79,7 @@ async def list_active_tokens(
 @router.post("/revoke/{token_id}")
 async def revoke_token(
     token_id: str,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     analytics: AnalyticsService = Depends(get_analytics),
@@ -111,6 +113,15 @@ async def revoke_token(
         token_tracking.revoked_at = datetime.now(timezone.utc)
         token_tracking.revoke_reason = "Revoked by user"
         await db.commit()
+        await record_token_event(
+            db,
+            user_id=current_user.id,
+            ip_address=token_tracking.ip_address,
+            action="revoked",
+            request=request,
+            metadata={"reason": "user_revoke", "token_id": token_id},
+        )
+        await db.commit()
         
         # Invalidate cache
         await RedisCache.clear_pattern(f"tokens:active:{current_user.id}:*")
@@ -134,6 +145,7 @@ async def revoke_token(
 
 @router.post("/revoke-all")
 async def revoke_all_tokens(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     analytics: AnalyticsService = Depends(get_analytics),
@@ -156,6 +168,16 @@ async def revoke_all_tokens(
             token_tracking.revoke_reason = "All tokens revoked by user"
         
         await db.commit()
+        if tokens:
+            await record_token_event(
+                db,
+                user_id=current_user.id,
+                ip_address=tokens[0].ip_address,
+                action="revoked",
+                request=request,
+                metadata={"reason": "user_revoke_all", "count": len(tokens)},
+            )
+            await db.commit()
         
         # Invalidate cache
         await RedisCache.clear_pattern(f"tokens:active:{current_user.id}:*")

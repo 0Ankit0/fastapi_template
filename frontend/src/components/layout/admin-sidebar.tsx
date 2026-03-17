@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
+  Radar,
+  ShieldAlert,
   Users,
   Shield,
   ArrowLeft,
@@ -12,6 +14,8 @@ import { OrgSwitcher } from './org-switcher';
 
 const adminNavigation = [
   { name: 'Admin Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+  { name: 'Logs', href: '/admin/logs', icon: Radar },
+  { name: 'Security Review', href: '/admin/security-review', icon: ShieldAlert },
   { name: 'Manage Users', href: '/admin/users', icon: Users },
   { name: 'Roles & Permissions', href: '/admin/rbac', icon: Shield },
 ];
