@@ -23,6 +23,7 @@ This documentation set turns the repository into a reusable product template wit
 
 - Feature-flagged modules for auth, multi-tenancy, notifications, analytics, finance, and websockets.
 - Provider-driven outbound communications for email, push, SMS, analytics, and payments.
+- Domain-aware Casbin RBAC with SQL-managed roles and permissions mirrored into runtime policy tuples.
 - Multi-device notification registry across Web Push, FCM, and OneSignal.
 - Database-backed general settings with environment fallback and migration seeding.
 - Shared backend, web, and mobile runtime capability discovery, including public general settings.
@@ -38,7 +39,8 @@ This documentation set turns the repository into a reusable product template wit
 5. Follow [onboarding/template-finalization-checklist.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/template-finalization-checklist.md) before you start deleting or renaming template features.
 6. Configure providers using [onboarding/provider-configuration.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/provider-configuration.md).
 7. Choose enabled modules and environment profile from [infrastructure/environment-configuration.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/infrastructure/environment-configuration.md).
-8. Validate docs with `python3 scripts/validate_documentation.py`.
+8. Understand authorization flow with [implementation/casbin-rbac.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/implementation/casbin-rbac.md).
+9. Validate docs with `python3 scripts/validate_documentation.py`.
 
 ## Documentation Status
 

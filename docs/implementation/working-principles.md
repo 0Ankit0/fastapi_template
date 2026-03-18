@@ -15,6 +15,7 @@
 - The system APIs expose enabled modules, active providers, fallbacks, and health status.
 - Clients adapt navigation and registration flows based on those system APIs.
 - Notification delivery respects both user preferences and provider/device readiness.
+- Push preference responses should be derived from active registered devices rather than inferred from one provider-specific field.
 
 ## Modification Rules
 

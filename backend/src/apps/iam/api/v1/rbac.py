@@ -27,7 +27,7 @@ from src.apps.iam.utils.rbac import (
     get_role_permissions,
     check_permission,
 )
-from src.apps.iam.casbin_enforcer import CasbinEnforcer
+from src.apps.iam.casbin_enforcer import CasbinEnforcer, GLOBAL_DOMAIN
 from src.apps.iam.utils.hashid import decode_id_or_404
 from src.apps.core.schemas import PaginatedResponse
 from src.apps.core.cache import RedisCache
@@ -309,7 +309,7 @@ async def check_user_permission(
     user_id: str,
     resource: str,
     action: str,
-    domain: str = Query(default="global", description="Domain (tenant slug or 'global')"),
+    domain: str = Query(default=GLOBAL_DOMAIN, description="Domain (tenant slug or 'global')"),
     current_user: User = Depends(get_current_active_superuser),
     session: AsyncSession = Depends(get_session),
 ):
@@ -337,7 +337,7 @@ async def check_user_permission(
 @router.get("/casbin/roles/{user_id}")
 async def get_casbin_roles(
     user_id: str,
-    domain: str = Query(default="global"),
+    domain: str = Query(default=GLOBAL_DOMAIN),
     current_user: User = Depends(get_current_active_superuser),
 ):
     """Get roles from Casbin for a user in a domain."""
@@ -357,7 +357,7 @@ async def get_casbin_roles(
 @router.get("/casbin/permissions/{user_id}")
 async def get_casbin_permissions(
     user_id: str,
-    domain: str = Query(default="global"),
+    domain: str = Query(default=GLOBAL_DOMAIN),
     current_user: User = Depends(get_current_active_superuser),
 ):
     """Get all permissions from Casbin for a user in a domain."""

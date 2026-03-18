@@ -2,9 +2,11 @@
 Casbin initialization utilities for FastAPI application.
 """
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
+
+from src.apps.iam.casbin_enforcer import CasbinEnforcer, GLOBAL_DOMAIN
 from src.db.session import engine
-from src.apps.iam.casbin_enforcer import CasbinEnforcer
 
 
 @asynccontextmanager
@@ -37,6 +39,10 @@ async def setup_default_roles_and_permissions(session):
     """
     Setup default roles and permissions for the application.
     Call this function after database migrations to initialize the RBAC system.
+
+    This seeds two layers at once:
+    - SQL tables for `Role`, `Permission`, and assignment joins
+    - Casbin policy rows through the RBAC utility helpers
     
     Args:
         session: AsyncSession instance
@@ -102,19 +108,19 @@ async def setup_default_roles_and_permissions(session):
     # Assign permissions to admin role (full access)
     for perm in permissions:
         assert admin_role.id is not None and perm.id is not None
-        await assign_permission_to_role(admin_role.id, perm.id, session)
+        await assign_permission_to_role(admin_role.id, perm.id, session, GLOBAL_DOMAIN)
     
     # Assign read/write permissions to editor role
     for perm in permissions:
         assert editor_role.id is not None and perm.id is not None
         if perm.action in ["read", "write"]:
-            await assign_permission_to_role(editor_role.id, perm.id, session)
+            await assign_permission_to_role(editor_role.id, perm.id, session, GLOBAL_DOMAIN)
     
     # Assign only read permissions to viewer role
     for perm in permissions:
         assert viewer_role.id is not None and perm.id is not None
         if perm.action == "read":
-            await assign_permission_to_role(viewer_role.id, perm.id, session)
+            await assign_permission_to_role(viewer_role.id, perm.id, session, GLOBAL_DOMAIN)
     
     print("Default roles and permissions created successfully!")
     print(f"- Admin role ID: {admin_role.id}")

@@ -1,10 +1,16 @@
+"""
+RBAC helpers that keep the relational catalog and the Casbin policy store aligned.
+
+The SQL tables remain the source of truth for roles, permissions, and assignments
+that admins manage through the API. Casbin stores the runtime authorization tuples
+that are used during permission checks.
+"""
+
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 from src.apps.iam.models import User, Role, UserRole, Permission, RolePermission
-from src.apps.iam.casbin_enforcer import CasbinEnforcer
-
-_GLOBAL = "global"
+from src.apps.iam.casbin_enforcer import CasbinEnforcer, GLOBAL_DOMAIN
 
 
 async def get_user_roles(user_id: int, session: AsyncSession) -> list[Role]:
@@ -31,7 +37,7 @@ async def assign_role_to_user(
     user_id: int,
     role_id: int,
     session: AsyncSession,
-    domain: str = _GLOBAL,
+    domain: str = GLOBAL_DOMAIN,
 ) -> UserRole:
     user = await session.get(User, user_id)
     if not user:
@@ -60,7 +66,7 @@ async def remove_role_from_user(
     user_id: int,
     role_id: int,
     session: AsyncSession,
-    domain: str = _GLOBAL,
+    domain: str = GLOBAL_DOMAIN,
 ) -> bool:
     user_role = (await session.execute(
         select(UserRole).where(UserRole.user_id == user_id, UserRole.role_id == role_id)
@@ -83,7 +89,7 @@ async def assign_permission_to_role(
     role_id: int,
     permission_id: int,
     session: AsyncSession,
-    domain: str = _GLOBAL,
+    domain: str = GLOBAL_DOMAIN,
 ) -> RolePermission:
     role = await session.get(Role, role_id)
     if not role:
@@ -115,7 +121,7 @@ async def remove_permission_from_role(
     role_id: int,
     permission_id: int,
     session: AsyncSession,
-    domain: str = _GLOBAL,
+    domain: str = GLOBAL_DOMAIN,
 ) -> bool:
     role_permission = (await session.execute(
         select(RolePermission).where(
@@ -143,7 +149,7 @@ async def check_permission(
     resource: str,
     action: str,
     session: AsyncSession,
-    domain: str = _GLOBAL,
+    domain: str = GLOBAL_DOMAIN,
 ) -> bool:
+    del session
     return await CasbinEnforcer.enforce(str(user_id), resource, action, domain)
-

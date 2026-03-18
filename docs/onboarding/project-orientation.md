@@ -22,6 +22,7 @@ The backend is the runtime source of truth.
 - [main.py](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/src/main.py) wires those settings into the running app by registering middleware, feature-gated routers, CORS, trusted hosts, rate limiting, and media serving.
 - [settings_store.py](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/src/apps/core/settings_store.py) syncs environment settings into the `generalsetting` table and applies database overrides for keys that are allowed to change at runtime.
 - [system/api.py](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/src/apps/system/api.py) exposes safe runtime discovery to clients.
+- [implementation/casbin-rbac.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/implementation/casbin-rbac.md) explains how SQL roles and permissions are mirrored into Casbin for runtime authorization.
 
 ### Frontend and Mobile
 
@@ -132,6 +133,7 @@ Only do that if the value is genuinely safe and useful in the browser or mobile 
 - Runtime settings store: [settings_store.py](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/src/apps/core/settings_store.py)
 - System discovery endpoints: [api.py](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/src/apps/system/api.py)
 - Communications service: [service.py](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/src/apps/communications/service.py)
+- Authorization model guide: [casbin-rbac.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/implementation/casbin-rbac.md)
 - Observability service: [service.py](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/src/apps/observability/service.py)
 - Frontend runtime hooks: [use-system.ts](/Users/ankit/Projects/Python/fastapi/fastapi_template/frontend/src/hooks/use-system.ts)
 
