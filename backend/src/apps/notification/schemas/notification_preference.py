@@ -1,7 +1,7 @@
 """Pydantic schemas for NotificationPreference."""
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class NotificationPreferenceRead(BaseModel):
@@ -13,6 +13,7 @@ class NotificationPreferenceRead(BaseModel):
     sms_enabled: bool
     push_endpoint: Optional[str] = None
     push_provider: Optional[str] = None
+    push_providers: list[str] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
 

@@ -10,15 +10,11 @@ from src.apps.notification.schemas.notification_preference import (
 )
 from src.apps.notification.services.notification import (
     get_or_create_preference,
+    get_preference_read,
+    serialize_preference,
 )
 
 router = APIRouter()
-
-
-def _preference_response(pref) -> NotificationPreferenceRead:
-    data = NotificationPreferenceRead.model_validate(pref).model_dump()
-    data["push_provider"] = "webpush" if pref.push_endpoint else None
-    return NotificationPreferenceRead.model_validate(data)
 
 
 @router.get("/preferences/", response_model=NotificationPreferenceRead)
@@ -27,8 +23,7 @@ async def get_preferences(
     db: AsyncSession = Depends(get_db),
 ) -> NotificationPreferenceRead:
     assert isinstance(current_user.id, int), "User Id can't be None"
-    pref = await get_or_create_preference(db, current_user.id)
-    return _preference_response(pref)
+    return await get_preference_read(db, current_user.id)
 
 
 @router.patch("/preferences/", response_model=NotificationPreferenceRead)
@@ -44,4 +39,4 @@ async def update_preferences(
     db.add(pref)
     await db.commit()
     await db.refresh(pref)
-    return _preference_response(pref)
+    return await serialize_preference(db, pref)

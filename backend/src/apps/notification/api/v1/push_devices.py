@@ -6,7 +6,7 @@ from src.apps.communications import get_communications_service
 from src.apps.core.config import settings
 from src.apps.iam.api.deps import get_current_user, get_db
 from src.apps.iam.models.user import User
-from src.apps.notification.models.notification_device import NotificationDeviceProvider
+from src.apps.notification.models.notification_device import NotificationDevicePlatform, NotificationDeviceProvider
 from src.apps.notification.schemas.notification_device import (
     FcmDeviceCreate,
     NotificationDeviceCreate,
@@ -24,15 +24,10 @@ from src.apps.notification.services.notification import (
     register_device,
     remove_device,
     remove_webpush_subscription,
+    serialize_preference,
 )
 
 router = APIRouter()
-
-
-def _preference_response(pref) -> NotificationPreferenceRead:
-    data = NotificationPreferenceRead.model_validate(pref).model_dump()
-    data["push_provider"] = "webpush" if pref.push_endpoint else None
-    return NotificationPreferenceRead.model_validate(data)
 
 
 def _require_push_enabled() -> None:
@@ -164,8 +159,8 @@ async def register_push_subscription(
         db,
         current_user.id,
         NotificationDeviceCreate(
-            provider="webpush",
-            platform="web",
+            provider=NotificationDeviceProvider.WEBPUSH,
+            platform=NotificationDevicePlatform.WEB,
             endpoint=data.endpoint,
             p256dh=data.p256dh,
             auth=data.auth,
@@ -176,7 +171,7 @@ async def register_push_subscription(
     db.add(pref)
     await db.commit()
     await db.refresh(pref)
-    return _preference_response(pref)
+    return await serialize_preference(db, pref)
 
 
 @router.delete("/preferences/push-subscription/", status_code=status.HTTP_204_NO_CONTENT)

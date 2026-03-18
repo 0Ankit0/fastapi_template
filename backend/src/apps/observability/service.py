@@ -190,7 +190,7 @@ async def create_or_update_incident(
     result = await db.execute(
         select(SecurityIncident).where(
             SecurityIncident.fingerprint == fingerprint,
-            SecurityIncident.status.in_(INCIDENT_ACTIVE_STATUSES),
+            col(SecurityIncident.status).in_(INCIDENT_ACTIVE_STATUSES),
         )
     )
     incident = result.scalars().first()
@@ -432,7 +432,7 @@ async def evaluate_token_churn(
             select(func.count(col(ObservabilityLogEntry.id))).where(
                 ObservabilityLogEntry.user_id == user_id,
                 ObservabilityLogEntry.ip_address == ip_address,
-                ObservabilityLogEntry.event_code.in_(("auth.token_issued", "auth.token_revoked")),
+                col(ObservabilityLogEntry.event_code).in_(("auth.token_issued", "auth.token_revoked")),
                 ObservabilityLogEntry.timestamp >= window_start,
             )
         )
@@ -693,7 +693,7 @@ async def build_log_summary(db: AsyncSession) -> dict[str, int]:
     critical_incidents = (
         await db.execute(
             select(func.count(col(SecurityIncident.id))).where(
-                SecurityIncident.status.in_(INCIDENT_ACTIVE_STATUSES),
+                col(SecurityIncident.status).in_(INCIDENT_ACTIVE_STATUSES),
                 SecurityIncident.severity == "high",
             )
         )

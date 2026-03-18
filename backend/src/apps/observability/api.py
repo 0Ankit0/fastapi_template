@@ -108,7 +108,7 @@ async def list_live_logs(
     del current_user
     query = select(ObservabilityLogEntry)
     if after_id:
-        query = query.where(ObservabilityLogEntry.id > decode_id_or_404(after_id))
+        query = query.where(col(ObservabilityLogEntry.id) > decode_id_or_404(after_id))
     if source:
         query = query.where(ObservabilityLogEntry.source == source)
     if level:

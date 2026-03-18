@@ -28,6 +28,7 @@ export interface NotificationPreference {
   sms_enabled: boolean;
   push_endpoint?: string;
   push_provider?: string | null;
+  push_providers: string[];
 }
 
 export interface NotificationPreferenceUpdate {

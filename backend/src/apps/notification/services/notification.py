@@ -15,6 +15,7 @@ from src.apps.notification.models.notification_device import (
 from src.apps.notification.models.notification_preference import NotificationPreference
 from src.apps.notification.schemas.notification import NotificationCreate, NotificationList, NotificationRead
 from src.apps.notification.schemas.notification_device import NotificationDeviceCreate
+from src.apps.notification.schemas.notification_preference import NotificationPreferenceRead
 from src.apps.notification.tasks import (
     send_notification_email_task,
     send_push_notification_task,
@@ -49,6 +50,26 @@ async def list_devices(db: AsyncSession, user_id: int) -> list[NotificationDevic
         .order_by(col(NotificationDevice.updated_at).desc())
     )
     return list(result.scalars().all())
+
+
+async def get_preference_read(
+    db: AsyncSession,
+    user_id: int,
+) -> NotificationPreferenceRead:
+    pref = await get_or_create_preference(db, user_id)
+    return await serialize_preference(db, pref)
+
+
+async def serialize_preference(
+    db: AsyncSession,
+    pref: NotificationPreference,
+) -> NotificationPreferenceRead:
+    devices = await list_devices(db, pref.user_id)
+    push_providers = sorted({device.provider.value for device in devices})
+    data = NotificationPreferenceRead.model_validate(pref).model_dump()
+    data["push_provider"] = push_providers[0] if len(push_providers) == 1 else None
+    data["push_providers"] = push_providers
+    return NotificationPreferenceRead.model_validate(data)
 
 
 async def register_device(
@@ -118,18 +139,15 @@ async def remove_webpush_subscription(db: AsyncSession, user_id: int) -> None:
 
 async def _sync_preference_push_fields(db: AsyncSession, user_id: int) -> NotificationPreference:
     pref = await get_or_create_preference(db, user_id)
-    result = await db.execute(
-        select(NotificationDevice).where(
-            NotificationDevice.user_id == user_id,
-            NotificationDevice.provider == NotificationDeviceProvider.WEBPUSH,
-            NotificationDevice.is_active == True,  # noqa: E712
-        )
+    devices = await list_devices(db, user_id)
+    webpush_device = next(
+        (device for device in devices if device.provider == NotificationDeviceProvider.WEBPUSH),
+        None,
     )
-    device = result.scalars().first()
-    pref.push_endpoint = device.endpoint if device else None
-    pref.push_p256dh = device.p256dh if device else None
-    pref.push_auth = device.auth if device else None
-    pref.push_enabled = pref.push_enabled if device else False
+    pref.push_endpoint = webpush_device.endpoint if webpush_device else None
+    pref.push_p256dh = webpush_device.p256dh if webpush_device else None
+    pref.push_auth = webpush_device.auth if webpush_device else None
+    pref.push_enabled = pref.push_enabled if devices else False
     db.add(pref)
     await db.commit()
     await db.refresh(pref)
