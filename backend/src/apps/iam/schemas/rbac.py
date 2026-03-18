@@ -125,3 +125,40 @@ class RolePermissionsResponse(BaseModel):
     def serialize_role_id(self, value: int) -> str:
         return encode_id(value)
 
+
+class RoleAssignmentResponse(BaseModel):
+    message: str
+    user_role_id: int
+
+    @field_serializer("user_role_id")
+    def serialize_user_role_id(self, value: int) -> str:
+        return encode_id(value)
+
+
+class PermissionAssignmentResponse(BaseModel):
+    message: str
+    role_permission_id: int
+
+    @field_serializer("role_permission_id")
+    def serialize_role_permission_id(self, value: int) -> str:
+        return encode_id(value)
+
+
+class CasbinRolesResponse(BaseModel):
+    user_id: int
+    domain: str
+    roles: list[str]
+
+    @field_serializer("user_id")
+    def serialize_user_id(self, value: int) -> str:
+        return encode_id(value)
+
+
+class CasbinPermissionsResponse(BaseModel):
+    user_id: int
+    domain: str
+    permissions: list[list[str]]
+
+    @field_serializer("user_id")
+    def serialize_user_id(self, value: int) -> str:
+        return encode_id(value)

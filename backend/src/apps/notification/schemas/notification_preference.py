@@ -1,7 +1,9 @@
 """Pydantic schemas for NotificationPreference."""
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
+
+from src.apps.iam.utils.hashid import encode_id
 
 
 class NotificationPreferenceRead(BaseModel):
@@ -16,6 +18,10 @@ class NotificationPreferenceRead(BaseModel):
     push_providers: list[str] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
+
+    @field_serializer("id", "user_id")
+    def serialize_ids(self, value: int) -> str:
+        return encode_id(value)
 
 
 class NotificationPreferenceUpdate(BaseModel):

@@ -5,6 +5,7 @@ from sqlmodel import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from src.apps.iam.models.user import User
+from src.apps.iam.models.role import UserRole
 from src.apps.iam.models.token_tracking import TokenTracking
 from src.db.session import get_session
 from pydantic import ValidationError
@@ -79,7 +80,12 @@ async def get_current_user(
             )
     
     result = await db.execute(
-        select(User).options(selectinload(User.profile)).where(User.id == int(token_data.sub)) # type: ignore
+        select(User)
+        .options(
+            selectinload(User.profile),
+            selectinload(User.user_roles).selectinload(UserRole.role),
+        )
+        .where(User.id == int(token_data.sub))
     )
     user = result.scalars().first()
 

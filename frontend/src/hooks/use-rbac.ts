@@ -15,6 +15,12 @@ import type {
   PaginatedResponse,
 } from '@/types';
 
+interface AuthorizationScopeOptions {
+  organizationId?: string;
+  organizationSlug?: string;
+  domain?: string;
+}
+
 export function useRoles(params?: { skip?: number; limit?: number }) {
   return useQuery({
     queryKey: ['rbac', 'roles', params],
@@ -150,14 +156,27 @@ export function useCheckPermission(
   userId: string,
   resource: string,
   action: string,
-  domain = 'global'
+  scope?: AuthorizationScopeOptions
 ) {
+  const resolvedScope = {
+    organizationId: scope?.organizationId,
+    organizationSlug: scope?.organizationSlug,
+    domain: scope?.domain,
+  };
   return useQuery({
-    queryKey: ['rbac', 'check-permission', userId, domain, resource, action],
+    queryKey: ['rbac', 'check-permission', userId, resolvedScope, resource, action],
     queryFn: async () => {
       const response = await apiClient.get<CheckPermissionResponse>(
         `/check-permission/${userId}`,
-        { params: { resource, action, domain } }
+        {
+          params: {
+            resource,
+            action,
+            organization_id: resolvedScope.organizationId,
+            organization_slug: resolvedScope.organizationSlug,
+            domain: resolvedScope.domain,
+          },
+        }
       );
       return response.data;
     },
@@ -165,13 +184,24 @@ export function useCheckPermission(
   });
 }
 
-export function useCasbinRoles(userId: string, domain = 'global') {
+export function useCasbinRoles(userId: string, scope?: AuthorizationScopeOptions) {
+  const resolvedScope = {
+    organizationId: scope?.organizationId,
+    organizationSlug: scope?.organizationSlug,
+    domain: scope?.domain,
+  };
   return useQuery({
-    queryKey: ['rbac', 'casbin-roles', userId, domain],
+    queryKey: ['rbac', 'casbin-roles', userId, resolvedScope],
     queryFn: async () => {
-      const response = await apiClient.get<{ user_id: number; domain: string; roles: string[] }>(
+      const response = await apiClient.get<{ user_id: string; domain: string; roles: string[] }>(
         `/casbin/roles/${userId}`,
-        { params: { domain } }
+        {
+          params: {
+            organization_id: resolvedScope.organizationId,
+            organization_slug: resolvedScope.organizationSlug,
+            domain: resolvedScope.domain,
+          },
+        }
       );
       return response.data;
     },
@@ -179,13 +209,24 @@ export function useCasbinRoles(userId: string, domain = 'global') {
   });
 }
 
-export function useCasbinPermissions(userId: string, domain = 'global') {
+export function useCasbinPermissions(userId: string, scope?: AuthorizationScopeOptions) {
+  const resolvedScope = {
+    organizationId: scope?.organizationId,
+    organizationSlug: scope?.organizationSlug,
+    domain: scope?.domain,
+  };
   return useQuery({
-    queryKey: ['rbac', 'casbin-permissions', userId, domain],
+    queryKey: ['rbac', 'casbin-permissions', userId, resolvedScope],
     queryFn: async () => {
-      const response = await apiClient.get<{ user_id: number; domain: string; permissions: string[][] }>(
+      const response = await apiClient.get<{ user_id: string; domain: string; permissions: string[][] }>(
         `/casbin/permissions/${userId}`,
-        { params: { domain } }
+        {
+          params: {
+            organization_id: resolvedScope.organizationId,
+            organization_slug: resolvedScope.organizationSlug,
+            domain: resolvedScope.domain,
+          },
+        }
       );
       return response.data;
     },

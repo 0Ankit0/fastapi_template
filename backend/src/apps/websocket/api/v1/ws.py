@@ -29,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.apps.core.config import settings
 from src.apps.iam.api.deps import get_current_user, get_db
 from src.apps.iam.models.user import User
+from src.apps.iam.utils.hashid import decode_id_or_404, encode_id
 from src.apps.websocket.crypto import session_key_b64
 from src.apps.websocket.deps import ws_get_current_user
 from src.apps.websocket.manager import manager
@@ -43,6 +44,7 @@ from src.apps.websocket.schemas.messages import (
     WSMessageType,
     WSPongMessage,
     WSRoomMessage,
+    WSOnlineStatusResponse,
     WSStatsResponse,
     WSTypingMessage,
 )
@@ -171,7 +173,7 @@ async def _handle_connection(
                 from src.apps.websocket.schemas.messages import WSEventMessage
                 typing_event = WSEventMessage(
                     event="typing",
-                    data={"user_id": user.id, "is_typing": msg.is_typing},
+                    data={"user_id": encode_id(user.id), "is_typing": msg.is_typing},
                     room=msg.room,
                     sender_id=user.id,
                 )
@@ -240,10 +242,14 @@ async def ws_stats(
     )
 
 
-@router.get("/online/{user_id}/")
+@router.get("/online/{user_id}/", response_model=WSOnlineStatusResponse)
 async def ws_is_online(
-    user_id: int,
+    user_id: str,
     current_user: User = Depends(get_current_user),
-) -> dict:
+) -> WSOnlineStatusResponse:
     """Check whether a specific user has an active WebSocket connection."""
-    return {"user_id": user_id, "online": manager.is_online(user_id)}
+    decoded_user_id = decode_id_or_404(user_id)
+    return WSOnlineStatusResponse(
+        user_id=decoded_user_id,
+        online=manager.is_online(decoded_user_id),
+    )

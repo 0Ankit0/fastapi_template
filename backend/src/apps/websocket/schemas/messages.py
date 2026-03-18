@@ -19,7 +19,9 @@ the per-session AES key the client must use for all subsequent frames.
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, field_serializer
+
+from src.apps.iam.utils.hashid import encode_id
 
 
 class WSMessageType(str, Enum):
@@ -153,6 +155,10 @@ class WSPresenceMessage(WSOutboundMessage):
     user_id: int
     online: bool
 
+    @field_serializer("user_id")
+    def serialize_user_id(self, value: int) -> str:
+        return encode_id(value)
+
 
 class WSSystemMessage(WSOutboundMessage):
     """Arbitrary server-initiated text notification."""
@@ -173,6 +179,12 @@ class WSEventMessage(WSOutboundMessage):
     room: Optional[str] = None      # None → personal delivery
     sender_id: Optional[int] = None
 
+    @field_serializer("sender_id")
+    def serialize_sender_id(self, value: int | None) -> str | None:
+        if value is None:
+            return None
+        return encode_id(value)
+
 
 class WSRoomMessage(WSOutboundMessage):
     """Relayed room message."""
@@ -180,6 +192,10 @@ class WSRoomMessage(WSOutboundMessage):
     room: str
     sender_id: int
     data: Any
+
+    @field_serializer("sender_id")
+    def serialize_sender_id(self, value: int) -> str:
+        return encode_id(value)
 
 
 # ──────────────────────────────────────────────────────────
@@ -190,3 +206,16 @@ class WSStatsResponse(BaseModel):
     total_connections: int
     rooms: dict[str, int]   # room_name → active member count
     users_online: list[int]  # list of user_ids currently connected
+
+    @field_serializer("users_online")
+    def serialize_users_online(self, value: list[int]) -> list[str]:
+        return [encode_id(user_id) for user_id in value]
+
+
+class WSOnlineStatusResponse(BaseModel):
+    user_id: int
+    online: bool
+
+    @field_serializer("user_id")
+    def serialize_user_id(self, value: int) -> str:
+        return encode_id(value)

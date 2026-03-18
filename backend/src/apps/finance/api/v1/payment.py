@@ -28,6 +28,7 @@ from src.apps.finance.services.khalti import KhaltiService
 from src.apps.finance.services.stripe import StripeService
 from src.apps.finance.services.paypal import PayPalService
 from src.apps.iam.api.deps import get_db
+from src.apps.iam.utils.hashid import decode_id_or_404
 from src.apps.analytics.dependencies import get_analytics
 from src.apps.analytics.service import AnalyticsService
 from src.apps.analytics.events import PaymentEvents
@@ -179,11 +180,12 @@ async def verify_payment(
 
 @router.get("/{transaction_id}/", response_model=PaymentTransactionRead)
 async def get_transaction(
-    transaction_id: int,
+    transaction_id: str,
     db: AsyncSession = Depends(get_db),
 ) -> PaymentTransactionRead:
     """Fetch a stored payment transaction by its internal ID."""
-    tx = await db.get(PaymentTransaction, transaction_id)
+    decoded_transaction_id = decode_id_or_404(transaction_id)
+    tx = await db.get(PaymentTransaction, decoded_transaction_id)
     if tx is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

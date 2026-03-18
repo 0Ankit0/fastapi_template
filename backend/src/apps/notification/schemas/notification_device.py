@@ -1,8 +1,9 @@
 from datetime import datetime
 from typing import Any, Optional
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, field_serializer, model_validator
 
+from src.apps.iam.utils.hashid import encode_id
 from src.apps.notification.models.notification_device import (
     NotificationDevicePlatform,
     NotificationDeviceProvider,
@@ -24,6 +25,10 @@ class NotificationDeviceRead(BaseModel):
     device_metadata: Optional[Any] = None
 
     model_config = {"from_attributes": True}
+
+    @field_serializer("id", "user_id")
+    def serialize_ids(self, value: int) -> str:
+        return encode_id(value)
 
 
 class NotificationDeviceCreate(BaseModel):

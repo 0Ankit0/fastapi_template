@@ -6,6 +6,7 @@ from src.apps.communications import get_communications_service
 from src.apps.core.config import settings
 from src.apps.iam.api.deps import get_current_user, get_db
 from src.apps.iam.models.user import User
+from src.apps.iam.utils.hashid import decode_id_or_404
 from src.apps.notification.models.notification_device import NotificationDevicePlatform, NotificationDeviceProvider
 from src.apps.notification.schemas.notification_device import (
     FcmDeviceCreate,
@@ -130,13 +131,13 @@ async def create_onesignal_device(
 
 @router.delete("/devices/{device_id}/", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_notification_device(
-    device_id: int,
+    device_id: str,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
     _require_push_enabled()
     assert isinstance(current_user.id, int), "User Id can't be None"
-    removed = await remove_device(db, current_user.id, device_id)
+    removed = await remove_device(db, current_user.id, decode_id_or_404(device_id))
     if not removed:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Device not found")
 

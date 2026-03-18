@@ -16,7 +16,7 @@ class CasbinEnforcer:
     `(subject, domain, object, action)`.
 
     - `subject`: usually a user id string, for example `"42"`
-    - `domain`: `"global"` for application-wide access or a tenant slug
+    - `domain`: `"global"` for application-wide access or an organization slug
     - `object`: permission resource, for example `"users"`
     - `action`: permission action, for example `"read"`
 

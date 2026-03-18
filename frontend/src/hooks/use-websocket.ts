@@ -139,16 +139,16 @@ export function useWSStats() {
 }
 
 /** Check if a specific user is online via WebSocket. */
-export function useWSIsOnline(userId: number | undefined) {
+export function useWSIsOnline(userId: string | undefined) {
   return useQuery({
     queryKey: ['ws-online', userId],
     queryFn: async () => {
-      const response = await apiClient.get<{ user_id: number; online: boolean }>(
+      const response = await apiClient.get<{ user_id: string; online: boolean }>(
         `/ws/online/${userId}/`
       );
       return response.data;
     },
-    enabled: !!userId,
+    enabled: Boolean(userId),
     refetchInterval: 15_000,
   });
 }

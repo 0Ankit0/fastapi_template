@@ -3,8 +3,8 @@
 export type NotificationType = 'info' | 'success' | 'warning' | 'error';
 
 export interface Notification {
-  id: number;
-  user_id: number;
+  id: string;
+  user_id: string;
   title: string;
   body: string;
   type: NotificationType;
@@ -20,8 +20,8 @@ export interface NotificationList {
 }
 
 export interface NotificationPreference {
-  id: number;
-  user_id: number;
+  id: string;
+  user_id: string;
   websocket_enabled: boolean;
   email_enabled: boolean;
   push_enabled: boolean;
@@ -42,7 +42,7 @@ export type NotificationDeviceProvider = 'webpush' | 'fcm' | 'onesignal';
 export type NotificationDevicePlatform = 'web' | 'android' | 'ios';
 
 export interface NotificationDevice {
-  id: number;
+  id: string;
   provider: NotificationDeviceProvider;
   platform: NotificationDevicePlatform;
   token?: string | null;

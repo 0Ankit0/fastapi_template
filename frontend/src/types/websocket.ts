@@ -8,5 +8,5 @@ export interface WebSocketMessage {
 export interface WebSocketStats {
   total_connections: number;
   rooms: Record<string, number>;
-  users_online: number[];
+  users_online: string[];
 }

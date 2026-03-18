@@ -56,14 +56,14 @@ export function useVerifyPayment() {
   });
 }
 
-export function useTransaction(transactionId: number) {
+export function useTransaction(transactionId: string) {
   return useQuery({
     queryKey: ['transactions', transactionId],
     queryFn: async () => {
       const response = await apiClient.get<PaymentTransaction>(`/payments/${transactionId}/`);
       return response.data;
     },
-    enabled: !!transactionId,
+    enabled: Boolean(transactionId),
   });
 }
 

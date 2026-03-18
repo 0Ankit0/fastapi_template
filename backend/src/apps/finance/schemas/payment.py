@@ -4,9 +4,10 @@ Includes generic schemas usable across all providers, plus provider-specific
 schemas for Khalti and eSewa.
 """
 from typing import Any, Optional
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_serializer, field_validator
 
 from src.apps.finance.models.payment import PaymentProvider, PaymentStatus
+from src.apps.iam.utils.hashid import decode_id, encode_id
 
 
 # ---------------------------------------------------------------------------
@@ -42,6 +43,10 @@ class InitiatePaymentResponse(BaseModel):
     provider_pidx: Optional[str] = None # Khalti pidx / eSewa ref
     extra: Optional[dict[str, Any]] = None  # provider-specific extras
 
+    @field_serializer("transaction_id")
+    def serialize_transaction_id(self, value: int) -> str:
+        return encode_id(value)
+
 
 class VerifyPaymentRequest(BaseModel):
     """Request body to verify / confirm a payment callback."""
@@ -53,6 +58,16 @@ class VerifyPaymentRequest(BaseModel):
     data: Optional[str] = None
     transaction_id: Optional[int] = None  # our internal transaction id
 
+    @field_validator("transaction_id", mode="before")
+    @classmethod
+    def decode_transaction_id(cls, value: int | str | None) -> int | None:
+        if isinstance(value, str):
+            decoded = decode_id(value)
+            if decoded is None:
+                raise ValueError("Invalid transaction_id")
+            return decoded
+        return value
+
 
 class VerifyPaymentResponse(BaseModel):
     """Normalised verification response from any provider."""
@@ -62,6 +77,10 @@ class VerifyPaymentResponse(BaseModel):
     amount: Optional[int] = None
     provider_transaction_id: Optional[str] = None
     extra: Optional[dict[str, Any]] = None
+
+    @field_serializer("transaction_id")
+    def serialize_transaction_id(self, value: int) -> str:
+        return encode_id(value)
 
 
 class PaymentTransactionRead(BaseModel):
@@ -80,6 +99,10 @@ class PaymentTransactionRead(BaseModel):
     failure_reason: Optional[str]
 
     model_config = {"from_attributes": True}
+
+    @field_serializer("id")
+    def serialize_id(self, value: int) -> str:
+        return encode_id(value)
 
 
 # ---------------------------------------------------------------------------

@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.apps.iam.api.deps import get_current_active_superuser, get_current_user, get_db
 from src.apps.iam.models.user import User
+from src.apps.iam.utils.hashid import decode_id_or_404
 from src.apps.notification.schemas.notification import (
     NotificationCreate,
     NotificationList,
@@ -87,13 +88,12 @@ async def mark_all_notifications_read(
     summary="Get a single notification",
 )
 async def get_notification_endpoint(
-    notification_id: int,
+    notification_id: str,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> NotificationRead:
-    
     assert isinstance(current_user.id, int),"User Id can't be None"
-    notification = await get_notification(db, notification_id, current_user.id)
+    notification = await get_notification(db, decode_id_or_404(notification_id), current_user.id)
     if not notification:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found")
     return NotificationRead.model_validate(notification)
@@ -105,14 +105,14 @@ async def get_notification_endpoint(
     summary="Mark notification as read",
 )
 async def mark_notification_read(
-    notification_id: int,
+    notification_id: str,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> NotificationRead:
     """Mark a single notification as read."""
 
     assert isinstance(current_user.id, int),"User Id can't be None"
-    notification = await mark_as_read(db, notification_id, current_user.id)
+    notification = await mark_as_read(db, decode_id_or_404(notification_id), current_user.id)
     if not notification:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found")
     return NotificationRead.model_validate(notification)
@@ -124,11 +124,11 @@ async def mark_notification_read(
     summary="Delete a notification",
 )
 async def delete_notification_endpoint(
-    notification_id: int,
+    notification_id: str,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
     """Delete a notification belonging to the current user."""
-    deleted = await delete_notification(db, notification_id, current_user.id)
+    deleted = await delete_notification(db, decode_id_or_404(notification_id), current_user.id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found")

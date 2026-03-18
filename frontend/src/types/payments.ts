@@ -16,7 +16,7 @@ export interface InitiatePaymentRequest {
 }
 
 export interface InitiatePaymentResponse {
-  transaction_id: number;
+  transaction_id: string;
   provider: PaymentProvider;
   status: PaymentStatus;
   payment_url?: string;
@@ -30,11 +30,11 @@ export interface VerifyPaymentRequest {
   oid?: string;        // eSewa legacy
   refId?: string;      // eSewa legacy
   data?: string;       // eSewa v2 base64-encoded callback data
-  transaction_id?: number;
+  transaction_id?: string;
 }
 
 export interface VerifyPaymentResponse {
-  transaction_id: number;
+  transaction_id: string;
   provider: PaymentProvider;
   status: PaymentStatus;
   amount?: number;
@@ -43,7 +43,7 @@ export interface VerifyPaymentResponse {
 }
 
 export interface PaymentTransaction {
-  id: number;
+  id: string;
   provider: PaymentProvider;
   status: PaymentStatus;
   amount: number;

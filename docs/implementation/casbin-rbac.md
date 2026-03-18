@@ -27,7 +27,7 @@ The active Casbin request model is domain-aware RBAC:
 In practical terms:
 
 - `subject` is usually the authenticated user id converted to a string.
-- `domain` is either the global namespace or a tenant slug.
+- `domain` is either the global namespace or an organization slug from the `tenant` table.
 - `object` is the permission resource such as `users`, `posts`, or `settings`.
 - `action` is the permission action such as `read`, `write`, or `delete`.
 
@@ -61,7 +61,7 @@ Those rows mean:
 
 - The `admin` role may `read` and `write` `users` in the `global` domain.
 - User `42` is an `admin` globally.
-- User `42` is also an `owner` inside the `acme-inc` tenant domain.
+- User `42` is also an `owner` inside the `acme-inc` organization domain.
 
 ## Request Flow
 
@@ -78,19 +78,19 @@ That means the SQL tables are useful for management and auditability, but the al
 
 ## Global vs Tenant Domains
 
-The constant `GLOBAL_DOMAIN = "global"` is the fallback namespace for non-tenant checks.
+The constant `GLOBAL_DOMAIN = "global"` is the fallback namespace for non-organization checks.
 
 Use the global domain when:
 
 - The permission is application-wide.
 - The resource is not tenant-scoped.
 
-Use a tenant slug when:
+Use an organization slug when:
 
-- Membership and access belong to one tenant only.
-- The same user can have different roles in different tenants.
+- Membership and access belong to one organization only.
+- The same user can have different roles in different organizations.
 
-Avoid mixing global and tenant policies for the same request unless you intentionally want both behaviors to exist.
+Avoid mixing global and organization policies for the same request unless you intentionally want both behaviors to exist.
 
 ## How To Modify It Safely
 
@@ -140,7 +140,20 @@ You must update:
 
 ### Work with tenant roles
 
-Tenant role assignments should always include the tenant slug as the domain. Reusing the global domain for tenant membership will make access bleed across tenants.
+Organization role assignments should always include the organization slug as the domain. Reusing the global domain for organization membership will make access bleed across organizations.
+
+## Catalog vs Organization Membership
+
+There are two role systems in the codebase, and they are intentionally different:
+
+- The SQL `Role`, `Permission`, `UserRole`, and `RolePermission` tables are the global RBAC catalog.
+- Organization membership lives in `TenantMember`, where `Tenant` is the organization record and `Tenant.slug` becomes the Casbin domain.
+
+That means:
+
+- Use the RBAC admin APIs for global roles and global permissions.
+- Use the multitenancy APIs for organization membership and owner/admin/member changes.
+- When a request needs an organization-scoped Casbin check, resolve the domain from the organization record instead of inventing an arbitrary string.
 
 ## Recommended Modification Rules
 

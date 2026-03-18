@@ -33,21 +33,21 @@ export function useNotifications(params?: { unread_only?: boolean; skip?: number
   });
 }
 
-export function useGetNotification(id: number) {
+export function useGetNotification(id: string) {
   return useQuery({
     queryKey: ['notifications', id],
     queryFn: async () => {
       const response = await apiClient.get<Notification>(`/notifications/${id}/`);
       return response.data;
     },
-    enabled: !!id,
+    enabled: Boolean(id),
   });
 }
 
 export function useMarkNotificationRead() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       const response = await apiClient.patch<Notification>(`/notifications/${id}/read/`);
       return response.data;
     },
@@ -73,7 +73,7 @@ export function useMarkAllNotificationsRead() {
 export function useDeleteNotification() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       await apiClient.delete(`/notifications/${id}/`);
     },
     onSuccess: () => {
@@ -87,7 +87,7 @@ export function useCreateNotification() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: {
-      user_id: number;
+      user_id: string;
       title: string;
       body: string;
       type?: string;
@@ -191,7 +191,7 @@ export function useRegisterNotificationDevice() {
 export function useRemoveNotificationDevice() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       await apiClient.delete(`/notifications/devices/${id}/`);
     },
     onSuccess: () => {

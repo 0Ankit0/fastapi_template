@@ -9,6 +9,7 @@ from sqlmodel import select, func, or_, col
 from typing import Optional
 from src.apps.iam.api.deps import get_current_user, get_current_active_superuser, get_db
 from src.apps.iam.models.user import User
+from src.apps.iam.models.role import UserRole
 from src.apps.iam.schemas.user import UserResponse, UserUpdate
 from src.apps.iam.utils.hashid import decode_id_or_404
 from src.apps.core.schemas import PaginatedResponse
@@ -22,6 +23,34 @@ from src.apps.iam.models.user import UserProfile
 from src.apps.observability.service import record_admin_privilege_change
 
 router = APIRouter(prefix="/users")
+
+
+def _serialize_user_response(user: User) -> dict[str, object]:
+    response = UserResponse.model_validate(user)
+    return {
+        "id": response.id,
+        "username": response.username,
+        "email": str(response.email),
+        "is_active": response.is_active,
+        "is_superuser": response.is_superuser,
+        "is_confirmed": response.is_confirmed,
+        "otp_enabled": response.otp_enabled,
+        "otp_verified": response.otp_verified,
+        "first_name": response.first_name,
+        "last_name": response.last_name,
+        "phone": response.phone,
+        "image_url": response.image_url,
+        "bio": response.bio,
+        "roles": response.roles,
+    }
+
+
+async def _invalidate_user_cache(user_id: int) -> None:
+    await RedisCache.delete(f"user:profile:{user_id}")
+    await RedisCache.clear_pattern(f"user:{user_id}:*")
+    await RedisCache.clear_pattern(f"casbin:roles:{user_id}:*")
+    await RedisCache.clear_pattern(f"casbin:permissions:{user_id}:*")
+    await RedisCache.clear_pattern(f"permission:check:{user_id}:*")
 
 
 @router.get("/", response_model=PaginatedResponse[UserResponse])
@@ -46,7 +75,10 @@ async def list_users(
     
     
     # Build query
-    query = select(User).options(selectinload(User.profile)) # type: ignore
+    query = select(User).options(
+        selectinload(User.profile),
+        selectinload(User.user_roles).selectinload(UserRole.role),
+    )
     count_query = select(func.count(col(User.id)))
     
     # Apply filters
@@ -81,7 +113,16 @@ async def list_users(
     )
     
     # Cache for 2 minutes (users data changes frequently)
-    await RedisCache.set(cache_key, response.model_dump(), ttl=120)
+    await RedisCache.set(
+        cache_key,
+        {
+            "items": [_serialize_user_response(user) for user in items],
+            "total": total,
+            "skip": skip,
+            "limit": limit,
+        },
+        ttl=120,
+    )
     
     return response
 
@@ -98,25 +139,9 @@ async def get_current_user_profile(
     # Try cache
     cached = await RedisCache.get(cache_key)
     if cached:
-        return UserResponse(**cached)
+        return UserResponse.model_validate(cached)
     
-    profile = current_user.profile
-    cache_data = {
-        'id': current_user.id,
-        'username': current_user.username,
-        'email': current_user.email,
-        'is_active': current_user.is_active,
-        'is_superuser': current_user.is_superuser,
-        'is_confirmed': current_user.is_confirmed,
-        'otp_enabled': current_user.otp_enabled,
-        'otp_verified': current_user.otp_verified,
-        'first_name': profile.first_name if profile else None,
-        'last_name': profile.last_name if profile else None,
-        'phone': profile.phone if profile else None,
-        'image_url': profile.image_url if profile else None,
-        'bio': profile.bio if profile else None,
-        'roles': [],
-    }
+    cache_data = _serialize_user_response(current_user)
     # Cache for 5 minutes
     await RedisCache.set(cache_key, cache_data, ttl=300)
     
@@ -174,7 +199,7 @@ async def upload_avatar(
     if current_user.profile:
         await db.refresh(current_user.profile)
 
-    await RedisCache.delete(f"user:profile:{current_user.id}")
+    await _invalidate_user_cache(current_user.id)
 
     await analytics.capture(
         str(current_user.id),
@@ -200,9 +225,14 @@ async def get_user(
     # Try cache
     cached = await RedisCache.get(cache_key)
     if cached:
-        return UserResponse(**cached)
+        return UserResponse.model_validate(cached)
     
-    result = await db.execute(select(User).options(selectinload(User.profile)).where(User.id == uid)) # type: ignore
+    result = await db.execute(
+        select(User).options(
+            selectinload(User.profile),
+            selectinload(User.user_roles).selectinload(UserRole.role),
+        ).where(User.id == uid)
+    )
     user = result.scalars().first()
     
     if not user:
@@ -211,23 +241,7 @@ async def get_user(
             detail="User not found"
         )
     
-    profile = user.profile
-    cache_data = {
-        'id': user.id,
-        'username': user.username,
-        'email': user.email,
-        'is_active': user.is_active,
-        'is_superuser': user.is_superuser,
-        'is_confirmed': user.is_confirmed,
-        'otp_enabled': user.otp_enabled,
-        'otp_verified': user.otp_verified,
-        'first_name': profile.first_name if profile else None,
-        'last_name': profile.last_name if profile else None,
-        'phone': profile.phone if profile else None,
-        'image_url': profile.image_url if profile else None,
-        'bio': profile.bio if profile else None,
-        'roles': [],
-    }
+    cache_data = _serialize_user_response(user)
     # Cache for 5 minutes
     await RedisCache.set(cache_key, cache_data, ttl=300)
     
@@ -277,7 +291,7 @@ async def update_current_user(
         await db.refresh(current_user.profile)
     
     # Invalidate caches
-    await RedisCache.delete(f"user:profile:{current_user.id}")
+    await _invalidate_user_cache(current_user.id)
     await RedisCache.clear_pattern("users:list:*")
 
     updated_fields = user_update.model_dump(exclude_unset=True)
@@ -302,7 +316,12 @@ async def update_user(
     Update user by ID (admin only)
     """
     uid = decode_id_or_404(user_id)
-    result = await db.execute(select(User).options(selectinload(User.profile)).where(User.id == uid)) # type: ignore
+    result = await db.execute(
+        select(User).options(
+            selectinload(User.profile),
+            selectinload(User.user_roles).selectinload(UserRole.role),
+        ).where(User.id == uid)
+    )
     user = result.scalars().first()
     
     if not user:
@@ -366,15 +385,17 @@ async def update_user(
         await db.refresh(profile)
         user.profile = profile
     result = await db.execute(
-        select(User).options(selectinload(User.profile)).where(User.id == uid)  # type: ignore
+        select(User).options(
+            selectinload(User.profile),
+            selectinload(User.user_roles).selectinload(UserRole.role),
+        ).where(User.id == uid)
     )
     user = result.scalars().first()
     assert user is not None
     
     # Invalidate caches
-    await RedisCache.delete(f"user:profile:{uid}")
+    await _invalidate_user_cache(uid)
     await RedisCache.clear_pattern("users:list:*")
-    await RedisCache.clear_pattern(f"user:{uid}:*")
     if privilege_changes:
         await record_admin_privilege_change(
             db,
@@ -418,10 +439,7 @@ async def delete_user(
     await db.commit()
     
     # Invalidate caches
-    await RedisCache.delete(f"user:profile:{uid}")
+    await _invalidate_user_cache(uid)
     await RedisCache.clear_pattern("users:list:*")
-    await RedisCache.clear_pattern(f"user:{uid}:*")
-    await RedisCache.delete(f"casbin:roles:{uid}")
-    await RedisCache.delete(f"casbin:permissions:{uid}")
     
     return {"message": "User deleted successfully"}

@@ -49,12 +49,12 @@ function DeviceRow({
   isPending,
 }: {
   device: {
-    id: number;
+    id: string;
     provider: string;
     platform: string;
     last_seen_at: string;
   };
-  onRemove: (id: number) => void;
+  onRemove: (id: string) => void;
   isPending: boolean;
 }) {
   return (
