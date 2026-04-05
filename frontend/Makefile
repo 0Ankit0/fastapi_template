@@ -1,4 +1,4 @@
-.PHONY: help install dev build start lint test clean docker-build docker-up docker-down
+.PHONY: help install dev build start lint lint-fix test test-coverage typecheck clean docker-build docker-up docker-down docker-logs docker-shell setup update-deps
 
 # Colors
 GREEN  := $(shell tput -Txterm setaf 2)
@@ -45,19 +45,19 @@ clean: ## Clean build artifacts
 
 # Docker commands
 docker-build: ## Build Docker image
-	docker build -t fastapi_template .
+	docker build -t fastapi_template_frontend .
 
 docker-up: ## Start all services with Docker Compose
-	docker-compose up -d
+	docker compose -f ../docker-compose.yml up -d
 
 docker-down: ## Stop all Docker Compose services
-	docker-compose down
+	docker compose -f ../docker-compose.yml down
 
 docker-logs: ## View Docker Compose logs
-	docker-compose logs -f
+	docker compose -f ../docker-compose.yml logs -f
 
 docker-shell: ## Open shell in frontend container
-	docker-compose exec frontend sh
+	docker compose -f ../docker-compose.yml exec frontend sh
 
 # Development helpers
 setup: install ## Initial project setup

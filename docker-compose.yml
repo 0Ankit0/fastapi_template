@@ -1,82 +1,135 @@
+x-backend-build: &backend-build
+  context: ./backend
+
+x-backend-env: &backend-env
+  DEBUG: "False"
+  TESTING: "False"
+  APP_ENV: production
+  POSTGRES_SERVER: db
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: postgres
+  POSTGRES_DB: template
+  DATABASE_URL: postgresql+asyncpg://postgres:postgres@db/template
+  SYNC_DATABASE_URL: postgresql://postgres:postgres@db:5432/template
+  REDIS_URL: redis://redis:6379/0
+  CELERY_BROKER_URL: redis://redis:6379/0
+  CELERY_RESULT_BACKEND: redis://redis:6379/0
+  CELERY_TASK_ALWAYS_EAGER: "False"
+  BACKEND_CORS_ORIGINS: http://localhost:3000
+  SERVER_HOST: http://localhost:8000
+  FRONTEND_URL: http://localhost:3000
+  WS_ALLOWED_ORIGINS: http://localhost:3000
+
 services:
   db:
-    image: postgres:16-alpine
+    image: docker.io/library/postgres:16-alpine
     environment:
       POSTGRES_DB: template
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d template"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
 
   redis:
-    image: redis:7-alpine
+    image: docker.io/library/redis:7-alpine
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
 
   backend:
-    build:
-      context: ./backend
-    environment:
-      DEBUG: "False"
-      TESTING: "False"
-      POSTGRES_SERVER: db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: template
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db/template
-      SYNC_DATABASE_URL: postgresql://postgres:postgres@db/template
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/0
-      BACKEND_CORS_ORIGINS: http://localhost:3000
-      SERVER_HOST: http://localhost:8000
-      FRONTEND_URL: http://localhost:3000
-    command: >
-      sh -c "uv run alembic upgrade head &&
-             uv run uvicorn src.main:app --host 0.0.0.0 --port 8000"
+    image: fastapi-template-backend:local
+    build: *backend-build
+    environment: *backend-env
+    command:
+      - /bin/sh
+      - -c
+      - alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/app/docker/healthcheck_backend.sh"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
 
   worker:
-    build:
-      context: ./backend
-    environment:
-      DEBUG: "False"
-      TESTING: "False"
-      POSTGRES_SERVER: db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: template
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db/template
-      SYNC_DATABASE_URL: postgresql://postgres:postgres@db/template
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/0
-    command: uv run celery -A src.apps.core.celery_app worker --loglevel=info
+    image: fastapi-template-backend:local
+    environment: *backend-env
+    command:
+      - celery
+      - -A
+      - src.apps.core.celery_app
+      - worker
+      - --loglevel=info
     depends_on:
-      - backend
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/app/docker/healthcheck_worker.sh"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
 
   frontend:
-    image: node:20-alpine
-    working_dir: /app
-    volumes:
-      - ./frontend:/app
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_APP_NAME: FastAPI Template
+        NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+        NEXT_PUBLIC_WS_URL: ws://localhost:8000
+        NEXT_PUBLIC_ANALYTICS_ENABLED: "false"
+        INTERNAL_API_BASE_URL: http://backend:8000
     environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      NEXT_PUBLIC_APP_NAME: FastAPI Template
       NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+      NEXT_PUBLIC_WS_URL: ws://localhost:8000
       NEXT_PUBLIC_ANALYTICS_ENABLED: "false"
-    command: sh -c "npm ci && npm run dev -- --hostname 0.0.0.0"
+      INTERNAL_API_BASE_URL: http://backend:8000
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT:-3000}:3000"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/app/docker/healthcheck.sh"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
 
 volumes:
   postgres_data:

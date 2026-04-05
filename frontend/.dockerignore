@@ -12,6 +12,17 @@ build
 .env*.local
 .env.development
 .env.test
+.github
+.husky
+.editorconfig
+.prettierignore
+.prettierrc
+Makefile
+bun.lock
+commitlint.config.js
+eslint.config.mjs
+sonar-project.properties
+vitest.config.ts
 
 # IDE
 .idea
@@ -43,4 +54,3 @@ docker-compose*
 # Misc
 README.md
 *.md
-.husky

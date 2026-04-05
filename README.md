@@ -31,3 +31,13 @@ The project is designed so that most customization starts with configuration and
 - Mobile analyze and tests: `make mobile-lint` and `make mobile-test`
 - Docs validation: `make docs`
 - Full local quality bar: `make ci`
+
+## Docker
+
+- The repo uses a single root `docker-compose.yml` as the canonical Docker entrypoint.
+- Start the full stack with `docker compose up --build`.
+- Start only infrastructure dependencies with `docker compose up -d db redis`.
+- Stop and remove the stack with `docker compose down -v`.
+- Podman is also supported with the same compose file: `podman compose config`, `podman compose up --build -d`, and `podman compose down`.
+- If a local service already uses a default port, override the published host ports with env vars such as `POSTGRES_PORT=15432`, `REDIS_PORT=16379`, `BACKEND_PORT=18000`, or `FRONTEND_PORT=13000`.
+- The backend image follows least-privilege runtime guidance: the final container runs as a dedicated non-root user, and OS package installation is avoided unless a builder-stage dependency truly requires it.
