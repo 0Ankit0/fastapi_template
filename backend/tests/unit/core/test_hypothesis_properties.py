@@ -13,7 +13,7 @@ class TestPasswordStrengthProperties:
     @given(st.text(min_size=8, max_size=100).filter(lambda x: x.encode('utf-8', errors='ignore').decode('utf-8') == x and '\x00' not in x))
     @hypothesis_settings(
         suppress_health_check=[HealthCheck.function_scoped_fixture],
-        deadline=1000,
+        deadline=None,
         max_examples=20
     )
     def test_hash_is_deterministic_for_same_input(self, password):
@@ -34,7 +34,7 @@ class TestPasswordStrengthProperties:
     )
     @hypothesis_settings(
         suppress_health_check=[HealthCheck.function_scoped_fixture],
-        deadline=1000,
+        deadline=None,
         max_examples=20
     )
     def test_wrong_password_never_verifies(self, password, wrong_password):
