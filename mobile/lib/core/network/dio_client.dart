@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../storage/secure_storage.dart';
@@ -6,6 +8,7 @@ class DioClient {
   late final Dio _dio;
   final SecureStorage _secureStorage;
   bool _isRefreshing = false;
+  Completer<String?>? _refreshCompleter;
 
   DioClient(this._secureStorage) {
     final baseUrl = dotenv.env['BASE_URL'] ?? 'http://127.0.0.1:8000/api/v1';
@@ -33,43 +36,40 @@ class DioClient {
           handler.next(options);
         },
         onError: (error, handler) async {
-          if (error.response?.statusCode == 401 && !_isRefreshing) {
+          if (error.response?.statusCode == 401) {
+            if (_isRefreshing) {
+              try {
+                final accessToken = await _refreshCompleter!.future;
+                if (accessToken == null) {
+                  handler.next(error);
+                  return;
+                }
+                final retryResponse = await _retryRequest(error.requestOptions, accessToken);
+                handler.resolve(retryResponse);
+              } catch (_) {
+                handler.next(error);
+              }
+              return;
+            }
+
             _isRefreshing = true;
+            _refreshCompleter = Completer<String?>();
             try {
-              final refreshToken = await _secureStorage.getRefreshToken();
-              if (refreshToken == null) {
-                await _secureStorage.clearTokens();
-                _isRefreshing = false;
+              final accessToken = await _refreshAccessToken();
+              _refreshCompleter?.complete(accessToken);
+              if (accessToken == null) {
                 handler.next(error);
                 return;
               }
-
-              final response = await _dio.post(
-                '/auth/refresh/?set_cookie=false',
-                data: {'refresh_token': refreshToken},
-                options: Options(
-                  headers: {'Authorization': null},
-                ),
-              );
-
-              final newAccessToken = response.data['access'] as String;
-              final newRefreshToken = response.data['refresh'] as String?;
-              await _secureStorage.saveAccessToken(newAccessToken);
-              if (newRefreshToken != null) {
-                await _secureStorage.saveRefreshToken(newRefreshToken);
-              }
-
-              _isRefreshing = false;
-
-              // Retry original request
-              final opts = error.requestOptions;
-              opts.headers['Authorization'] = 'Bearer $newAccessToken';
-              final retryResponse = await _dio.fetch(opts);
+              final retryResponse = await _retryRequest(error.requestOptions, accessToken);
               handler.resolve(retryResponse);
             } catch (e) {
-              _isRefreshing = false;
+              _refreshCompleter?.completeError(e);
               await _secureStorage.clearTokens();
               handler.next(error);
+            } finally {
+              _isRefreshing = false;
+              _refreshCompleter = null;
             }
           } else {
             handler.next(error);
@@ -77,5 +77,43 @@ class DioClient {
         },
       ),
     );
+  }
+
+  Future<String?> _refreshAccessToken() async {
+    final refreshToken = await _secureStorage.getRefreshToken();
+    if (refreshToken == null) {
+      await _secureStorage.clearTokens();
+      return null;
+    }
+
+    final response = await _dio.post(
+      '/auth/refresh/?set_cookie=false',
+      data: {'refresh_token': refreshToken},
+      options: Options(
+        headers: {'Authorization': null},
+      ),
+    );
+
+    final newAccessToken = response.data['access'] as String?;
+    final newRefreshToken = response.data['refresh'] as String?;
+    if (newAccessToken == null) {
+      await _secureStorage.clearTokens();
+      return null;
+    }
+
+    await _secureStorage.saveAccessToken(newAccessToken);
+    if (newRefreshToken != null) {
+      await _secureStorage.saveRefreshToken(newRefreshToken);
+    }
+
+    return newAccessToken;
+  }
+
+  Future<Response<dynamic>> _retryRequest(
+    RequestOptions requestOptions,
+    String accessToken,
+  ) async {
+    requestOptions.headers['Authorization'] = 'Bearer $accessToken';
+    return _dio.fetch(requestOptions);
   }
 }

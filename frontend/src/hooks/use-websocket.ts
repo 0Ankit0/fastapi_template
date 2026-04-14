@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { ensureValidAccessToken } from '@/lib/auth-session';
 import type { WebSocketStats } from '@/types';
 
 interface WebSocketMessage {
@@ -35,10 +36,10 @@ export function useWebSocket({
   const reconnectAttemptsRef = useRef(0);
   const [isConnected, setIsConnected] = useState(false);
 
-  const connect = useCallback(() => {
+  const connect = useCallback(async () => {
     if (typeof window === 'undefined' || !url) return;
 
-    const token = localStorage.getItem('access_token');
+    const token = await ensureValidAccessToken();
     if (!token) return;
 
     const wsUrl = `${url}?token=${token}`;
@@ -89,7 +90,7 @@ export function useWebSocket({
   }, []);
 
   useEffect(() => {
-    connect();
+    void connect();
     return () => disconnect();
   }, [connect, disconnect]);
 

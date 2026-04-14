@@ -5,6 +5,7 @@ import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth-store';
 import { analytics } from '@/lib/analytics';
 import { AuthEvents } from '@/lib/analytics/events';
+import { hasStoredSessionTokens } from '@/lib/auth-session';
 import type {
   LoginCredentials,
   SignupData,
@@ -65,7 +66,7 @@ export function useAuth() {
       analytics.identify(String(u.id), { email: u.email, username: u.username });
       return u;
     },
-    enabled: typeof window !== 'undefined' && !!localStorage.getItem('access_token'),
+    enabled: hasStoredSessionTokens(),
   });
 
   const logout = async () => {
@@ -215,4 +216,3 @@ export function useResendVerification() {
     },
   });
 }
-

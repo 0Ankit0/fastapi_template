@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/providers/system_provider.dart';
 import '../../../notifications/presentation/providers/notification_provider.dart';
 
-class HomeTab extends StatelessWidget {
+class HomeTab extends ConsumerWidget {
   const HomeTab({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final capabilities = ref.watch(systemCapabilitiesProvider).valueOrNull;
+    final financeEnabled = capabilities?.modules['finance'] ?? true;
+    final authEnabled = capabilities?.modules['auth'] ?? true;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Home')),
       body: ListView(
@@ -21,21 +26,34 @@ class HomeTab extends StatelessWidget {
                 ?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          _QuickAccessCard(
-            icon: Icons.payment,
-            title: 'Payments',
-            subtitle: 'Khalti · eSewa · Pay & view history',
-            color: Colors.indigo,
-            onTap: () => context.go('/home/payments'),
-          ),
-          const SizedBox(height: 8),
-          _QuickAccessCard(
-            icon: Icons.devices,
-            title: 'Active Sessions',
-            subtitle: 'View and revoke active tokens',
-            color: Colors.teal,
-            onTap: () => context.go('/home/settings/tokens'),
-          ),
+          if (financeEnabled) ...[
+            _QuickAccessCard(
+              icon: Icons.payment,
+              title: 'Payments',
+              subtitle: 'Khalti · eSewa · Pay & view history',
+              color: Colors.indigo,
+              onTap: () => context.go('/home/payments'),
+            ),
+            const SizedBox(height: 8),
+          ],
+          if (authEnabled) ...[
+            _QuickAccessCard(
+              icon: Icons.devices,
+              title: 'Active Sessions',
+              subtitle: 'View and revoke active tokens',
+              color: Colors.teal,
+              onTap: () => context.go('/home/settings/tokens'),
+            ),
+          ],
+          if (!financeEnabled && !authEnabled)
+            const Card(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  'This environment does not expose any optional quick-access modules right now.',
+                ),
+              ),
+            ),
         ],
       ),
     );

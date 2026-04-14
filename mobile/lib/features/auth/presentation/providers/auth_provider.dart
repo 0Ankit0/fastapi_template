@@ -4,6 +4,7 @@ import '../../../../core/providers/dio_provider.dart';
 import '../../../../core/storage/secure_storage.dart';
 import '../../../../core/analytics/analytics_provider.dart';
 import '../../../../core/analytics/analytics_events.dart';
+import '../../data/models/auth_response.dart';
 import '../../data/models/login_request.dart';
 import '../../data/models/register_request.dart';
 import '../../data/models/user.dart';
@@ -67,16 +68,46 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     _secureStorage = ref.watch(secureStorageProvider);
     return _restoreSession();
   }
+
   Future<AuthState> _restoreSession() async {
     try {
       final accessToken = await _secureStorage.getAccessToken();
-      if (accessToken == null) return const AuthState();
+      final refreshToken = await _secureStorage.getRefreshToken();
 
-      final user = await _authRepository.getMe();
-      return AuthState(user: user, isAuthenticated: true);
+      if (accessToken == null && refreshToken == null) {
+        return const AuthState();
+      }
+
+      if (accessToken != null) {
+        try {
+          final user = await _authRepository.getMe();
+          return AuthState(user: user, isAuthenticated: true);
+        } catch (_) {
+          // Fall back to refresh rotation below.
+        }
+      }
+
+      if (refreshToken != null) {
+        final authResponse = await _authRepository.refreshToken(refreshToken);
+        await _persistTokens(authResponse);
+        final user = await _authRepository.getMe();
+        return AuthState(user: user, isAuthenticated: true);
+      }
+
+      await _secureStorage.clearTokens();
+      return const AuthState();
     } catch (_) {
       await _secureStorage.clearTokens();
       return const AuthState();
+    }
+  }
+
+  Future<void> _persistTokens(AuthResponse authResponse) async {
+    if (authResponse.access != null) {
+      await _secureStorage.saveAccessToken(authResponse.access!);
+    }
+    if (authResponse.refresh != null) {
+      await _secureStorage.saveRefreshToken(authResponse.refresh!);
     }
   }
 
@@ -94,12 +125,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         return;
       }
 
-      if (authResponse.access != null) {
-        await _secureStorage.saveAccessToken(authResponse.access!);
-      }
-      if (authResponse.refresh != null) {
-        await _secureStorage.saveRefreshToken(authResponse.refresh!);
-      }
+      await _persistTokens(authResponse);
       final user = await _authRepository.getMe();
       state = AsyncData(AuthState(user: user, isAuthenticated: true));
       ref.read(analyticsServiceProvider).identify(user.id.toString(), {'email': user.email});
@@ -115,12 +141,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     state = const AsyncLoading();
     try {
       final authResponse = await _authRepository.validateOtp(otpCode, tempToken);
-      if (authResponse.access != null) {
-        await _secureStorage.saveAccessToken(authResponse.access!);
-      }
-      if (authResponse.refresh != null) {
-        await _secureStorage.saveRefreshToken(authResponse.refresh!);
-      }
+      await _persistTokens(authResponse);
       final user = await _authRepository.getMe();
       state = AsyncData(AuthState(user: user, isAuthenticated: true));
     } on AppException catch (e) {
@@ -136,12 +157,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       final request = RegisterRequest(
           username: username, email: email, password: password, confirmPassword: password);
       final authResponse = await _authRepository.register(request);
-      if (authResponse.access != null) {
-        await _secureStorage.saveAccessToken(authResponse.access!);
-      }
-      if (authResponse.refresh != null) {
-        await _secureStorage.saveRefreshToken(authResponse.refresh!);
-      }
+      await _persistTokens(authResponse);
       final user = await _authRepository.getMe();
       state = AsyncData(AuthState(user: user, isAuthenticated: true));
       ref.read(analyticsServiceProvider).identify(user.id.toString(), {'email': user.email});

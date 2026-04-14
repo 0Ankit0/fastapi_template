@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, Tenant } from '@/types';
+import { clearStoredAuthTokens, setStoredAuthTokens } from '@/lib/auth-session';
 
 interface AuthState {
   user: User | null;
@@ -23,19 +24,13 @@ export const useAuthStore = create<AuthState>()(
       _hasHydrated: false,
       setUser: (user) => set({ user, isAuthenticated: !!user }),
       setTokens: (access, refresh) => {
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('access_token', access);
-          localStorage.setItem('refresh_token', refresh);
-        }
+        setStoredAuthTokens(access, refresh);
       },
       setTenant: (tenant) => {
         set({ tenant });
       },
       logout: () => {
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
-        }
+        clearStoredAuthTokens();
         set({ user: null, tenant: null, isAuthenticated: false });
       },
       setHasHydrated: (state) => set({ _hasHydrated: state }),
