@@ -1,48 +1,53 @@
 # Environment Configuration
 
-| Profile | Purpose | Defaults |
-|---|---|---|
-| `local` | Fast feedback for developers | SQLite `app.db`, memory-backed Celery, optional providers disabled |
-| `staging` | Full integration verification | Managed DB/Redis, real provider sandboxes |
-| `production` | Live workloads | Hardened hosts, managed services, monitoring enabled |
+This template uses a small set of env-file entrypoints instead of forcing every downstream team to rediscover where settings belong.
 
-## Key Configuration Areas
+## Environment files by layer
+
+| File | Scope | Intended use |
+|---|---|---|
+| `backend/.env` | FastAPI runtime | Local backend development and direct process execution |
+| `frontend/.env.local` | Next.js local runtime | Local web development outside Docker |
+| `mobile/.env` | Flutter startup defaults | Mobile-safe non-secret defaults committed with the template |
+| `.env.docker.dev` | Compose development stack | Live-reload container development |
+| `.env.docker.prod` | Compose production-style stack | Immutable image deployment settings |
+
+## Development vs production-style Docker defaults
+
+| Setting area | Development | Production-style |
+|---|---|---|
+| `BACKEND_DEBUG` | `True` | `False` |
+| `BACKEND_APP_ENV` | `development` | `production` |
+| `BACKEND_SECURE_COOKIES` | `False` | `True` |
+| `BACKEND_COOKIE_SAMESITE` | `lax` | `none` |
+| `FRONTEND_NODE_ENV` | `development` | `production` |
+| Public URLs | localhost defaults | real HTTPS / WSS URLs |
+
+## Backend configuration model
+
+The backend settings model reads environment values first, then allows selected keys to be overridden from the `generalsetting` table after startup. That split matters:
+
+- **Bootstrap-only settings** must come from env or secret management:
+  - `DATABASE_URL`
+  - `SYNC_DATABASE_URL`
+  - `SECRET_KEY`
+  - provider secrets and credentials
+- **Runtime-safe settings** can be published through the general settings system.
+- **Public runtime settings** are exposed through `/api/v1/system/*` for client discovery.
+
+## Core configuration areas
 
 - App identity: `PROJECT_NAME`, `APP_ENV`, `APP_INSTANCE_NAME`, `APP_REGION`
+- Security/session settings: `SECRET_KEY`, `PASSWORD_PEPPER`, cookie settings, auth expiry values
 - Feature flags: `FEATURE_*`
-- Communications: `EMAIL_PROVIDER`, `PUSH_PROVIDER`, `SMS_PROVIDER`, fallbacks
-- Analytics: `ANALYTICS_PROVIDER`, provider credentials
-- Payments: provider-specific enablement and secrets
-- Runtime: database, Redis, Celery, CORS, trusted hosts, cookies, media, frontend URLs
-- Operations: logging, suspicious-activity thresholds, rate limits, timeout/retry policy, websocket heartbeat/origin settings
+- Provider selection: email, push, SMS, analytics, maps, payments, social auth
+- Runtime connectivity: database, Redis, Celery, frontend/backend URLs, websocket origins
+- Operational controls: rate limits, log outputs, retry/timeouts, storage, worker behavior
 
-## Database Naming Convention
+## Recommended workflow for downstream teams
 
-- The default logical database name is `app`.
-- In local SQLite mode, this resolves to:
-  - `DATABASE_URL=sqlite+aiosqlite:///./app.db`
-  - `SYNC_DATABASE_URL=sqlite:///./app.db`
-- In non-debug relational deployments, `POSTGRES_DB=app` is the default unless an environment overrides it explicitly.
-
-## Runtime Override Rules
-
-- The backend starts from environment values first.
-- After the database connection is available, the `generalsetting` table can override runtime-safe keys.
-- Bootstrap-only keys such as `DATABASE_URL` and `SYNC_DATABASE_URL` are intentionally excluded from runtime DB override.
-- Startup-sensitive values may still require an application restart even when a database override exists.
-
-## Startup-Sensitive Groups
-
-These values are the most likely to require process restart even if they are runtime-editable:
-
-- middleware and ingress behavior: trusted hosts, proxy trust, CORS, cookies
-- worker bootstrap: Celery eager mode, broker wiring, default queue
-- database engine behavior: pool size, overflow, timeout, recycle
-- storage and filesystem mounting behavior
-- websocket process-level heartbeat and idle handling
-
-## Recommended Mental Model
-
-- Environment/profile selection decides the baseline shape of a deployment.
-- Runtime-safe DB overrides fine-tune behavior after the app is running.
-- Public system APIs are for client-safe discovery only, not for leaking private operational state.
+1. Start from the provided example files.
+2. Set public URLs and secrets first.
+3. Decide which feature flags are truly enabled for the project.
+4. Confirm the system discovery endpoints match those choices.
+5. Only then begin deleting modules, routes, or UI surfaces from the template.

@@ -1,50 +1,45 @@
 # FastAPI Template Documentation
 
-This documentation set turns the repository into a reusable product template with configurable modules, pluggable providers, and deployment-ready operating guidance.
-
-## Documentation Structure
-
-- `requirements/` defines scope, personas, and success criteria.
-- `analysis/` captures domain rules, workflows, actors, and events.
-- `high-level-design/` explains the architecture and major runtime flows.
-- `detailed-design/` drills into API contracts, components, and data models.
-- `infrastructure/` describes environments, networking, deployment, and CI/CD.
-- `edge-cases/` records template-specific failure modes and operational concerns.
-- `implementation/` gives build, rollout, and testing playbooks.
-- `onboarding/` helps teams bootstrap a fresh project from the template.
-- `onboarding/project-orientation.md` explains how the whole project fits together before you start changing it.
-- `implementation/working-principles.md` explains the design rules the template follows.
-- `onboarding/configuration-management.md` explains how configuration moves through backend, web, and mobile.
-- `onboarding/modifying-the-template.md` gives a safe process for future modifications.
-- `onboarding/template-finalization-checklist.md` gives the handoff checklist for turning the starter into a real product.
-- `infrastructure/production-hardening-checklist.md` lists the deployment reviews that still belong to each downstream project.
-
-## Key Features
-
-- Feature-flagged modules for auth, multi-tenancy, notifications, analytics, finance, and websockets.
-- Provider-driven outbound communications for email, push, SMS, analytics, and payments.
-- Domain-aware Casbin RBAC with SQL-managed roles and permissions mirrored into runtime policy tuples.
-- Multi-device notification registry across Web Push, FCM, and OneSignal.
-- Database-backed general settings with environment fallback and migration seeding.
-- Shared backend, web, and mobile runtime capability discovery, including public general settings.
-- Centralized operational configuration for logging, observability, rate limits, storage, Celery, cookies, hosts, and websocket behavior.
-- CI, environment, and release documentation for reuse across future projects.
+This documentation set is the handoff surface for downstream teams adopting the template. It covers what is built, how the modules fit together, how configuration flows through the stack, and how to change or deploy the starter safely.
 
 ## Getting Started
 
-1. Read [requirements/requirements.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/requirements/requirements.md).
-2. Read [onboarding/project-orientation.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/project-orientation.md).
-3. Follow [onboarding/local-setup.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/local-setup.md).
-4. Understand config flow with [onboarding/configuration-management.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/configuration-management.md).
-5. Follow [onboarding/template-finalization-checklist.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/template-finalization-checklist.md) before you start deleting or renaming template features.
-6. Configure providers using [onboarding/provider-configuration.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/provider-configuration.md).
-7. Choose enabled modules and environment profile from [infrastructure/environment-configuration.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/infrastructure/environment-configuration.md).
-8. Understand authorization flow with [implementation/casbin-rbac.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/implementation/casbin-rbac.md).
-9. Validate docs with `python3 scripts/validate_documentation.py`.
+1. [requirements/requirements.md](../docs/requirements/requirements.md)
+2. [onboarding/project-orientation.md](../docs/onboarding/project-orientation.md)
+3. [onboarding/local-setup.md](../docs/onboarding/local-setup.md)
+4. [infrastructure/environment-configuration.md](../docs/infrastructure/environment-configuration.md)
+5. [onboarding/deployment.md](../docs/onboarding/deployment.md)
+6. [onboarding/modifying-the-template.md](../docs/onboarding/modifying-the-template.md)
+7. [onboarding/template-finalization-checklist.md](../docs/onboarding/template-finalization-checklist.md)
+
+## Documentation Structure
+
+- `requirements/`: scope, personas, expectations, and success criteria.
+- `analysis/`: workflows, actors, data/event modeling, and domain notes.
+- `high-level-design/`: system boundaries and runtime architecture.
+- `detailed-design/`: API contracts, models, and implementation detail.
+- `implementation/`: operational playbooks such as RBAC and rollout notes.
+- `infrastructure/`: environments, runtime settings, and production hardening.
+- `edge-cases/`: failure modes and template-specific operational concerns.
+- `onboarding/`: local setup, deployment, extension guidance, and template handoff.
+
+## Key Features
+
+- Feature-gated backend modules with runtime capability discovery for both clients.
+- Automatic refresh-token session recovery across the web and mobile apps.
+- Development and production-style Docker env templates with a shared Compose base.
+- Versioned mobile startup defaults so Flutter tooling works from a fresh clone.
+- Portable markdown links and a docs structure aimed at downstream project teams.
+
+## What changed to make the template reusable
+
+- Backend auth flows now issue a complete access/refresh token pair consistently in both JSON and cookie modes.
+- Web and mobile clients both restore sessions automatically through refresh-token rotation.
+- Docker now has explicit development and production-style environment templates.
+- Mobile ships with safe versioned startup defaults so a fresh checkout can analyze and test without hidden manual setup.
+- Documentation links are portable and no longer tied to a machine-specific path.
 
 ## Documentation Status
 
-- Phase coverage: requirements, analysis, design, infrastructure, edge cases, implementation, onboarding.
-- Diagram coverage: Mermaid-based system, process, architecture, and deployment views.
-- Validation coverage: enforced by `scripts/validate_documentation.py`.
-- Current status: template docs aligned with the Project-Ideas structure and extended for provider-driven runtime configuration, database-backed settings overrides, and operational configuration guidance.
+- Docs structure/content validation: `python3 scripts/validate_documentation.py`
+- Full local quality bar from repo root: `make ci`

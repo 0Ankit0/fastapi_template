@@ -4,7 +4,7 @@ Use this checklist when you are turning the starter into a real downstream proje
 
 ## Before You Rename Anything
 
-1. Read [project-orientation.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/project-orientation.md), [configuration-management.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/configuration-management.md), and [modifying-the-template.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/modifying-the-template.md).
+1. Read [project-orientation.md](../../docs/onboarding/project-orientation.md), [configuration-management.md](../../docs/onboarding/configuration-management.md), and [modifying-the-template.md](../../docs/onboarding/modifying-the-template.md).
 2. Run `make setup` so every app surface has a local env file.
 3. Run `make infra-up` and `make backend-migrate` once to confirm the baseline template boots cleanly before you customize it.
 4. Capture the initial health of the starter with `make health-check` and `make ci`.
@@ -13,7 +13,7 @@ Use this checklist when you are turning the starter into a real downstream proje
 
 - Change `PROJECT_NAME`, `APP_INSTANCE_NAME`, and any product-facing names in backend, frontend, mobile, and docs.
 - Review package/app identifiers in `frontend/package.json`, Flutter metadata, and deployment manifests.
-- Update branded copy in the top-level [README.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/README.md) and docs index.
+- Update branded copy in the top-level [README.md](../../README.md) and docs index.
 
 ## Module Review
 
@@ -38,7 +38,7 @@ Use this quick classification rule:
 | Public runtime | backend allowlist and discovery APIs | browser/mobile-safe values |
 | Secret-only | env / secret manager only | credentials, signing keys, webhook secrets |
 
-- Review [backend/.env.example](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/.env.example) group by group.
+- Review [backend/.env.example](../../backend/.env.example) group by group.
 - Confirm which settings are startup-sensitive and require restart even if they are runtime-editable.
 - Trim any public general settings your project does not actually need clients to consume.
 
@@ -50,6 +50,6 @@ Use this quick classification rule:
 
 ## Production Readiness Review
 
-- Review [production-hardening-checklist.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/infrastructure/production-hardening-checklist.md).
+- Review [production-hardening-checklist.md](../../docs/infrastructure/production-hardening-checklist.md).
 - Revisit rate limits, suspicious-activity thresholds, and cookie settings for your real traffic profile.
 - Verify host/proxy trust, webhook validation, and provider callback URLs in staging before production.

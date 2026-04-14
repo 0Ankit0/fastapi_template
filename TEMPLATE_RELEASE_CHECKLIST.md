@@ -4,10 +4,10 @@ Use this checklist when you are turning the boilerplate into a real project and 
 
 ## Identity
 
-- Rename `PROJECT_NAME` and `APP_INSTANCE_NAME` in [backend/.env.example](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/.env.example).
-- Set `NEXT_PUBLIC_APP_NAME` in [frontend/.env.local.example](/Users/ankit/Projects/Python/fastapi/fastapi_template/frontend/.env.local.example).
-- Set `PROJECT_NAME` in [mobile/.env.example](/Users/ankit/Projects/Python/fastapi/fastapi_template/mobile/.env.example).
-- Review package and app identifiers in [backend/pyproject.toml](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/pyproject.toml), [frontend/package.json](/Users/ankit/Projects/Python/fastapi/fastapi_template/frontend/package.json), and [mobile/pubspec.yaml](/Users/ankit/Projects/Python/fastapi/fastapi_template/mobile/pubspec.yaml).
+- Rename `PROJECT_NAME` and `APP_INSTANCE_NAME` in [backend/.env.example](./backend/.env.example).
+- Set `NEXT_PUBLIC_APP_NAME` in [frontend/.env.local.example](./frontend/.env.local.example).
+- Set `PROJECT_NAME` in [mobile/.env.example](./mobile/.env.example).
+- Review package and app identifiers in [backend/pyproject.toml](./backend/pyproject.toml), [frontend/package.json](./frontend/package.json), and [mobile/pubspec.yaml](./mobile/pubspec.yaml).
 
 ## Product Shape
 
@@ -31,6 +31,6 @@ Use this checklist when you are turning the boilerplate into a real project and 
 
 ## Reading Path
 
-- Read [docs/onboarding/project-orientation.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/project-orientation.md)
-- Read [docs/onboarding/template-finalization-checklist.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/template-finalization-checklist.md)
-- Read [docs/infrastructure/production-hardening-checklist.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/infrastructure/production-hardening-checklist.md)
+- Read [docs/onboarding/project-orientation.md](./docs/onboarding/project-orientation.md)
+- Read [docs/onboarding/template-finalization-checklist.md](./docs/onboarding/template-finalization-checklist.md)
+- Read [docs/infrastructure/production-hardening-checklist.md](./docs/infrastructure/production-hardening-checklist.md)

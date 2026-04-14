@@ -1,43 +1,98 @@
 # FastAPI Template
 
-A reusable full-stack template with FastAPI, Next.js, and Flutter, built around feature flags, pluggable providers, and reusable project documentation.
+Reusable full-stack starter built around **FastAPI**, **Next.js**, and **Flutter** with feature-gated modules, provider discovery, automatic token refresh, and deployment-ready Docker defaults.
 
-The project is designed so that most customization starts with configuration and capability discovery, not code forks. The backend is the source of truth for enabled modules, active providers, public runtime settings, and operational behavior.
+## What the template gives you
 
-## What It Includes
+- Backend feature flags for auth, multitenancy, notifications, websockets, finance, analytics, maps, and social auth.
+- Runtime capability discovery so web and mobile clients can adapt to enabled modules and active providers.
+- Rotating access/refresh token sessions across backend, web, and mobile clients.
+- Provider-driven integrations for email, push, SMS, analytics, and payments.
+- Local-first developer tooling plus Docker workflows for both development and production-style deployments.
+- A structured `docs/` system for onboarding, operations, architecture, and template customization.
 
-- Config-driven modules for auth, multi-tenancy, notifications, websockets, finance, analytics, and social auth.
-- Communications provider switching for email, push, and SMS.
-- Runtime discovery APIs for clients and operators.
-- Database-backed runtime settings overrides for safe operational config.
-- Centralized operational config for cookies, hosts, rate limits, logging, observability, storage, Celery, and websocket behavior.
-- Web and mobile clients that adapt to enabled modules and configured providers.
-- A full `docs/` system modeled on the Project-Ideas documentation structure.
+## Stack at a glance
 
-## Quick Start
+| Layer | Technology | Notes |
+|---|---|---|
+| API | FastAPI + SQLModel + Alembic | Feature-gated routers, runtime settings, Celery, Redis, websockets |
+| Web | Next.js 16 + React Query + Zustand | Adaptive dashboard UI, protected routes, proactive token refresh |
+| Mobile | Flutter + Riverpod + Dio | Native auth/session handling, provider-driven notifications |
+| Infra | Postgres + Redis + Docker Compose | Shared local/dev/prod container entrypoints |
 
-1. Review [docs/README.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/README.md).
-2. Run `make setup`.
-3. Read [project-orientation.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/project-orientation.md), [configuration-management.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/configuration-management.md), [template-finalization-checklist.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/template-finalization-checklist.md), and [TEMPLATE_RELEASE_CHECKLIST.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/TEMPLATE_RELEASE_CHECKLIST.md).
-4. Start local dependencies with `make infra-up`.
-5. Run migrations with `make backend-migrate`.
-6. Start the apps with `make backend-dev`, `make frontend-dev`, and `make mobile-dev`.
-7. Verify the starter with `make health-check` and `make ci`.
+## Quick start
 
-## Validation
+1. Run `make setup`.
+2. Review the generated env files:
+   - `backend/.env`
+   - `frontend/.env.local`
+   - `mobile/.env`
+   - `.env.docker.dev`
+   - `.env.docker.prod`
+3. Start infrastructure with `make infra-up`.
+4. Run migrations with `make backend-migrate`.
+5. Start the apps:
+   - `make backend-dev`
+   - `make frontend-dev`
+   - `make mobile-dev`
+6. Validate the template with `make ci`.
 
-- Backend lint and tests: `make backend-lint` and `make backend-test`
-- Frontend lint, typecheck, tests, and build: `make frontend-lint` and `make frontend-test`
-- Mobile analyze and tests: `make mobile-lint` and `make mobile-test`
+## Auth session flow
+
+- The backend now issues a complete **access + refresh** token pair in every login/signup/OTP/social flow, including cookie mode.
+- The web client refreshes expired access tokens automatically before protected API requests and reuses the rotated token pair across the app.
+- The mobile client restores sessions from refresh tokens on startup and queues concurrent refresh attempts so expired sessions recover cleanly.
+
+## Docker workflows
+
+### Development
+
+```bash
+docker compose --env-file .env.docker.dev -f docker-compose.yml -f docker-compose.dev.yml up --build
+```
+
+### Production-style
+
+```bash
+docker compose --env-file .env.docker.prod -f docker-compose.yml up --build -d
+```
+
+### Convenience targets
+
+- `make docker-dev-up`
+- `make docker-dev-down`
+- `make docker-prod-up`
+- `make docker-prod-down`
+
+Podman is also supported:
+
+```bash
+podman compose --env-file .env.docker.dev -f docker-compose.yml -f docker-compose.dev.yml config
+```
+
+## Validation commands
+
+- Backend lint/tests: `make backend-lint` and `make backend-test`
+- Frontend lint/typecheck/tests/build: `make frontend-lint` and `make frontend-test`
+- Mobile analyze/tests: `make mobile-lint` and `make mobile-test`
 - Docs validation: `make docs`
 - Full local quality bar: `make ci`
 
-## Docker
+## Repository layout
 
-- The repo uses a single root `docker-compose.yml` as the canonical Docker entrypoint.
-- Start the full stack with `docker compose up --build`.
-- Start only infrastructure dependencies with `docker compose up -d db redis`.
-- Stop and remove the stack with `docker compose down -v`.
-- Podman is also supported with the same compose file: `podman compose config`, `podman compose up --build -d`, and `podman compose down`.
-- If a local service already uses a default port, override the published host ports with env vars such as `POSTGRES_PORT=15432`, `REDIS_PORT=16379`, `BACKEND_PORT=18000`, or `FRONTEND_PORT=13000`.
-- The backend image follows least-privilege runtime guidance: the final container runs as a dedicated non-root user, and OS package installation is avoided unless a builder-stage dependency truly requires it.
+```text
+backend/   FastAPI app, database models, feature modules, Alembic migrations
+frontend/  Next.js app, auth/session UX, dashboard pages, runtime-aware components
+mobile/    Flutter app, native auth/session flows, notifications, profile/settings
+docs/      Requirements, architecture, onboarding, deployment, and operations guides
+scripts/   Bootstrap, env-copy, health, and docs validation helpers
+```
+
+## Start here in the docs
+
+- [Documentation index](./docs/README.md)
+- [Local setup](./docs/onboarding/local-setup.md)
+- [Project orientation](./docs/onboarding/project-orientation.md)
+- [Environment configuration](./docs/infrastructure/environment-configuration.md)
+- [Deployment guide](./docs/onboarding/deployment.md)
+- [Template finalization checklist](./docs/onboarding/template-finalization-checklist.md)

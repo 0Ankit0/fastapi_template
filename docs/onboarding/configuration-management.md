@@ -6,7 +6,7 @@ This document explains where configuration lives, how the project chooses the ef
 
 ### Backend
 
-- Backend runtime settings are defined in [backend/src/apps/core/config.py](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/src/apps/core/config.py).
+- Backend runtime settings are defined in [backend/src/apps/core/config.py](../../backend/src/apps/core/config.py).
 - Values bootstrap from process environment and `backend/.env` through `pydantic-settings`.
 - `backend/.env.example` is the committed template reference, while `backend/.env` is the primary local working file.
 - After the database is available, runtime setting reads can be overridden from the `generalsetting` table.
@@ -82,7 +82,7 @@ Runtime-editable does not always mean hot-reloadable. Anything consumed during p
 
 ### Feature flags
 
-- Feature flags primarily change router registration in [main.py](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/src/main.py).
+- Feature flags primarily change router registration in [main.py](../../backend/src/main.py).
 - Clients should read capability discovery APIs and adapt their navigation or flows accordingly.
 
 ### Providers

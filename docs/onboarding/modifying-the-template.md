@@ -1,6 +1,6 @@
 # Modifying the Template
 
-Use this document when you already understand the project structure and want a safe pattern for changing it. If you are new to the repo, read [project-orientation.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/onboarding/project-orientation.md) first.
+Use this document when you already understand the project structure and want a safe pattern for changing it. If you are new to the repo, read [project-orientation.md](../../docs/onboarding/project-orientation.md) first.
 
 ## Safe Modification Workflow
 
@@ -52,8 +52,8 @@ Use this document when you already understand the project structure and want a s
 
 ### Move From Local To Staging Or Production
 
-- Start with the profile guidance in [environment-configuration.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/infrastructure/environment-configuration.md).
-- Review the hardening steps in [production-hardening-checklist.md](/Users/ankit/Projects/Python/fastapi/fastapi_template/docs/infrastructure/production-hardening-checklist.md).
+- Start with the profile guidance in [environment-configuration.md](../../docs/infrastructure/environment-configuration.md).
+- Review the hardening steps in [production-hardening-checklist.md](../../docs/infrastructure/production-hardening-checklist.md).
 - Replace local-friendly proxy, cookie, and provider defaults with environment-specific values.
 - Re-run `make ci` and `make health-check` after the environment is deployed.
 
@@ -65,12 +65,12 @@ Use this document when you already understand the project structure and want a s
 
 ## Files You Usually Touch
 
-- Backend settings: [config.py](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/src/apps/core/config.py)
-- Backend app wiring: [main.py](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/src/main.py)
-- Runtime override flow: [settings_store.py](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/src/apps/core/settings_store.py)
-- System discovery APIs: [api.py](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/src/apps/system/api.py)
-- Web runtime hooks: [use-system.ts](/Users/ankit/Projects/Python/fastapi/fastapi_template/frontend/src/hooks/use-system.ts)
-- Mobile runtime bootstrap: [notification_bootstrapper.dart](/Users/ankit/Projects/Python/fastapi/fastapi_template/mobile/lib/features/notifications/presentation/widgets/notification_bootstrapper.dart)
+- Backend settings: [config.py](../../backend/src/apps/core/config.py)
+- Backend app wiring: [main.py](../../backend/src/main.py)
+- Runtime override flow: [settings_store.py](../../backend/src/apps/core/settings_store.py)
+- System discovery APIs: [api.py](../../backend/src/apps/system/api.py)
+- Web runtime hooks: [use-system.ts](../../frontend/src/hooks/use-system.ts)
+- Mobile runtime bootstrap: [notification_bootstrapper.dart](../../mobile/lib/features/notifications/presentation/widgets/notification_bootstrapper.dart)
 
 ## Do Not Skip
 

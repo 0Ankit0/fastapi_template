@@ -9,12 +9,12 @@ If you only change one layer and forget the other, the system will look correct 
 
 ## Files That Matter
 
-- [casbin_enforcer.py](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/src/apps/iam/casbin_enforcer.py)
-- [casbin_model.conf](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/src/apps/iam/casbin_model.conf)
-- [casbin_rule.py](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/src/apps/iam/models/casbin_rule.py)
-- [rbac.py](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/src/apps/iam/utils/rbac.py)
-- [rbac.py](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/src/apps/iam/api/v1/rbac.py)
-- [main.py](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/src/main.py)
+- [casbin_enforcer.py](../../backend/src/apps/iam/casbin_enforcer.py)
+- [casbin_model.conf](../../backend/src/apps/iam/casbin_model.conf)
+- [casbin_rule.py](../../backend/src/apps/iam/models/casbin_rule.py)
+- [rbac.py](../../backend/src/apps/iam/utils/rbac.py)
+- [rbac.py](../../backend/src/apps/iam/api/v1/rbac.py)
+- [main.py](../../backend/src/main.py)
 
 ## The Authorization Model
 
@@ -31,7 +31,7 @@ In practical terms:
 - `object` is the permission resource such as `users`, `posts`, or `settings`.
 - `action` is the permission action such as `read`, `write`, or `delete`.
 
-The matcher in [casbin_model.conf](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/src/apps/iam/casbin_model.conf) is intentionally strict:
+The matcher in [casbin_model.conf](../../backend/src/apps/iam/casbin_model.conf) is intentionally strict:
 
 - The user must hold the role in the same domain.
 - The requested resource must exactly match the policy resource.
@@ -67,10 +67,10 @@ Those rows mean:
 
 The normal permission-check path looks like this:
 
-1. Startup loads the shared Casbin enforcer in [main.py](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/src/main.py).
+1. Startup loads the shared Casbin enforcer in [main.py](../../backend/src/main.py).
 2. Admin APIs create roles and permissions in SQL tables.
 3. RBAC utility helpers mirror those assignments into Casbin policy rows.
-4. A protected code path calls `check_permission(...)` in [rbac.py](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/src/apps/iam/utils/rbac.py).
+4. A protected code path calls `check_permission(...)` in [rbac.py](../../backend/src/apps/iam/utils/rbac.py).
 5. `check_permission(...)` delegates to `CasbinEnforcer.enforce(...)`.
 6. Casbin evaluates the request tuple against the loaded policies.
 
@@ -112,7 +112,7 @@ Do not insert only the SQL row and expect authorization to work. The Casbin tupl
 
 ### Change the matcher or policy shape
 
-Only change [casbin_model.conf](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/src/apps/iam/casbin_model.conf) when the authorization model itself needs to change.
+Only change [casbin_model.conf](../../backend/src/apps/iam/casbin_model.conf) when the authorization model itself needs to change.
 
 Examples:
 
@@ -123,7 +123,7 @@ Examples:
 When you change the model:
 
 1. Update this document.
-2. Update [casbin_rule.py](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/src/apps/iam/models/casbin_rule.py) comments if column meaning changes.
+2. Update [casbin_rule.py](../../backend/src/apps/iam/models/casbin_rule.py) comments if column meaning changes.
 3. Review every helper that writes policies or grouping rows.
 4. Add tests for both allow and deny cases.
 
@@ -157,7 +157,7 @@ That means:
 
 ## Recommended Modification Rules
 
-- Prefer changing RBAC through the helpers in [rbac.py](/Users/ankit/Projects/Python/fastapi/fastapi_template/backend/src/apps/iam/utils/rbac.py), not through raw SQL.
+- Prefer changing RBAC through the helpers in [rbac.py](../../backend/src/apps/iam/utils/rbac.py), not through raw SQL.
 - Prefer exact, stable `resource` and `action` names over human-readable phrases.
 - Keep route-level authorization strings aligned with the permission catalog.
 - Document any new domain conventions before multiple teams start relying on them.
