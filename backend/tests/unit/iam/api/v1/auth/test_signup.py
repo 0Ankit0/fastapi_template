@@ -100,6 +100,7 @@ class TestSignup:
         
         assert response.status_code == 200
         assert response.json()["message"] == "Account created successfully"
-        assert "access_token" in response.cookies
+        assert settings.ACCESS_TOKEN_COOKIE in response.cookies
+        assert settings.REFRESH_TOKEN_COOKIE in response.cookies
         cookie_header = response.headers.get("set-cookie", "").lower()
         assert f"samesite={settings.COOKIE_SAMESITE}" in cookie_header

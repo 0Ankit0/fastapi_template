@@ -11,7 +11,7 @@ from urllib.parse import urlencode
 
 from src.apps.core import security
 from src.apps.core.config import OAUTH_PROVIDERS, settings
-from src.apps.core.cookies import auth_cookie_options
+from src.apps.core.cookies import set_auth_cookies
 from src.apps.core.http import default_timeout, retry_async
 from src.apps.core.security import TokenType
 from src.apps.iam.api.deps import get_db
@@ -261,10 +261,10 @@ async def social_callback(
 
     if set_cookie:
         redirect_resp = RedirectResponse(url=frontend_callback, status_code=302)
-        redirect_resp.set_cookie(
-            key=settings.ACCESS_TOKEN_COOKIE,
-            value=access_token,
-            **auth_cookie_options(max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60),
+        set_auth_cookies(
+            redirect_resp,
+            access_token=access_token,
+            refresh_token=refresh_token,
         )
         return redirect_resp
 

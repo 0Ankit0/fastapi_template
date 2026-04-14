@@ -3,6 +3,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.apps.core import security
+from src.apps.core.config import settings
 from tests.factories import UserFactory
 
 
@@ -103,3 +104,32 @@ class TestLogin:
         
         assert response.status_code == 400
         assert "Inactive user" in response.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_login_with_cookie(self, client: AsyncClient, db_session: AsyncSession):
+        """Test login with cookie response."""
+        hashed_pw = security.get_password_hash("TestPass123")
+        user = UserFactory.build(
+            username="cookieuser",
+            email="cookie@example.com",
+            hashed_password=hashed_pw,
+            is_active=True,
+        )
+        db_session.add(user)
+        await db_session.commit()
+        await db_session.refresh(user)
+
+        response = await client.post(
+            "/api/v1/auth/login/?set_cookie=true",
+            json={
+                "username": "cookieuser",
+                "password": "TestPass123",
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.json()["message"] == "Logged in successfully"
+        assert settings.ACCESS_TOKEN_COOKIE in response.cookies
+        assert settings.REFRESH_TOKEN_COOKIE in response.cookies
+        cookie_header = response.headers.get("set-cookie", "").lower()
+        assert f"samesite={settings.COOKIE_SAMESITE}" in cookie_header

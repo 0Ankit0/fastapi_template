@@ -8,7 +8,7 @@ from slowapi.util import get_remote_address
 from src.apps.core.config import settings
 from src.apps.core import security
 from src.apps.core.security import TokenType
-from src.apps.core.cookies import auth_cookie_options
+from src.apps.core.cookies import set_auth_cookies
 from src.apps.iam.api.deps import get_current_user, get_db
 from src.apps.iam.models.user import User, UserProfile
 from src.apps.iam.models.token_tracking import TokenTracking
@@ -31,8 +31,8 @@ limiter = Limiter(key_func=get_remote_address)
 async def signup(
     request: Request,
     response: Response,
-    set_cookie: bool,
     login_data: UserCreate,
+    set_cookie: bool = False,
     db: AsyncSession = Depends(get_db),
     analytics: AnalyticsService = Depends(get_analytics),
 ) -> Token | dict[str, str]:
@@ -136,10 +136,10 @@ async def signup(
         )
 
         if set_cookie:
-            response.set_cookie(
-                key=settings.ACCESS_TOKEN_COOKIE,
-                value=access_token,
-                **auth_cookie_options(max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60),
+            set_auth_cookies(
+                response,
+                access_token=access_token,
+                refresh_token=refresh_token,
             )
             return {"message": "Account created successfully"}
         
