@@ -39,17 +39,27 @@ mobile-test:
 mobile-dev:
 	cd mobile && flutter run
 
-dev-up:
-	docker compose up --build
+docker-dev-up:
+	docker compose --env-file .env.docker.dev -f docker-compose.yml -f docker-compose.dev.yml up --build
+
+docker-dev-down:
+	docker compose --env-file .env.docker.dev -f docker-compose.yml -f docker-compose.dev.yml down -v
+
+docker-prod-up:
+	docker compose --env-file .env.docker.prod -f docker-compose.yml up --build -d
+
+docker-prod-down:
+	docker compose --env-file .env.docker.prod -f docker-compose.yml down
+
+dev-up: docker-dev-up
 
 infra-up:
-	docker compose up -d db redis
+	docker compose --env-file .env.docker.dev -f docker-compose.yml up -d db redis
 
-dev-down:
-	docker compose down -v
+dev-down: docker-dev-down
 
 infra-down:
-	docker compose down -v
+	docker compose --env-file .env.docker.dev -f docker-compose.yml down -v
 
 health-check:
 	python3 scripts/check_template_health.py
