@@ -166,10 +166,13 @@ export default function SettingsPage() {
   });
 
   // ── Notifications ──────────────────────────────────────────────────────
-  const { data: prefs, isLoading: prefsLoading } = useNotificationPreferences();
-  const { data: devices } = useNotificationDevices();
-  const { data: pushConfig } = usePushConfig();
   const { data: capabilities } = useSystemCapabilities();
+  const pushRuntimeEnabled = Boolean(
+    capabilities?.modules.notifications && capabilities?.active_providers.push
+  );
+  const { data: prefs, isLoading: prefsLoading } = useNotificationPreferences();
+  const { data: devices } = useNotificationDevices({ enabled: pushRuntimeEnabled });
+  const { data: pushConfig } = usePushConfig({ enabled: pushRuntimeEnabled });
   const updatePref = useUpdateNotificationPreferences();
   const registerDevice = useRegisterNotificationDevice();
   const removeDevice = useRemoveNotificationDevice();

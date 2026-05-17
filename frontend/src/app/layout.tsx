@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Fastapi Template',
-  description: 'Modern Fastapi Template platform',
+  title: 'FastAPI Template',
+  description: 'Postgres-first FastAPI starter with Next.js, SQLAlchemy, and production-ready defaults.',
 };
 
 export default function RootLayout({

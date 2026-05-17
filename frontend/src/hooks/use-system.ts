@@ -32,7 +32,7 @@ export function useSystemProviders() {
   });
 }
 
-export function usePushConfig() {
+export function usePushConfig(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['push-config'],
     queryFn: async () => {
@@ -53,6 +53,7 @@ export function usePushConfig() {
         throw error;
       }
     },
+    enabled: options?.enabled ?? true,
     staleTime: 60_000,
   });
 }
