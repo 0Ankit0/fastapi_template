@@ -7,7 +7,7 @@ from typing import Any
 
 from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import col, func, select
+from src.db.query import col, func, select
 
 from src.apps.core.config import settings
 from src.apps.core.logging import get_log_context, log_output_enabled, set_log_context

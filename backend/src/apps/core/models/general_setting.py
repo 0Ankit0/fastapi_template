@@ -1,18 +1,22 @@
+from __future__ import annotations
+
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Column, Text
-from sqlmodel import Field, SQLModel
+from sqlalchemy import Text
+from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column
+
+from src.db.base import Base
 
 
-class GeneralSetting(SQLModel, table=True):
-    __tablename__ = "generalsetting"  # type: ignore[assignment]
+class GeneralSetting(Base):
+    __tablename__ = "generalsetting"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
-    key: str = Field(max_length=255, unique=True, index=True)
-    env_value: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
-    db_value: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
-    use_db_value: bool = Field(default=False)
-    is_runtime_editable: bool = Field(default=True)
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)
+    id: Mapped[Optional[int]] = mapped_column(primary_key=True, init=False, default=None, nullable=False)
+    key: Mapped[str] = mapped_column(unique=True, index=True)
+    env_value: Mapped[Optional[str]] = mapped_column(Text, default=None)
+    db_value: Mapped[Optional[str]] = mapped_column(Text, default=None)
+    use_db_value: Mapped[bool] = mapped_column(default=False)
+    is_runtime_editable: Mapped[bool] = mapped_column(default=True)
+    created_at: Mapped[datetime] = mapped_column(default_factory=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(default_factory=datetime.now)

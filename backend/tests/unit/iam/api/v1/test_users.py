@@ -1,7 +1,7 @@
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from src.db.query import select
 
 from src.apps.core import security
 from src.apps.iam.models.user import User

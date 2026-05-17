@@ -1,39 +1,103 @@
 import pytest
 import os
+import re
 from typing import AsyncGenerator
 from unittest.mock import AsyncMock, patch
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy.pool import StaticPool
-from sqlmodel import SQLModel
+from sqlalchemy.pool import NullPool
+from src.db.base import Base
+
+os.environ["TESTING"] = "True"
+
+_test_postgres_server = os.environ.get("TEST_POSTGRES_SERVER") or os.environ.get("POSTGRES_SERVER", "localhost")
+_test_postgres_user = os.environ.get("TEST_POSTGRES_USER") or os.environ.get("POSTGRES_USER", "postgres")
+_test_postgres_password = os.environ.get("TEST_POSTGRES_PASSWORD") or os.environ.get("POSTGRES_PASSWORD", "postgres")
+_base_postgres_db = os.environ.get("POSTGRES_DB", "app")
+_test_postgres_db = os.environ.get("TEST_POSTGRES_DB") or f"{_base_postgres_db}_test"
+
+os.environ.setdefault("POSTGRES_SERVER", _test_postgres_server)
+os.environ.setdefault("POSTGRES_USER", _test_postgres_user)
+os.environ.setdefault("POSTGRES_PASSWORD", _test_postgres_password)
+os.environ.setdefault("POSTGRES_DB", _test_postgres_db)
+
+TEST_DATABASE_URL = os.environ.setdefault(
+    "DATABASE_URL",
+    os.environ.get("TEST_DATABASE_URL")
+    or (
+        f"postgresql+psycopg://{_test_postgres_user}:{_test_postgres_password}"
+        f"@{_test_postgres_server}/{_test_postgres_db}"
+    ),
+)
 
 from src.main import app
 from src.db import session as db_session_module
 from src.db.session import get_session
 
-# Set TESTING environment variable before importing settings
-os.environ["TESTING"] = "True"
+
+def _load_models() -> None:
+    import src.apps.core.models  # noqa: F401
+    import src.apps.finance.models  # noqa: F401
+    import src.apps.iam.models  # noqa: F401
+    import src.apps.multitenancy.models  # noqa: F401
+    import src.apps.notification.models  # noqa: F401
+    import src.apps.observability.models  # noqa: F401
+    import src.apps.websocket.models  # noqa: F401
+
+
+def _validated_database_name(database_url: str) -> str:
+    database_name = make_url(database_url).database
+    if not database_name or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", database_name):
+        raise RuntimeError(
+            "TEST_DATABASE_URL must point to a PostgreSQL database with a simple identifier name"
+        )
+    return database_name
+
+
+def _admin_database_url(database_url: str) -> str:
+    return make_url(database_url).set(database="postgres").render_as_string(hide_password=False)
+
+
+def _ensure_test_database() -> None:
+    database_name = _validated_database_name(TEST_DATABASE_URL)
+    admin_engine = create_engine(
+        _admin_database_url(TEST_DATABASE_URL),
+        isolation_level="AUTOCOMMIT",
+    )
+    try:
+        with admin_engine.connect() as connection:
+            exists = connection.execute(
+                text("SELECT 1 FROM pg_database WHERE datname = :database_name"),
+                {"database_name": database_name},
+            ).scalar()
+            if not exists:
+                connection.execute(text(f'CREATE DATABASE "{database_name}"'))
+    finally:
+        admin_engine.dispose()
 
 
 @pytest.fixture(scope="function")
 async def test_engine():
-    """Create a test engine for each test function with unique database."""
-    # Use in-memory database with StaticPool
+    """Create a PostgreSQL-backed test engine for each test function."""
+    _ensure_test_database()
+    _load_models()
     engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
+        TEST_DATABASE_URL,
         echo=False,
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool
+        poolclass=NullPool,
     )
-    
+
     async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-    
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
+
     yield engine
-    
+
     async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
-    
+        await conn.run_sync(Base.metadata.drop_all)
+
     await engine.dispose()
 
 

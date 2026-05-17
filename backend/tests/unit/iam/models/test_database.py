@@ -1,6 +1,6 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from src.db.query import select
 
 from src.apps.iam.models.user import User, UserProfile
 from tests.factories import UserFactory, UserProfileFactory

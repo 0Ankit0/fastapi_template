@@ -118,7 +118,7 @@ class TestTokenManagement:
         await db_session.commit()
         
         # Count tokens before refresh
-        from sqlmodel import select, func
+        from src.db.query import func, select
         result = await db_session.execute(
             select(func.count(TokenTracking.id)).where(TokenTracking.user_id == user.id) # type: ignore
         )

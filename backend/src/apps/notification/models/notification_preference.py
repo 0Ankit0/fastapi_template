@@ -1,13 +1,18 @@
 """User notification channel preference model."""
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Optional
 
-from sqlmodel import Field, Relationship, SQLModel
+from sqlalchemy import ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from src.db.base import Base
 
 if TYPE_CHECKING:
     from src.apps.iam.models.user import User
 
 
-class NotificationPreference(SQLModel, table=True):
+class NotificationPreference(Base):
     """
     Stores per-user notification channel preferences.
 
@@ -15,44 +20,23 @@ class NotificationPreference(SQLModel, table=True):
     preferences are read or updated.  The *_enabled flags gate whether a
     given channel is used when a notification is dispatched.
     """
+    __tablename__ = "notificationpreference"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="user.id", unique=True, index=True)
+    id: Mapped[Optional[int]] = mapped_column(primary_key=True, init=False, default=None, nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), unique=True, index=True)
 
     # ── Channel flags ──────────────────────────────────────────────────────
-    websocket_enabled: bool = Field(
-        default=True,
-        description="Deliver notifications via WebSocket (real-time, always-on by default)",
-    )
-    email_enabled: bool = Field(
-        default=False,
-        description="Send notifications via email",
-    )
-    push_enabled: bool = Field(
-        default=False,
-        description="Send browser / mobile push notifications (requires push subscription)",
-    )
-    sms_enabled: bool = Field(
-        default=False,
-        description="Send SMS / text-message notifications (requires verified phone number)",
-    )
+    websocket_enabled: Mapped[bool] = mapped_column(default=True)
+    email_enabled: Mapped[bool] = mapped_column(default=False)
+    push_enabled: Mapped[bool] = mapped_column(default=False)
+    sms_enabled: Mapped[bool] = mapped_column(default=False)
 
     # ── Web-Push subscription data (populated by the browser after opt-in) ─
-    push_endpoint: Optional[str] = Field(
-        default=None,
-        max_length=2048,
-        description="Push service endpoint URL provided by the browser",
-    )
-    push_p256dh: Optional[str] = Field(
-        default=None,
-        max_length=512,
-        description="Browser public key (base64url) for payload encryption",
-    )
-    push_auth: Optional[str] = Field(
-        default=None,
-        max_length=256,
-        description="Auth secret (base64url) for payload encryption",
-    )
+    push_endpoint: Mapped[Optional[str]] = mapped_column(String(2048), default=None)
+    push_p256dh: Mapped[Optional[str]] = mapped_column(String(512), default=None)
+    push_auth: Mapped[Optional[str]] = mapped_column(String(256), default=None)
 
-    # Relationship
-    user: Optional["User"] = Relationship(back_populates="notification_preference")
+    user: Mapped["User | None"] = relationship(
+        back_populates="notification_preference",
+        init=False,
+    )

@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import or_
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import col, desc, func, select
+from src.db.query import col, desc, func, select
 
 from src.apps.core.schemas import PaginatedResponse
 from src.apps.iam.api.deps import get_current_active_superuser, get_db

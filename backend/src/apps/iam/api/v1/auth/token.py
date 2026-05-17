@@ -1,6 +1,6 @@
 from datetime import timedelta, datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status, Body
-from sqlmodel import select
+from src.db.query import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from jose import jwt
 from src.apps.core.config import settings

@@ -1,6 +1,6 @@
 from datetime import timedelta, datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from sqlmodel import select
+from src.db.query import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from jose import jwt
 from slowapi import Limiter
@@ -58,16 +58,16 @@ async def signup(
            username=login_data.username,
            email=login_data.email,
             hashed_password=hashed_password,
-            profile=None
         )
+        db.add(new_user)
+        await db.flush()
+
         user_profile = UserProfile(
+            user_id=new_user.id,
             first_name=login_data.first_name or "",
             last_name=login_data.last_name or "",
             phone=login_data.phone or "",
-            user=new_user
         )
-        
-        db.add(new_user)
         db.add(user_profile)
         await db.commit()
         

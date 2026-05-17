@@ -48,7 +48,7 @@ async def setup_default_roles_and_permissions(session):
         session: AsyncSession instance
         
     Example:
-        from sqlmodel import Session
+        from src.db.query import Session
         from src.apps.iam.casbin_init import setup_default_roles_and_permissions
         
         async with get_session() as session:
@@ -56,7 +56,7 @@ async def setup_default_roles_and_permissions(session):
     """
     from src.apps.iam.models import Role, Permission
     from src.apps.iam.utils.rbac import assign_permission_to_role
-    from sqlmodel import select
+    from src.db.query import select
     
     # Check if roles already exist
     result = await session.execute(select(Role))

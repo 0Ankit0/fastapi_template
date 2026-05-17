@@ -1,7 +1,12 @@
+from __future__ import annotations
+
 from typing import Optional, TYPE_CHECKING
 from datetime import datetime
 from enum import Enum
-from sqlmodel import SQLModel, Field, Relationship
+from sqlalchemy import Enum as SAEnum, ForeignKey, String
+from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
+
+from src.db.base import Base
 
 if TYPE_CHECKING:
     from src.apps.iam.models.user import User
@@ -22,98 +27,112 @@ class InvitationStatus(str, Enum):
 
 # ── Tenant ───────────────────────────────────────────────────────────────────
 
-class TenantBase(SQLModel):
-    name: str = Field(max_length=100, description="Display name of the tenant")
-    slug: str = Field(
-        max_length=63,
-        unique=True,
-        index=True,
-        regex=r'^[a-z0-9]+(?:-[a-z0-9]+)*$',
-        description="URL-safe unique identifier (lowercase, hyphens allowed)",
+class TenantBase(MappedAsDataclass, kw_only=True):
+    name: Mapped[str] = mapped_column(String(100))
+    slug: Mapped[str] = mapped_column(String(63), unique=True, index=True)
+    description: Mapped[str] = mapped_column(String(500), default="")
+    is_active: Mapped[bool] = mapped_column(default=True)
+
+
+class Tenant(TenantBase, Base):
+    __tablename__ = "tenant"
+
+    id: Mapped[Optional[int]] = mapped_column(primary_key=True, init=False, default=None, nullable=False)
+    owner_id: Mapped[Optional[int]] = mapped_column(ForeignKey("user.id"), default=None)
+    created_at: Mapped[datetime] = mapped_column(default_factory=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(default_factory=datetime.now)
+
+    members: Mapped[list["TenantMember"]] = relationship(
+        back_populates="tenant",
+        init=False,
+        default_factory=list,
     )
-    description: str = Field(default="", max_length=500, description="Tenant description")
-    is_active: bool = Field(default=True, description="Whether the tenant is active")
-
-
-class Tenant(TenantBase, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    owner_id: Optional[int] = Field(
-        default=None,
-        foreign_key="user.id",
-        description="User ID of the tenant owner",
+    invitations: Mapped[list["TenantInvitation"]] = relationship(
+        back_populates="tenant",
+        init=False,
+        default_factory=list,
     )
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)
-
-    # Relationships
-    members: list["TenantMember"] = Relationship(back_populates="tenant")
-    invitations: list["TenantInvitation"] = Relationship(back_populates="tenant")
-    owner: Optional["User"] = Relationship(
+    owner: Mapped["User | None"] = relationship(
         back_populates="owned_tenants",
-        sa_relationship_kwargs={"foreign_keys": "[Tenant.owner_id]"},
+        init=False,
+        foreign_keys="Tenant.owner_id",
     )
 
 
 # ── TenantMember ─────────────────────────────────────────────────────────────
 
-class TenantMemberBase(SQLModel):
-    role: TenantRole = Field(
+class TenantMemberBase(MappedAsDataclass, kw_only=True):
+    role: Mapped[TenantRole] = mapped_column(
+        SAEnum(
+            TenantRole,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+            native_enum=False,
+        ),
         default=TenantRole.MEMBER,
-        description="Role of the user within the tenant",
     )
-    is_active: bool = Field(default=True, description="Whether the membership is active")
+    is_active: Mapped[bool] = mapped_column(default=True)
 
 
-class TenantMember(TenantMemberBase, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    tenant_id: Optional[int] = Field(
+class TenantMember(TenantMemberBase, Base):
+    __tablename__ = "tenantmember"
+
+    id: Mapped[Optional[int]] = mapped_column(primary_key=True, init=False, default=None, nullable=False)
+    tenant_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("tenant.id", ondelete="CASCADE"),
         default=None,
-        foreign_key="tenant.id",
         index=True,
-        ondelete="CASCADE",
     )
-    user_id: Optional[int] = Field(
+    user_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("user.id", ondelete="CASCADE"),
         default=None,
-        foreign_key="user.id",
         index=True,
-        ondelete="CASCADE",
     )
-    joined_at: datetime = Field(default_factory=datetime.now)
+    joined_at: Mapped[datetime] = mapped_column(default_factory=datetime.now)
 
-    # Relationships
-    tenant: Optional[Tenant] = Relationship(back_populates="members")
-    user: Optional["User"] = Relationship(back_populates="tenant_memberships")
+    tenant: Mapped[Tenant | None] = relationship(back_populates="members", init=False)
+    user: Mapped["User | None"] = relationship(back_populates="tenant_memberships", init=False)
 
 
 # ── TenantInvitation ─────────────────────────────────────────────────────────
 
-class TenantInvitationBase(SQLModel):
-    email: str = Field(max_length=255, index=True, description="Invited email address")
-    role: TenantRole = Field(default=TenantRole.MEMBER, description="Role granted on acceptance")
-    status: InvitationStatus = Field(default=InvitationStatus.PENDING)
+class TenantInvitationBase(MappedAsDataclass, kw_only=True):
+    email: Mapped[str] = mapped_column(String(255), index=True)
+    role: Mapped[TenantRole] = mapped_column(
+        SAEnum(
+            TenantRole,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+            native_enum=False,
+        ),
+        default=TenantRole.MEMBER,
+    )
+    status: Mapped[InvitationStatus] = mapped_column(
+        SAEnum(
+            InvitationStatus,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+            native_enum=False,
+        ),
+        default=InvitationStatus.PENDING,
+    )
 
 
-class TenantInvitation(TenantInvitationBase, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    tenant_id: Optional[int] = Field(
+class TenantInvitation(TenantInvitationBase, Base):
+    __tablename__ = "tenantinvitation"
+
+    id: Mapped[Optional[int]] = mapped_column(primary_key=True, init=False, default=None, nullable=False)
+    tenant_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("tenant.id", ondelete="CASCADE"),
         default=None,
-        foreign_key="tenant.id",
         index=True,
-        ondelete="CASCADE",
     )
-    invited_by: Optional[int] = Field(
-        default=None,
-        foreign_key="user.id",
-        description="User ID who sent the invitation",
-    )
-    token: str = Field(max_length=255, unique=True, index=True, description="One-time invitation token")
-    expires_at: datetime = Field(description="When the invitation expires")
-    created_at: datetime = Field(default_factory=datetime.now)
-    accepted_at: Optional[datetime] = Field(default=None)
+    invited_by: Mapped[Optional[int]] = mapped_column(ForeignKey("user.id"), default=None)
+    token: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    expires_at: Mapped[datetime]
+    created_at: Mapped[datetime] = mapped_column(default_factory=datetime.now)
+    accepted_at: Mapped[Optional[datetime]] = mapped_column(default=None)
 
-    # Relationships
-    tenant: Optional[Tenant] = Relationship(back_populates="invitations")
-    inviter: Optional["User"] = Relationship(
+    tenant: Mapped[Tenant | None] = relationship(back_populates="invitations", init=False)
+    inviter: Mapped["User | None"] = relationship(
         back_populates="sent_invitations",
-        sa_relationship_kwargs={"foreign_keys": "[TenantInvitation.invited_by]"},
+        init=False,
+        foreign_keys="TenantInvitation.invited_by",
     )

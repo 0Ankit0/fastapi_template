@@ -5,7 +5,7 @@ from typing import Optional
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import col
+from src.db.query import col
 
 from src.apps.notification.models.notification import Notification
 from src.apps.notification.models.notification_device import (

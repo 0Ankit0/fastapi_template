@@ -9,7 +9,6 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-import sqlmodel
 
 
 # revision identifiers, used by Alembic.
@@ -23,13 +22,13 @@ def upgrade() -> None:
     """Upgrade schema."""
     op.create_table(
         "notificationdevice",
-        sa.Column("provider", sqlmodel.AutoString(length=32), nullable=False),
-        sa.Column("platform", sqlmodel.AutoString(length=32), nullable=False),
-        sa.Column("token", sqlmodel.AutoString(length=1024), nullable=True),
-        sa.Column("endpoint", sqlmodel.AutoString(length=2048), nullable=True),
-        sa.Column("p256dh", sqlmodel.AutoString(length=512), nullable=True),
-        sa.Column("auth", sqlmodel.AutoString(length=256), nullable=True),
-        sa.Column("subscription_id", sqlmodel.AutoString(length=255), nullable=True),
+        sa.Column("provider", sa.String(length=32), nullable=False),
+        sa.Column("platform", sa.String(length=32), nullable=False),
+        sa.Column("token", sa.String(length=1024), nullable=True),
+        sa.Column("endpoint", sa.String(length=2048), nullable=True),
+        sa.Column("p256dh", sa.String(length=512), nullable=True),
+        sa.Column("auth", sa.String(length=256), nullable=True),
+        sa.Column("subscription_id", sa.String(length=255), nullable=True),
         sa.Column("device_metadata", sa.JSON(), nullable=True),
         sa.Column("is_active", sa.Boolean(), nullable=False),
         sa.Column("last_seen_at", sa.DateTime(), nullable=False),

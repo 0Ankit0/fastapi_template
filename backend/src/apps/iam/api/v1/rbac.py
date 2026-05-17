@@ -3,7 +3,7 @@ RBAC API endpoints — roles, permissions, assignments and Casbin integration.
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select, func, col
+from src.db.query import col, func, select
 from src.db.session import get_session
 from src.apps.iam.models import Role, Permission, User
 from src.apps.iam.api.deps import get_current_active_superuser

@@ -1,6 +1,6 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from src.db.query import select
 
 from src.apps.core.config import settings
 from src.apps.iam.models.login_attempt import LoginAttempt

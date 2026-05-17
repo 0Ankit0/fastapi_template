@@ -5,7 +5,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from sqlmodel import select, func, or_, col
+from src.db.query import col, func, or_, select
 from typing import Optional
 from src.apps.iam.api.deps import get_current_user, get_current_active_superuser, get_db
 from src.apps.iam.models.user import User

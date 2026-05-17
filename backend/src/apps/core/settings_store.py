@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Iterable
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from src.db.query import select
 
 from src.apps.core.config import (
     NON_RUNTIME_EDITABLE_SETTING_KEYS,

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select, func, col
+from src.db.query import col, func, select
 
 from src.apps.iam.api.deps import get_current_user, get_db
 from src.apps.iam.casbin_enforcer import CasbinEnforcer

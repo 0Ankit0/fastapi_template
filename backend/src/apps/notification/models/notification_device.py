@@ -1,9 +1,13 @@
+from __future__ import annotations
+
 from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Optional
 
-from sqlalchemy import JSON
-from sqlmodel import Field, Relationship, SQLModel
+from sqlalchemy import Enum as SAEnum, ForeignKey, JSON, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from src.db.base import Base
 
 if TYPE_CHECKING:
     from src.apps.iam.models.user import User
@@ -21,20 +25,36 @@ class NotificationDevicePlatform(str, Enum):
     IOS = "ios"
 
 
-class NotificationDevice(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="user.id", index=True)
-    provider: NotificationDeviceProvider = Field(index=True)
-    platform: NotificationDevicePlatform = Field(index=True)
-    token: Optional[str] = Field(default=None, max_length=2048)
-    endpoint: Optional[str] = Field(default=None, max_length=2048)
-    p256dh: Optional[str] = Field(default=None, max_length=512)
-    auth: Optional[str] = Field(default=None, max_length=256)
-    subscription_id: Optional[str] = Field(default=None, max_length=255, index=True)
-    device_metadata: Optional[Any] = Field(default=None, sa_type=JSON)
-    is_active: bool = Field(default=True, index=True)
-    last_seen_at: datetime = Field(default_factory=datetime.now)
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)
+class NotificationDevice(Base):
+    __tablename__ = "notificationdevice"
 
-    user: Optional["User"] = Relationship(back_populates="notification_devices")
+    id: Mapped[Optional[int]] = mapped_column(primary_key=True, init=False, default=None, nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), index=True)
+    provider: Mapped[NotificationDeviceProvider] = mapped_column(
+        SAEnum(
+            NotificationDeviceProvider,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+            native_enum=False,
+        ),
+        index=True,
+    )
+    platform: Mapped[NotificationDevicePlatform] = mapped_column(
+        SAEnum(
+            NotificationDevicePlatform,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+            native_enum=False,
+        ),
+        index=True,
+    )
+    token: Mapped[Optional[str]] = mapped_column(String(2048), default=None)
+    endpoint: Mapped[Optional[str]] = mapped_column(String(2048), default=None)
+    p256dh: Mapped[Optional[str]] = mapped_column(String(512), default=None)
+    auth: Mapped[Optional[str]] = mapped_column(String(256), default=None)
+    subscription_id: Mapped[Optional[str]] = mapped_column(String(255), default=None, index=True)
+    device_metadata: Mapped[Optional[Any]] = mapped_column(JSON, default=None)
+    is_active: Mapped[bool] = mapped_column(default=True, index=True)
+    last_seen_at: Mapped[datetime] = mapped_column(default_factory=datetime.now)
+    created_at: Mapped[datetime] = mapped_column(default_factory=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(default_factory=datetime.now)
+
+    user: Mapped["User | None"] = relationship(back_populates="notification_devices", init=False)

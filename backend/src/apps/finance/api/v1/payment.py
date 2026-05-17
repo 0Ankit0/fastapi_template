@@ -10,7 +10,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select, col
+from src.db.query import col, select
 
 from src.apps.core.config import settings
 

@@ -1,3 +1,4 @@
+from factory import post_generation
 from factory.faker import Faker
 from factory.base import Factory
 from datetime import datetime, timezone
@@ -39,6 +40,11 @@ class UserProfileFactory(Factory):
     phone = Faker("phone_number")
     image_url = Faker("image_url")
     bio = Faker("text", max_nb_chars=200)
+
+    @post_generation
+    def user(self, create, extracted, **kwargs):
+        if extracted is not None:
+            self.user = extracted
 
 
 class LoginAttemptFactory(Factory):

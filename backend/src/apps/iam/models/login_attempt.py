@@ -1,54 +1,36 @@
+from __future__ import annotations
+
 from typing import Optional, TYPE_CHECKING
-from sqlmodel import SQLModel, Field, Relationship
 from datetime import datetime
+from sqlalchemy import ForeignKey, String
+from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
+
+from src.db.base import Base
 
 if TYPE_CHECKING:
     from .user import User
 
-class BaseLoginAttempt(SQLModel):
-    timestamp: datetime = Field(
-        default_factory=datetime.now,
-        description="Timestamp of when the login attempt occurred"
-    )
-    ip_address: str = Field(
-        max_length=45,
-        description="IP address from which the login attempt was made"
-    )
-    attempted_username: str = Field(
-        default="",
-        max_length=150,
-        description="Username submitted during the login attempt"
-    )
-    user_agent: str = Field(
-        max_length=255,
-        description="User agent string from the login attempt"
-    )
-    success: bool = Field(
-        default=False,
-        description="Indicates whether the login attempt was successful"
-    )
-    failure_reason: str = Field(
-        default="",
-        max_length=255,
-        description="Reason for login failure, if applicable"
+class BaseLoginAttempt(MappedAsDataclass, kw_only=True):
+    ip_address: Mapped[str] = mapped_column(String(45))
+    user_agent: Mapped[str] = mapped_column(String(255))
+    timestamp: Mapped[datetime] = mapped_column(default_factory=datetime.now)
+    attempted_username: Mapped[str] = mapped_column(String(150), default="")
+    success: Mapped[bool] = mapped_column(default=False)
+    failure_reason: Mapped[str] = mapped_column(String(255), default="")
+
+
+class LoginAttempt(BaseLoginAttempt, Base):
+    __tablename__ = "loginattempt"
+
+    id: Mapped[Optional[int]] = mapped_column(primary_key=True, init=False, default=None, nullable=False)
+    user_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("user.id", ondelete="CASCADE"),
+        default=None,
     )
 
-class LoginAttempt(BaseLoginAttempt, table=True):
-    """
-    Model to track login attempts for users, including metadata about the attempt and whether it was successful. 
-    This can be used for security monitoring, brute-force attack prevention, and user behavior analysis.
-    """
-    id: int = Field(
-        default=None, 
-        primary_key=True,
-        description="Unique identifier for the login attempt"
+    user: Mapped[User | None] = relationship(
+        back_populates="login_attempts",
+        init=False,
+        passive_deletes=True,
     )
-    user_id: Optional[int] = Field(
-        foreign_key="user.id",
-        ondelete="CASCADE",
-        description="ID of the user associated with the login attempt"
-    )
-
-    # Relationships
-    user: Optional[User] = Relationship(back_populates="login_attempts",passive_deletes=True)
         

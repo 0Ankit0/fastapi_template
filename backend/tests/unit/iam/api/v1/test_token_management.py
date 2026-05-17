@@ -2,7 +2,7 @@ import pytest
 import uuid
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from src.db.query import select
 
 from src.apps.iam.models.login_attempt import LoginAttempt
 from src.apps.iam.models.user import User

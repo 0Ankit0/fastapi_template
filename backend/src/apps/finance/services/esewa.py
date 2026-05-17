@@ -225,7 +225,7 @@ class EsewaService(BasePaymentProvider):
         our_status = status_map.get(esewa_status_str, PaymentStatus.FAILED)
 
         # ------ update transaction ----------------------------------------
-        from sqlmodel import select
+        from src.db.query import select
         result = await db.execute(
             select(PaymentTransaction).where(
                 PaymentTransaction.provider_pidx == transaction_uuid

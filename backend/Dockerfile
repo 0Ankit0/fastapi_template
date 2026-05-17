@@ -34,6 +34,7 @@ WORKDIR /app
 RUN groupadd --system app && useradd --system --gid app app
 
 COPY --from=builder --chown=app:app /app /app
+RUN mkdir -p /app/media && chown app:app /app/media
 
 USER app
 

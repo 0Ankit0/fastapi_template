@@ -205,7 +205,7 @@ class KhaltiService(BasePaymentProvider):
         }
         our_status = status_map.get(khalti_status, PaymentStatus.FAILED)
 
-        from sqlmodel import select
+        from src.db.query import select
         result = await db.execute(
             select(PaymentTransaction).where(PaymentTransaction.provider_pidx == pidx)
         )

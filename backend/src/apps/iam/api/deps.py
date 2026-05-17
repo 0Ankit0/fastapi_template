@@ -1,7 +1,7 @@
 from typing import Annotated, AsyncGenerator, Optional
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlmodel import select
+from src.db.query import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from src.apps.iam.models.user import User

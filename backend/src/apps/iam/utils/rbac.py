@@ -10,7 +10,7 @@ checks.
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from src.db.query import select
 from src.apps.iam.models import User, Role, UserRole, Permission, RolePermission
 from src.apps.iam.casbin_enforcer import CasbinEnforcer, GLOBAL_DOMAIN
 from src.apps.multitenancy.models.tenant import Tenant

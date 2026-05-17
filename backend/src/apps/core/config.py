@@ -14,7 +14,6 @@ GENERAL_SETTINGS_TABLE_NAME = "generalsetting"
 NON_RUNTIME_EDITABLE_SETTING_KEYS = frozenset(
     {
         "DATABASE_URL",
-        "SYNC_DATABASE_URL",
         "SECRET_KEY",
         "PASSWORD_PEPPER",
         "POSTGRES_SERVER",
@@ -202,7 +201,6 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = "password"
     POSTGRES_DB: str = "app"
     DATABASE_URL: str | None = None
-    SYNC_DATABASE_URL: str | None = None
     DB_POOL_SIZE: int = 10
     DB_MAX_OVERFLOW: int = 20
     DB_POOL_TIMEOUT: int = 30
@@ -427,24 +425,8 @@ class Settings(BaseSettings):
         if isinstance(value, str) and value:
             return value
         data = info.data
-        if data.get("DEBUG", True):
-            return f"sqlite+aiosqlite:///./{data.get('POSTGRES_DB')}.db"
         return (
-            f"postgresql+asyncpg://{data.get('POSTGRES_USER')}:"
-            f"{data.get('POSTGRES_PASSWORD')}@{data.get('POSTGRES_SERVER')}/"
-            f"{data.get('POSTGRES_DB')}"
-        )
-
-    @field_validator("SYNC_DATABASE_URL", mode="before")
-    @classmethod
-    def assemble_sync_db_connection(cls, value: str | None, info: ValidationInfo) -> str:
-        if isinstance(value, str) and value:
-            return value
-        data = info.data
-        if data.get("DEBUG", True):
-            return f"sqlite:///./{data.get('POSTGRES_DB')}.db"
-        return (
-            f"postgresql://{data.get('POSTGRES_USER')}:"
+            f"postgresql+psycopg://{data.get('POSTGRES_USER')}:"
             f"{data.get('POSTGRES_PASSWORD')}@{data.get('POSTGRES_SERVER')}/"
             f"{data.get('POSTGRES_DB')}"
         )
@@ -539,7 +521,7 @@ def _load_general_setting_rows() -> list[dict[str, Any]]:
     from sqlalchemy import create_engine, inspect, text
 
     try:
-        engine = create_engine(_environment_settings.SYNC_DATABASE_URL)
+        engine = create_engine(_environment_settings.DATABASE_URL)
     except Exception:
         return []
 

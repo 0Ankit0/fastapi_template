@@ -2,7 +2,7 @@
 from datetime import datetime
 from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import and_, update
+from src.db.query import and_, update
 
 from src.apps.iam.models.token_tracking import TokenTracking
 

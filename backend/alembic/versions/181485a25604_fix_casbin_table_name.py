@@ -9,7 +9,6 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-import sqlmodel
 
 
 # revision identifiers, used by Alembic.
@@ -21,7 +20,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Rename casbinrule → casbin_rule to match what casbin-async-sqlalchemy-adapter expects."""
-    # Drop indexes on the wrongly-named table first (SQLite requires this before rename)
+    # Drop indexes on the wrongly-named table before renaming it.
     with op.batch_alter_table('casbinrule', schema=None) as batch_op:
         batch_op.drop_index('ix_casbinrule_ptype')
         batch_op.drop_index('ix_casbinrule_v0')

@@ -1,7 +1,7 @@
 from datetime import timedelta, datetime, timezone
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from sqlmodel import select
+from src.db.query import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from jose import jwt
 import pyotp

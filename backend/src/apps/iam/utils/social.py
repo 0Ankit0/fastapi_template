@@ -5,7 +5,7 @@ from typing import Any, Optional
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from src.db.query import select
 
 from src.apps.core.config import OAUTH_PROVIDERS, settings
 from src.apps.iam.models.user import User, UserProfile
@@ -110,7 +110,8 @@ async def find_or_create_social_user(
         social_id=social_id,
     )
     db.add(new_user)
-    db.add(UserProfile(first_name=first_name, last_name=last_name, user=new_user))
+    await db.flush()
+    db.add(UserProfile(first_name=first_name, last_name=last_name, user_id=new_user.id))
     await db.commit()
     await db.refresh(new_user)
     return new_user

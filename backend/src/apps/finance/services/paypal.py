@@ -20,7 +20,7 @@ from datetime import datetime
 
 import paypalrestsdk
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from src.db.query import select
 
 from src.apps.core.config import settings
 from src.apps.finance.models.payment import PaymentProvider, PaymentStatus, PaymentTransaction

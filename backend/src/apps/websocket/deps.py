@@ -14,7 +14,7 @@ from fastapi import WebSocket
 from jose import JWTError, jwt
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from src.db.query import select
 
 from src.apps.core import security
 from src.apps.core.config import settings

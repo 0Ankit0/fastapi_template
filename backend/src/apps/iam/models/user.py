@@ -1,6 +1,11 @@
+from __future__ import annotations
+
 from typing import Optional, TYPE_CHECKING
 from datetime import datetime
-from sqlmodel import Field, SQLModel, Relationship
+from sqlalchemy import ForeignKey, String
+from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
+
+from src.db.base import Base
 
 if TYPE_CHECKING:
     from .login_attempt import LoginAttempt
@@ -12,135 +17,97 @@ if TYPE_CHECKING:
     from src.apps.notification.models.notification import Notification
     from src.apps.notification.models.notification_preference import NotificationPreference
 
-class UserBase(SQLModel):
-    username: str = Field(
-        unique=True,
-        index=True,
-        max_length=50,
-        description="Unique username for the user"
-    )
-    email: str = Field(
-        unique=True,
-        index=True,
-        max_length=255,
-        regex=r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$',
-        description="User's email address"
-    )
-    is_active: bool = Field(
-        default=True,
-        description="Indicates whether the user account is active"
-    )
-    is_superuser: bool = Field(
-        default=False,
-        description="Indicates whether the user has superuser privileges"
-    )
-    is_confirmed: bool = Field(
-        default=False,
-        description="Indicates whether the user's email is confirmed"
-    )
-    otp_enabled: bool = Field(
-        default=False,
-        description="Indicates whether OTP is enabled for the user"
-    )
-    otp_verified: bool = Field(
-        default=False,
-        description="Indicates whether OTP is verified for the user"
-    )
-    otp_base32: str = Field(
-        default="",
-        max_length=255,
-        description="Base32 encoded OTP secret key for the user"
-    )
-    otp_auth_url: str = Field(
-        default="",
-        max_length=255,
-        description="OTP authentication URL for the user"
-    )
+class UserBase(MappedAsDataclass, kw_only=True):
+    username: Mapped[str] = mapped_column(String(50), unique=True, index=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    is_active: Mapped[bool] = mapped_column(default=True)
+    is_superuser: Mapped[bool] = mapped_column(default=False)
+    is_confirmed: Mapped[bool] = mapped_column(default=False)
+    otp_enabled: Mapped[bool] = mapped_column(default=False)
+    otp_verified: Mapped[bool] = mapped_column(default=False)
+    otp_base32: Mapped[str] = mapped_column(String(255), default="")
+    otp_auth_url: Mapped[str] = mapped_column(String(255), default="")
 
-class User(UserBase, table=True):
-    id: Optional[int] = Field(
-        default=None,
-        primary_key=True
+
+class User(UserBase, Base):
+    __tablename__ = "user"
+
+    id: Mapped[Optional[int]] = mapped_column(primary_key=True, init=False, default=None, nullable=False)
+    hashed_password: Mapped[Optional[str]] = mapped_column(String(255), default=None)
+    social_provider: Mapped[Optional[str]] = mapped_column(String(50), default=None, index=True)
+    social_id: Mapped[Optional[str]] = mapped_column(String(255), default=None, index=True)
+    created_at: Mapped[datetime] = mapped_column(default_factory=datetime.now)
+
+    profile: Mapped[UserProfile | None] = relationship(
+        back_populates="user",
+        init=False,
+        lazy="selectin",
     )
-    hashed_password: Optional[str] = Field(
-        default=None,
-        max_length=255,
-        description="Hashed password for the user (None for social-login-only accounts)"
+    login_attempts: Mapped[list["LoginAttempt"]] = relationship(
+        back_populates="user",
+        init=False,
+        default_factory=list,
     )
-    social_provider: Optional[str] = Field(
-        default=None,
-        max_length=50,
-        index=True,
-        description="OAuth2 provider name (google, github, facebook)"
+    tokens: Mapped[list["TokenTracking"]] = relationship(
+        back_populates="user",
+        init=False,
+        default_factory=list,
     )
-    social_id: Optional[str] = Field(
-        default=None,
-        max_length=255,
-        index=True,
-        description="Provider-specific user ID for social login"
+    used_tokens: Mapped[list["UsedToken"]] = relationship(
+        back_populates="user",
+        init=False,
+        default_factory=list,
     )
-    created_at: datetime = Field(
-        default_factory=datetime.now,
-        description="Timestamp when the user was created"
+    user_roles: Mapped[list["UserRole"]] = relationship(
+        back_populates="user",
+        init=False,
+        default_factory=list,
     )
-    
-    # Relationships
-    profile: Optional["UserProfile"] = Relationship(back_populates="user")
-    login_attempts: list["LoginAttempt"] = Relationship(back_populates="user")
-    tokens: list["TokenTracking"] = Relationship(back_populates="user")
-    used_tokens: list["UsedToken"] = Relationship(back_populates="user")
-    user_roles: list["UserRole"] = Relationship(back_populates="user")
-    owned_tenants: list["Tenant"] = Relationship(
+    owned_tenants: Mapped[list["Tenant"]] = relationship(
         back_populates="owner",
-        sa_relationship_kwargs={"foreign_keys": "[Tenant.owner_id]"},
+        init=False,
+        default_factory=list,
+        foreign_keys="Tenant.owner_id",
     )
-    tenant_memberships: list["TenantMember"] = Relationship(back_populates="user")
-    sent_invitations: list["TenantInvitation"] = Relationship(
+    tenant_memberships: Mapped[list["TenantMember"]] = relationship(
+        back_populates="user",
+        init=False,
+        default_factory=list,
+    )
+    sent_invitations: Mapped[list["TenantInvitation"]] = relationship(
         back_populates="inviter",
-        sa_relationship_kwargs={"foreign_keys": "[TenantInvitation.invited_by]"},
+        init=False,
+        default_factory=list,
+        foreign_keys="TenantInvitation.invited_by",
     )
-    notifications: list["Notification"] = Relationship(back_populates="user")
-    notification_devices: list["NotificationDevice"] = Relationship(back_populates="user")
-    notification_preference: Optional["NotificationPreference"] = Relationship(back_populates="user")
-
-
-class UserProfileBase(SQLModel):
-    first_name: str = Field(
-        default="",
-        max_length=40,
-        description="User's first name"
+    notifications: Mapped[list["Notification"]] = relationship(
+        back_populates="user",
+        init=False,
+        default_factory=list,
     )
-    last_name: str = Field(
-        default="",
-        max_length=40,
-        description="User's last name"
+    notification_devices: Mapped[list["NotificationDevice"]] = relationship(
+        back_populates="user",
+        init=False,
+        default_factory=list,
     )
-    phone: str = Field(
-        default="",
-        max_length=20,
-        regex=r'^\+?[1-9]\d{1,14}$',
-        description="User's phone number"
-    )
-    image_url: str = Field(
-        default="",
-        max_length=255,
-        description="URL to the user's profile image"
-    )
-    bio: str = Field(
-        default="",
-        max_length=500,
-        description="Short biography or description of the user"
+    notification_preference: Mapped["NotificationPreference | None"] = relationship(
+        back_populates="user",
+        init=False,
     )
 
-class UserProfile(UserProfileBase, table=True):
-    id: Optional[int] = Field(
-        default=None,
-        primary_key=True
-    )
-    user_id: Optional[int] = Field(
-        default=None,
-        foreign_key="user.id"
-    )
 
-    # Relationships
-    user: Optional[User] = Relationship(back_populates="profile")
+class UserProfileBase(MappedAsDataclass, kw_only=True):
+    first_name: Mapped[str] = mapped_column(String(40), default="")
+    last_name: Mapped[str] = mapped_column(String(40), default="")
+    phone: Mapped[str] = mapped_column(String(20), default="")
+    image_url: Mapped[str] = mapped_column(String(255), default="")
+    bio: Mapped[str] = mapped_column(String(500), default="")
+
+
+class UserProfile(UserProfileBase, Base):
+    __tablename__ = "userprofile"
+
+    id: Mapped[Optional[int]] = mapped_column(primary_key=True, init=False, default=None, nullable=False)
+    user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("user.id"), default=None)
+
+    user: Mapped[User | None] = relationship(back_populates="profile", init=False, lazy="selectin")

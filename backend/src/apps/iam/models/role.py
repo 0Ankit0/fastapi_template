@@ -1,122 +1,78 @@
+from __future__ import annotations
+
 from typing import Optional
 from datetime import datetime
-from sqlmodel import Field, SQLModel, Relationship
+from sqlalchemy import ForeignKey, String
+from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
 
-from .user import User
-
-
-class RoleBase(SQLModel):
-    name: str = Field(
-        unique=True,
-        index=True,
-        max_length=50,
-        description="Unique role name"
-    )
-    description: str = Field(
-        default="",
-        max_length=255,
-        description="Role description"
-    )
+from src.db.base import Base
 
 
-class Role(RoleBase, table=True):
-    id: Optional[int] = Field(
-        default=None,
-        primary_key=True
-    )
-    created_at: datetime = Field(
-        default_factory=datetime.now,
-        description="Timestamp when the role was created"
-    )
-    updated_at: datetime = Field(
-        default_factory=datetime.now,
-        description="Timestamp when the role was last updated"
-    )
-    
-    # Relationships
-    user_roles: list["UserRole"] = Relationship(back_populates="role")
-    role_permissions: list["RolePermission"] = Relationship(back_populates="role")
+class RoleBase(MappedAsDataclass, kw_only=True):
+    name: Mapped[str] = mapped_column(String(50), unique=True, index=True)
+    description: Mapped[str] = mapped_column(String(255), default="")
 
 
-class PermissionBase(SQLModel):
-    resource: str = Field(
-        max_length=100,
-        index=True,
-        description="Resource identifier (e.g., 'users', 'posts', 'settings')"
+class Role(RoleBase, Base):
+    __tablename__ = "role"
+
+    id: Mapped[Optional[int]] = mapped_column(primary_key=True, init=False, default=None, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(default_factory=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(default_factory=datetime.now)
+
+    user_roles: Mapped[list["UserRole"]] = relationship(
+        back_populates="role",
+        init=False,
+        default_factory=list,
     )
-    action: str = Field(
-        max_length=50,
-        index=True,
-        description="Action allowed on resource (e.g., 'read', 'write', 'delete')"
-    )
-    description: str = Field(
-        default="",
-        max_length=255,
-        description="Permission description"
+    role_permissions: Mapped[list["RolePermission"]] = relationship(
+        back_populates="role",
+        init=False,
+        default_factory=list,
     )
 
 
-class Permission(PermissionBase, table=True):
-    id: Optional[int] = Field(
-        default=None,
-        primary_key=True
-    )
-    created_at: datetime = Field(
-        default_factory=datetime.now,
-        description="Timestamp when the permission was created"
-    )
-    
-    # Relationships
-    role_permissions: list["RolePermission"] = Relationship(back_populates="permission")
+class PermissionBase(MappedAsDataclass, kw_only=True):
+    resource: Mapped[str] = mapped_column(String(100), index=True)
+    action: Mapped[str] = mapped_column(String(50), index=True)
+    description: Mapped[str] = mapped_column(String(255), default="")
 
 
-class UserRole(SQLModel, table=True):
-    """Association table for User-Role many-to-many relationship"""
-    id: Optional[int] = Field(
-        default=None,
-        primary_key=True
+class Permission(PermissionBase, Base):
+    __tablename__ = "permission"
+
+    id: Mapped[Optional[int]] = mapped_column(primary_key=True, init=False, default=None, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(default_factory=datetime.now)
+
+    role_permissions: Mapped[list["RolePermission"]] = relationship(
+        back_populates="permission",
+        init=False,
+        default_factory=list,
     )
-    user_id: int = Field(
-        foreign_key="user.id",
-        index=True,
-        description="User ID"
-    )
-    role_id: int = Field(
-        foreign_key="role.id",
-        index=True,
-        description="Role ID"
-    )
-    assigned_at: datetime = Field(
-        default_factory=datetime.now,
-        description="Timestamp when the role was assigned to the user"
-    )
-    
-    # Relationships
-    user: Optional["User"] = Relationship(back_populates="user_roles")
-    role: Optional[Role] = Relationship(back_populates="user_roles")
 
 
-class RolePermission(SQLModel, table=True):
-    """Association table for Role-Permission many-to-many relationship"""
-    id: Optional[int] = Field(
-        default=None,
-        primary_key=True
+class UserRole(Base):
+    __tablename__ = "userrole"
+
+    id: Mapped[Optional[int]] = mapped_column(primary_key=True, init=False, default=None, nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), index=True)
+    role_id: Mapped[int] = mapped_column(ForeignKey("role.id"), index=True)
+    assigned_at: Mapped[datetime] = mapped_column(default_factory=datetime.now)
+
+    user: Mapped["User | None"] = relationship(back_populates="user_roles", init=False)
+    role: Mapped[Role | None] = relationship(back_populates="user_roles", init=False)
+
+
+class RolePermission(Base):
+    __tablename__ = "rolepermission"
+
+    id: Mapped[Optional[int]] = mapped_column(primary_key=True, init=False, default=None, nullable=False)
+    role_id: Mapped[int] = mapped_column(ForeignKey("role.id"), index=True)
+    permission_id: Mapped[int] = mapped_column(ForeignKey("permission.id"), index=True)
+    granted_at: Mapped[datetime] = mapped_column(default_factory=datetime.now)
+
+    role: Mapped[Role | None] = relationship(back_populates="role_permissions", init=False)
+    permission: Mapped[Permission | None] = relationship(
+        back_populates="role_permissions",
+        init=False,
     )
-    role_id: int = Field(
-        foreign_key="role.id",
-        index=True,
-        description="Role ID"
-    )
-    permission_id: int = Field(
-        foreign_key="permission.id",
-        index=True,
-        description="Permission ID"
-    )
-    granted_at: datetime = Field(
-        default_factory=datetime.now,
-        description="Timestamp when the permission was granted to the role"
-    )
-    
-    # Relationships
-    role: Optional[Role] = Relationship(back_populates="role_permissions")
-    permission: Optional[Permission] = Relationship(back_populates="role_permissions")

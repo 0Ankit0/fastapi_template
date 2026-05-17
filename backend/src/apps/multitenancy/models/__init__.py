@@ -6,6 +6,8 @@ from .tenant import (
     InvitationStatus,
 )
 
+import src.apps.iam.models  # noqa: F401
+
 __all__ = [
     "Tenant",
     "TenantMember",

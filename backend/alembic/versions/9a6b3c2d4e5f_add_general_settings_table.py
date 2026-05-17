@@ -10,7 +10,6 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-import sqlmodel
 from src.apps.core.config import (
     NON_RUNTIME_EDITABLE_SETTING_KEYS,
     get_environment_settings_snapshot,
@@ -29,7 +28,7 @@ def upgrade() -> None:
     op.create_table(
         "generalsetting",
         sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("key", sqlmodel.AutoString(length=255), nullable=False),
+        sa.Column("key", sa.String(length=255), nullable=False),
         sa.Column("env_value", sa.Text(), nullable=True),
         sa.Column("db_value", sa.Text(), nullable=True),
         sa.Column("use_db_value", sa.Boolean(), nullable=False),

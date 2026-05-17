@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
-from sqlmodel import select, desc, func, col
+from src.db.query import col, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone
 from src.apps.iam.api.deps import get_current_user, get_db

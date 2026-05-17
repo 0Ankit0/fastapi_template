@@ -9,7 +9,6 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-import sqlmodel
 
 
 # revision identifiers, used by Alembic.
@@ -45,8 +44,8 @@ def upgrade() -> None:
     token_type.create(bind, checkfirst=True)
 
     op.create_table('usedtoken',
-    sa.Column('token_jti', sqlmodel.AutoString(length=255), nullable=False),
-    sa.Column('token_purpose', sqlmodel.AutoString(length=50), nullable=False),
+    sa.Column('token_jti', sa.String(length=255), nullable=False),
+    sa.Column('token_purpose', sa.String(length=50), nullable=False),
     sa.Column('used_at', sa.DateTime(), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=True),

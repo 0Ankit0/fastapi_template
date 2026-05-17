@@ -1,8 +1,14 @@
+from __future__ import annotations
+
 from typing import Optional
-from sqlmodel import Field, SQLModel
+
+from sqlalchemy import String
+from sqlalchemy.orm import Mapped, mapped_column
+
+from src.db.base import Base
 
 
-class CasbinRule(SQLModel, table=True):
+class CasbinRule(Base):
     """
     Casbin policy rule storage model.
 
@@ -14,53 +20,13 @@ class CasbinRule(SQLModel, table=True):
 
     Table name must match what `casbin-async-sqlalchemy-adapter` expects.
     """
-    __tablename__ = "casbin_rule"  # type: ignore[assignment]
+    __tablename__ = "casbin_rule"
 
-    id: Optional[int] = Field(
-        default=None,
-        primary_key=True
-    )
-    ptype: str = Field(
-        max_length=255,
-        index=True,
-        description="Policy type (p for policy, g for grouping/role)"
-    )
-    v0: str = Field(
-        default="",
-        max_length=255,
-        nullable=True,
-        index=True,
-        description="p: role name, g: user id"
-    )
-    v1: str = Field(
-        default="",
-        max_length=255,
-        nullable=True,
-        index=True,
-        description="p: domain, g: role name"
-    )
-    v2: str = Field(
-        default="",
-        max_length=255,
-        nullable=True,
-        index=True,
-        description="p: resource, g: domain"
-    )
-    v3: str = Field(
-        default="",
-        max_length=255,
-        nullable=True,
-        description="p: action, g: unused"
-    )
-    v4: str = Field(
-        default="",
-        max_length=255,
-        nullable=True,
-        description="Unused in the current Casbin model"
-    )
-    v5: str = Field(
-        default="",
-        max_length=255,
-        nullable=True,
-        description="Unused in the current Casbin model"
-    )
+    id: Mapped[Optional[int]] = mapped_column(primary_key=True, init=False, default=None, nullable=False)
+    ptype: Mapped[str] = mapped_column(String(255), index=True)
+    v0: Mapped[Optional[str]] = mapped_column(String(255), default="", nullable=True, index=True)
+    v1: Mapped[Optional[str]] = mapped_column(String(255), default="", nullable=True, index=True)
+    v2: Mapped[Optional[str]] = mapped_column(String(255), default="", nullable=True, index=True)
+    v3: Mapped[Optional[str]] = mapped_column(String(255), default="", nullable=True)
+    v4: Mapped[Optional[str]] = mapped_column(String(255), default="", nullable=True)
+    v5: Mapped[Optional[str]] = mapped_column(String(255), default="", nullable=True)
