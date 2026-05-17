@@ -18,7 +18,7 @@ flowchart TB
   end
 
   subgraph Infrastructure
-    DB[(Postgres / SQLite)]
+    DB[(Postgres)]
     Redis[(Redis / Celery)]
     Providers[(Email / Push / SMS / Analytics / Payment Providers)]
   end

@@ -6,7 +6,7 @@ flowchart TB
   Mobile[Flutter Release Build]
   API[FastAPI Container]
   Worker[Celery Worker]
-  DB[(Postgres / SQLite)]
+  DB[(Postgres)]
   Redis[(Redis)]
   Providers[(External Providers)]
 

@@ -46,7 +46,7 @@ Use this quick classification rule:
 
 - Choose `STORAGE_BACKEND=local` or `s3` intentionally.
 - Review database naming, media URLs, and retention policies before the first shared environment.
-- Confirm local bootstrap still works if you keep SQLite for development.
+- Confirm local bootstrap still works against Postgres before teammates start building on top of the template.
 
 ## Production Readiness Review
 

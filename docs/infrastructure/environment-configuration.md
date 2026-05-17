@@ -29,7 +29,6 @@ The backend settings model reads environment values first, then allows selected 
 
 - **Bootstrap-only settings** must come from env or secret management:
   - `DATABASE_URL`
-  - `SYNC_DATABASE_URL`
   - `SECRET_KEY`
   - provider secrets and credentials
 - **Runtime-safe settings** can be published through the general settings system.
