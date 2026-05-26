@@ -103,7 +103,7 @@ async def create_role(
 @router.get("/roles", response_model=PaginatedResponse[RoleResponse])
 async def list_roles(
     skip: int = Query(default=0, ge=0),
-    limit: int = Query(default=10, ge=1, le=100),
+    limit: int = Query(default=10, ge=1, le=200),
     current_user: User = Depends(get_current_active_superuser),
     session: AsyncSession = Depends(get_session),
 ):
@@ -180,7 +180,7 @@ async def create_permission(
 @router.get("/permissions", response_model=PaginatedResponse[PermissionResponse])
 async def list_permissions(
     skip: int = Query(default=0, ge=0),
-    limit: int = Query(default=10, ge=1, le=100),
+    limit: int = Query(default=10, ge=1, le=200),
     current_user: User = Depends(get_current_active_superuser),
     session: AsyncSession = Depends(get_session),
 ):
