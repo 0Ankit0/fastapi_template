@@ -5,7 +5,6 @@ from typing import Any, Optional
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
-from jose import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 from urllib.parse import urlencode
 
@@ -40,6 +39,11 @@ _PROVIDER_ENABLED: dict[str, bool] = {
 
 def _assert_provider_enabled(provider: str) -> None:
     """Raise 400 if the provider is disabled or unknown."""
+    if not settings.FEATURE_SOCIAL_AUTH:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Social login is not enabled.",
+        )
     if provider not in OAUTH_PROVIDERS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -58,6 +62,9 @@ def _assert_provider_enabled(provider: str) -> None:
     description="Returns a list of social OAuth2 providers that are currently enabled.",
 )
 async def list_social_providers() -> dict:
+    if not settings.FEATURE_SOCIAL_AUTH:
+        return {"providers": []}
+
     enabled = [p for p, on in _PROVIDER_ENABLED.items() if on]
     return {"providers": enabled}
 
@@ -86,7 +93,7 @@ async def social_login(provider: str) -> RedirectResponse:
     summary="Handle OAuth2 callback",
     description=(
         "Exchanges the authorization code for tokens, retrieves user info, "
-        "and issues JWT access/refresh tokens. Pass set_cookie=true to receive "
+        "and issues access/refresh tokens. Pass set_cookie=true to receive "
         "tokens via HttpOnly cookie instead of JSON."
     ),
 )
@@ -204,13 +211,13 @@ async def social_callback(
     ip_address = get_client_ip(request)
     user_agent = request.headers.get("user-agent", "unknown")
 
-    # Issue application JWT tokens
+    # Issue application tokens
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = security.create_access_token(user.id, expires_delta=access_token_expires)
     refresh_token = security.create_refresh_token(user.id)
 
-    access_payload = jwt.decode(access_token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
-    refresh_payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
+    access_payload = security.decode_token(access_token)
+    refresh_payload = security.decode_token(refresh_token)
 
     # Revoke any existing active tokens for this user+IP before issuing new ones
     await revoke_tokens_for_ip(db, user.id, ip_address)
@@ -221,7 +228,7 @@ async def social_callback(
         token_type=TokenType.ACCESS,
         ip_address=ip_address,
         user_agent=user_agent,
-        expires_at=datetime.fromtimestamp(access_payload["exp"], tz=timezone.utc),
+        expires_at=security.payload_expiration(access_payload),
     ))
     db.add(TokenTracking(
         user_id=user.id,
@@ -229,7 +236,7 @@ async def social_callback(
         token_type=TokenType.REFRESH,
         ip_address=ip_address,
         user_agent=user_agent,
-        expires_at=datetime.fromtimestamp(refresh_payload["exp"], tz=timezone.utc),
+        expires_at=security.payload_expiration(refresh_payload),
     ))
     await db.commit()
     await record_successful_login_event(

@@ -51,6 +51,14 @@ class CasbinEnforcer:
             raise RuntimeError("Enforcer not initialized. Call get_enforcer first.")
         return cls._enforcer
 
+    @classmethod
+    async def _ensure_enforcer(cls) -> AsyncEnforcer:
+        if cls._enforcer is None:
+            from src.db.session import engine
+
+            return await cls.get_enforcer(engine)
+        return cls._enforcer
+
     # ── Policy management ─────────────────────────────────────────────────
 
     @classmethod
@@ -61,7 +69,7 @@ class CasbinEnforcer:
         act: str,
         domain: str = GLOBAL_DOMAIN,
     ) -> bool:
-        enforcer = cls._require_enforcer()
+        enforcer = await cls._ensure_enforcer()
         return await enforcer.add_policy(sub, cls.normalize_domain(domain), obj, act)
 
     @classmethod
@@ -72,7 +80,7 @@ class CasbinEnforcer:
         act: str,
         domain: str = GLOBAL_DOMAIN,
     ) -> bool:
-        enforcer = cls._require_enforcer()
+        enforcer = await cls._ensure_enforcer()
         return await enforcer.remove_policy(sub, cls.normalize_domain(domain), obj, act)
 
     # ── Role / grouping management ────────────────────────────────────────
@@ -84,7 +92,7 @@ class CasbinEnforcer:
         role: str,
         domain: str = GLOBAL_DOMAIN,
     ) -> bool:
-        enforcer = cls._require_enforcer()
+        enforcer = await cls._ensure_enforcer()
         return await enforcer.add_role_for_user_in_domain(
             user,
             role,
@@ -105,7 +113,7 @@ class CasbinEnforcer:
         helper here because callers intend to revoke one role assignment, not
         wipe every role in a domain.
         """
-        enforcer = cls._require_enforcer()
+        enforcer = await cls._ensure_enforcer()
         return await enforcer.remove_grouping_policy(
             user,
             role,
@@ -118,7 +126,7 @@ class CasbinEnforcer:
         user: str,
         domain: str = GLOBAL_DOMAIN,
     ) -> list[str]:
-        enforcer = cls._require_enforcer()
+        enforcer = await cls._ensure_enforcer()
         return await enforcer.get_roles_for_user_in_domain(
             user,
             cls.normalize_domain(domain),
@@ -130,7 +138,7 @@ class CasbinEnforcer:
         role: str,
         domain: str = GLOBAL_DOMAIN,
     ) -> list[str]:
-        enforcer = cls._require_enforcer()
+        enforcer = await cls._ensure_enforcer()
         return await enforcer.get_users_for_role_in_domain(
             role,
             cls.normalize_domain(domain),
@@ -146,7 +154,7 @@ class CasbinEnforcer:
         act: str,
         domain: str = GLOBAL_DOMAIN,
     ) -> bool:
-        enforcer = cls._require_enforcer()
+        enforcer = await cls._ensure_enforcer()
         return enforcer.enforce(sub, cls.normalize_domain(domain), obj, act)
 
     @classmethod
@@ -155,7 +163,7 @@ class CasbinEnforcer:
         user: str,
         domain: str = GLOBAL_DOMAIN,
     ) -> list[list[str]]:
-        enforcer = cls._require_enforcer()
+        enforcer = await cls._ensure_enforcer()
         return await enforcer.get_permissions_for_user_in_domain(
             user,
             cls.normalize_domain(domain),

@@ -2,7 +2,6 @@ from datetime import timedelta, datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status, Body
 from src.db.query import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from jose import jwt
 from src.apps.core.config import settings
 from src.apps.core import security
 from src.apps.core.security import TokenType
@@ -51,7 +50,7 @@ async def refresh_token(
         user_id = int(user_id)
         
         # Check if refresh token is tracked and active
-        refresh_payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
+        refresh_payload = security.decode_token(refresh_token)
         refresh_jti = refresh_payload.get("jti")
         token_tracking = None
 
@@ -96,8 +95,8 @@ async def refresh_token(
         new_refresh_token = security.create_refresh_token(user.id)
         
         # Track new tokens
-        access_payload = jwt.decode(access_token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
-        new_refresh_payload = jwt.decode(new_refresh_token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
+        access_payload = security.decode_token(access_token)
+        new_refresh_payload = security.decode_token(new_refresh_token)
 
         # Revoke any remaining active tokens for this user+IP before issuing new ones
         await revoke_tokens_for_ip(db, user.id, ip_address)
@@ -108,7 +107,7 @@ async def refresh_token(
             token_type=TokenType.ACCESS,
             ip_address=ip_address,
             user_agent=user_agent,
-            expires_at=datetime.fromtimestamp(access_payload["exp"], tz=timezone.utc)
+            expires_at=security.payload_expiration(access_payload)
         )
         db.add(access_token_tracking)
         
@@ -118,7 +117,7 @@ async def refresh_token(
             token_type=TokenType.REFRESH,
             ip_address=ip_address,
             user_agent=user_agent,
-            expires_at=datetime.fromtimestamp(new_refresh_payload["exp"], tz=timezone.utc)
+            expires_at=security.payload_expiration(new_refresh_payload)
         )
         db.add(refresh_token_tracking)
         await db.commit()

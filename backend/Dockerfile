@@ -27,14 +27,17 @@ FROM python:3.14-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PATH=/app/.venv/bin:$PATH
+    PATH=/app/.venv/bin:$PATH \
+    UV_CACHE_DIR=/app/.cache/uv
 
 WORKDIR /app
 
 RUN groupadd --system app && useradd --system --gid app app
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install uv
 
 COPY --from=builder --chown=app:app /app /app
-RUN mkdir -p /app/media && chown app:app /app/media
+RUN mkdir -p /app/media /app/.cache/uv && chown -R app:app /app/media /app/.cache
 
 USER app
 

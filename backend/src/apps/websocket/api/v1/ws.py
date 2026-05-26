@@ -87,12 +87,10 @@ async def _handle_connection(
     # Send handshake (plaintext — the connection is already TLS-protected)
     jti = None  # session_key_b64 uses the same derivation; we need jti from token
     # Re-derive the b64 key for the handshake using the same jti used in connect
-    from jose import jwt as jose_jwt
     from src.apps.core import security
-    from src.apps.core.config import settings
     token = websocket.query_params.get("token", "")
     try:
-        payload = jose_jwt.decode(token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
+        payload = security.decode_token(token)
         jti = payload.get("jti") or payload.get("sub", "")
     except Exception:
         jti = ""

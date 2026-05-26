@@ -92,7 +92,7 @@ async def confirm_password_reset(
                 detail="Invalid reset token data"
             )
         
-        # Verify the embedded JWT token
+        # Verify the embedded PASETO token
         payload = security.verify_token(jwt_token, token_type=TokenType.PASSWORD_RESET)
         token_jti = payload.get("jti")
         

@@ -1,7 +1,7 @@
 """
 WebSocket authentication dependency.
 
-JWT is passed as a ``?token=<jwt>`` query parameter (Authorization headers
+The access token is passed as a ``?token=...`` query parameter (Authorization headers
 are not supported in browser WebSocket API).
 
 Returns the authenticated User and the derived AES session key bytes.
@@ -11,7 +11,6 @@ to re-authenticate rather than retry blindly.
 from typing import Optional, Tuple
 
 from fastapi import WebSocket
-from jose import JWTError, jwt
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.db.query import select
@@ -29,7 +28,7 @@ async def ws_get_current_user(
     db: AsyncSession,
 ) -> Tuple[User, bytes]:
     """
-    Validate the JWT from ``?token=`` and return ``(user, session_key)``.
+    Validate the access token from ``?token=`` and return ``(user, session_key)``.
 
     ``session_key`` is a 32-byte AES-256-GCM key derived from the token's
     jti + the server SECRET_KEY.  It is unique per token and never travels
@@ -58,9 +57,9 @@ async def ws_get_current_user(
         raise RuntimeError("WS auth failed: missing token")
 
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
+        payload = security.decode_token(token)
         token_data = TokenPayload(**payload)
-    except (JWTError, ValidationError):
+    except (security.TokenValidationError, ValidationError):
         await _reject("Invalid or expired token")
         raise RuntimeError("WS auth failed: invalid token")
 

@@ -3,23 +3,25 @@ services:
     command:
       - /bin/sh
       - -c
-      - alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+      - mkdir -p /tmp/uv-cache && UV_CACHE_DIR=/tmp/uv-cache uv sync --frozen --no-dev && alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - ./backend/src:/app/src
       - ./backend/alembic:/app/alembic
       - ./backend/alembic.ini:/app/alembic.ini
+      - ./backend/pyproject.toml:/app/pyproject.toml
+      - ./backend/uv.lock:/app/uv.lock
 
   worker:
     command:
-      - celery
-      - -A
-      - src.apps.core.celery_app
-      - worker
-      - --loglevel=info
+      - /bin/sh
+      - -c
+      - mkdir -p /tmp/uv-cache && UV_CACHE_DIR=/tmp/uv-cache uv sync --frozen --no-dev && celery -A src.apps.core.celery_app worker --loglevel=info
     volumes:
       - ./backend/src:/app/src
       - ./backend/alembic:/app/alembic
       - ./backend/alembic.ini:/app/alembic.ini
+      - ./backend/pyproject.toml:/app/pyproject.toml
+      - ./backend/uv.lock:/app/uv.lock
 
   frontend:
     build:

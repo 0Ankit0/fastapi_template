@@ -9,7 +9,6 @@ from src.apps.iam.models.role import UserRole
 from src.apps.iam.models.token_tracking import TokenTracking
 from src.db.session import get_session
 from pydantic import ValidationError
-from jose import JWTError, jwt
 from src.apps.core.config import settings
 from src.apps.core import security
 from src.apps.core.logging import set_log_context
@@ -44,13 +43,9 @@ async def get_current_user(
         )
     
     try:
-        payload = jwt.decode(
-            token,
-            settings.SECRET_KEY,
-            algorithms=[security.ALGORITHM]
-        )
+        payload = security.decode_token(token)
         token_data = TokenPayload(**payload)
-    except (JWTError, ValidationError):
+    except (security.TokenValidationError, ValidationError):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials"

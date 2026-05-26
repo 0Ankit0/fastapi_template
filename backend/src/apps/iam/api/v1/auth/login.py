@@ -3,7 +3,6 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from src.db.query import col, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from jose import jwt
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from src.apps.core.config import settings
@@ -190,9 +189,8 @@ async def login_access_token(
         )
         refresh_token = security.create_refresh_token(user.id)
         
-        # Decode tokens to get JTI
-        access_payload = jwt.decode(access_token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
-        refresh_payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
+        access_payload = security.decode_token(access_token)
+        refresh_payload = security.decode_token(refresh_token)
 
         # Revoke any existing active tokens for this user+IP before issuing new ones
         await revoke_tokens_for_ip(db, user.id, ip_address)
@@ -204,7 +202,7 @@ async def login_access_token(
             token_type=TokenType.ACCESS,
             ip_address=ip_address,
             user_agent=user_agent,
-            expires_at=datetime.fromtimestamp(access_payload["exp"], tz=timezone.utc)
+            expires_at=security.payload_expiration(access_payload)
         )
         db.add(access_token_tracking)
         
@@ -215,7 +213,7 @@ async def login_access_token(
             token_type=TokenType.REFRESH,
             ip_address=ip_address,
             user_agent=user_agent,
-            expires_at=datetime.fromtimestamp(refresh_payload["exp"], tz=timezone.utc)
+            expires_at=security.payload_expiration(refresh_payload)
         )
         db.add(refresh_token_tracking)
         await db.commit()
@@ -307,7 +305,7 @@ async def logout(
         if token:
             # Decode to get JTI
             try:
-                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
+                payload = security.decode_token(token)
                 jti = payload.get("jti")
                 ip_address = get_client_ip(request)
                 

@@ -2,7 +2,6 @@ from datetime import timedelta, datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from src.db.query import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from jose import jwt
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from src.apps.core.config import settings
@@ -86,9 +85,8 @@ async def signup(
         
         refresh_token = security.create_refresh_token(new_user.id)
         
-        # Decode tokens to get JTI
-        access_payload = jwt.decode(access_token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
-        refresh_payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
+        access_payload = security.decode_token(access_token)
+        refresh_payload = security.decode_token(refresh_token)
 
         # Revoke any existing active tokens for this user+IP before issuing new ones
         await revoke_tokens_for_ip(db, new_user.id, ip_address)
@@ -100,7 +98,7 @@ async def signup(
             token_type=TokenType.ACCESS,
             ip_address=ip_address,
             user_agent=user_agent,
-            expires_at=datetime.fromtimestamp(access_payload["exp"], tz=timezone.utc)
+            expires_at=security.payload_expiration(access_payload)
         )
         db.add(access_token_tracking)
         
@@ -111,7 +109,7 @@ async def signup(
             token_type=TokenType.REFRESH,
             ip_address=ip_address,
             user_agent=user_agent,
-            expires_at=datetime.fromtimestamp(refresh_payload["exp"], tz=timezone.utc)
+            expires_at=security.payload_expiration(refresh_payload)
         )
         db.add(refresh_token_tracking)
         await db.commit()
@@ -191,7 +189,7 @@ async def verify_email(
             )
         
         
-        # Verify the embedded JWT token
+        # Verify the embedded PASETO token
         payload = security.verify_token(str(jwt_token), token_type=TokenType.EMAIL_VERIFICATION)
         token_jti = payload.get("jti")
         

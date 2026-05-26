@@ -12,5 +12,4 @@ router.include_router(signup.router)
 router.include_router(password.router)
 router.include_router(token.router)
 router.include_router(otp.router)
-if settings.FEATURE_SOCIAL_AUTH:
-    router.include_router(social.router)
+router.include_router(social.router)
