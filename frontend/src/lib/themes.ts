@@ -77,6 +77,44 @@ function mixColors(base: string, blend: string, weight: number) {
   );
 }
 
+function channelToLinear(value: number) {
+  const normalized = value / 255;
+  return normalized <= 0.03928
+    ? normalized / 12.92
+    : ((normalized + 0.055) / 1.055) ** 2.4;
+}
+
+function contrastRatio(foreground: string, background: string) {
+  const fg = hexToRgb(foreground);
+  const bg = hexToRgb(background);
+
+  const foregroundLuminance =
+    0.2126 * channelToLinear(fg.r) +
+    0.7152 * channelToLinear(fg.g) +
+    0.0722 * channelToLinear(fg.b);
+  const backgroundLuminance =
+    0.2126 * channelToLinear(bg.r) +
+    0.7152 * channelToLinear(bg.g) +
+    0.0722 * channelToLinear(bg.b);
+
+  const lighter = Math.max(foregroundLuminance, backgroundLuminance);
+  const darker = Math.min(foregroundLuminance, backgroundLuminance);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function ensureContrast(foreground: string, background: string, minimumRatio: number, mode: ThemeMode) {
+  let candidate = normalizeHex(foreground);
+  const targetBlend = mode === 'dark' ? '#ffffff' : '#0f172a';
+  let attempts = 0;
+
+  while (contrastRatio(candidate, background) < minimumRatio && attempts < 10) {
+    candidate = mixColors(candidate, targetBlend, 0.14);
+    attempts += 1;
+  }
+
+  return candidate;
+}
+
 function readableText(background: string) {
   const { r, g, b } = hexToRgb(background);
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
@@ -95,9 +133,25 @@ export function buildTheme(theme: {
 }): AppTheme {
   const background = normalizeHex(theme.background);
   const surface = normalizeHex(theme.surface);
-  const textPrimary = normalizeHex(theme.textPrimary);
+  const textPrimary = ensureContrast(theme.textPrimary, background, 7, theme.mode);
   const accent = normalizeHex(theme.accent);
   const blendBase = theme.mode === 'dark' ? '#ffffff' : '#0f172a';
+  const surfaceMuted = mixColors(background, blendBase, theme.mode === 'dark' ? 0.05 : 0.03);
+  const surfaceSubtle = mixColors(surface, blendBase, theme.mode === 'dark' ? 0.08 : 0.05);
+  const borderColor = mixColors(surface, blendBase, theme.mode === 'dark' ? 0.18 : 0.12);
+  const textSecondary = ensureContrast(
+    mixColors(textPrimary, background, theme.mode === 'dark' ? 0.18 : 0.28),
+    background,
+    5.2,
+    theme.mode
+  );
+  const textMuted = ensureContrast(
+    mixColors(textPrimary, background, theme.mode === 'dark' ? 0.34 : 0.46),
+    background,
+    4.5,
+    theme.mode
+  );
+  const accentForeground = ensureContrast(readableText(accent), accent, 4.5, theme.mode);
 
   return {
     id: theme.id,
@@ -108,14 +162,14 @@ export function buildTheme(theme: {
       background,
       foreground: textPrimary,
       surface,
-      surfaceMuted: mixColors(background, blendBase, theme.mode === 'dark' ? 0.04 : 0.03),
-      surfaceSubtle: mixColors(surface, blendBase, theme.mode === 'dark' ? 0.06 : 0.05),
-      borderColor: mixColors(surface, blendBase, theme.mode === 'dark' ? 0.14 : 0.12),
+      surfaceMuted,
+      surfaceSubtle,
+      borderColor,
       textPrimary,
-      textSecondary: mixColors(textPrimary, background, theme.mode === 'dark' ? 0.22 : 0.3),
-      textMuted: mixColors(textPrimary, background, theme.mode === 'dark' ? 0.42 : 0.5),
+      textSecondary,
+      textMuted,
       accent,
-      accentForeground: readableText(accent),
+      accentForeground,
       accentSoft: mixColors(accent, background, theme.mode === 'dark' ? 0.8 : 0.88),
       successSoft: mixColors('#16a34a', background, theme.mode === 'dark' ? 0.82 : 0.9),
       warningSoft: mixColors('#d97706', background, theme.mode === 'dark' ? 0.84 : 0.9),

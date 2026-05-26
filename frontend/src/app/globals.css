@@ -43,6 +43,18 @@ body {
   background-color: var(--surface) !important;
 }
 
+.bg-white\/95,
+.bg-white\/90,
+.bg-white\/85,
+.bg-white\/80,
+.bg-white\/75,
+.bg-white\/10,
+.bg-white\/7,
+.bg-white\/6,
+.bg-white\/5 {
+  background-color: color-mix(in srgb, var(--surface) 88%, transparent) !important;
+}
+
 .bg-gray-50 {
   background-color: var(--surface-muted) !important;
 }
@@ -54,8 +66,24 @@ body {
 .border-gray-300,
 .border-gray-200,
 .border-gray-100,
+.border-slate-300,
+.border-slate-200,
 .border-slate-700 {
   border-color: var(--border-color) !important;
+}
+
+.border-gray-200\/80,
+.border-white\/70,
+.border-white\/40,
+.border-white\/20,
+.border-white\/10 {
+  border-color: color-mix(in srgb, var(--border-color) 84%, transparent) !important;
+}
+
+.text-slate-950,
+.text-slate-900,
+.text-slate-800 {
+  color: var(--text-primary) !important;
 }
 
 .text-gray-900 {
@@ -64,13 +92,16 @@ body {
 
 .text-gray-700,
 .text-gray-600,
-.text-slate-200 {
+.text-slate-200,
+.text-slate-100,
+.text-slate-700 {
   color: var(--text-secondary) !important;
 }
 
 .text-gray-500,
 .text-gray-400,
-.text-slate-400 {
+.text-slate-400,
+.text-sky-100 {
   color: var(--text-muted) !important;
 }
 
@@ -95,6 +126,18 @@ body {
   background-color: var(--accent-soft) !important;
 }
 
+.bg-gray-900,
+.bg-slate-950,
+.bg-slate-900 {
+  background-color: color-mix(in srgb, var(--text-primary) 92%, black) !important;
+}
+
+.hover\:bg-slate-800:hover,
+.hover\:bg-slate-100:hover,
+.hover\:bg-gray-200:hover {
+  background-color: var(--surface-subtle) !important;
+}
+
 .hover\:bg-blue-700:hover {
   background-color: color-mix(in srgb, var(--accent) 88%, black) !important;
 }
@@ -110,6 +153,15 @@ body {
 .hover\:bg-gray-100:hover,
 .hover\:bg-gray-50:hover {
   background-color: var(--surface-subtle) !important;
+}
+
+.text-blue-800,
+.hover\:text-blue-800:hover {
+  color: color-mix(in srgb, var(--accent) 82%, var(--text-primary)) !important;
+}
+
+.text-gray-300 {
+  color: color-mix(in srgb, var(--text-muted) 72%, var(--background)) !important;
 }
 
 .bg-green-50,
@@ -173,7 +225,12 @@ select,
 input,
 textarea {
   color: var(--text-primary);
-  background-color: transparent;
+  background-color: var(--surface);
+}
+
+option {
+  color: var(--text-primary);
+  background-color: var(--surface);
 }
 
 ::selection {

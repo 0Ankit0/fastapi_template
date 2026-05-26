@@ -12,6 +12,7 @@ import VerifyEmailPage from '@/app/(auth)/verify-email/page';
 import AcceptInvitationPage from '@/app/(auth)/accept-invitation/page';
 import AuthCallbackPage from '@/app/(auth)/auth-callback/page';
 import PaymentCallbackPage from '@/app/(auth)/payment-callback/page';
+import { SuperuserRoute } from '@/components/auth/superuser-route';
 import UserDashboardLayout from '@/app/(user-dashboard)/layout';
 import DashboardPage from '@/app/(user-dashboard)/dashboard/page';
 import ProfilePage from '@/app/(user-dashboard)/profile/page';
@@ -92,8 +93,22 @@ export function AppRouter() {
             <Route path="tokens" element={<TokensPage />} />
             <Route path="tenants" element={<TenantsPage />} />
             <Route path="maps" element={<MapsPage />} />
-            <Route path="rbac" element={<RbacPage />} />
-            <Route path="rbac/:roleId" element={<RoleManagePage />} />
+            <Route
+              path="rbac"
+              element={
+                <SuperuserRoute>
+                  <RbacPage />
+                </SuperuserRoute>
+              }
+            />
+            <Route
+              path="rbac/:roleId"
+              element={
+                <SuperuserRoute>
+                  <RoleManagePage />
+                </SuperuserRoute>
+              }
+            />
           </Route>
 
           <Route element={<AdminRouteLayout />}>
