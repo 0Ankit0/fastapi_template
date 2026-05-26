@@ -7,7 +7,7 @@ This template uses a small set of env-file entrypoints instead of forcing every 
 | File | Scope | Intended use |
 |---|---|---|
 | `backend/.env` | FastAPI runtime | Local backend development and direct process execution |
-| `frontend/.env.local` | Next.js local runtime | Local web development outside Docker |
+| `frontend/.env.local` | Vite local runtime | Local web development outside Docker |
 | `mobile/.env` | Flutter startup defaults | Mobile-safe non-secret defaults committed with the template |
 | `.env.docker.dev` | Compose development stack | Live-reload container development |
 | `.env.docker.prod` | Compose production-style stack | Immutable image deployment settings |

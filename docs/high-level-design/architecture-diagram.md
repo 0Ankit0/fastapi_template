@@ -3,7 +3,7 @@
 ```mermaid
 flowchart TB
   subgraph Clients
-    Web[Next.js Web App]
+    Web[React + Vite Web App]
     Mobile[Flutter Mobile App]
   end
 

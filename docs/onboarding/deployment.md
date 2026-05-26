@@ -23,7 +23,7 @@ Use this guide when you want to run the template in containers or hand it off as
 - `redis`: Redis 7
 - `backend`: FastAPI API service
 - `worker`: Celery worker
-- `frontend`: Next.js web app
+- `frontend`: React + Vite web app
 
 ## Pre-deploy checklist
 

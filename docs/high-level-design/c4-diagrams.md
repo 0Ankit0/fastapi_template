@@ -5,7 +5,7 @@ flowchart TB
   Person1[Person: End User]
   Person2[Person: Operator]
   System[System: Reusable FastAPI Template]
-  Web[Container: Next.js Frontend]
+  Web[Container: React + Vite Frontend]
   Mobile[Container: Flutter App]
   API[Container: FastAPI Backend]
   Providers[External System: Third-party Providers]

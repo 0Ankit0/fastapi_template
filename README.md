@@ -1,6 +1,6 @@
 # FastAPI Template
 
-Reusable full-stack starter built around **FastAPI**, **Next.js**, and **Flutter** with feature-gated modules, provider discovery, automatic token refresh, and deployment-ready Docker defaults.
+Reusable full-stack starter built around **FastAPI**, **React + Vite**, and **Flutter** with feature-gated modules, provider discovery, automatic token refresh, and deployment-ready Docker defaults.
 
 ## What the template gives you
 
@@ -16,7 +16,7 @@ Reusable full-stack starter built around **FastAPI**, **Next.js**, and **Flutter
 | Layer | Technology | Notes |
 |---|---|---|
 | API | FastAPI + SQLModel + Alembic | Feature-gated routers, runtime settings, Celery, Redis, websockets |
-| Web | Next.js 16 + React Query + Zustand | Adaptive dashboard UI, protected routes, proactive token refresh |
+| Web | React 19 + Vite + React Query + Zustand | Adaptive dashboard UI, protected routes, proactive token refresh |
 | Mobile | Flutter + Riverpod + Dio | Native auth/session handling, provider-driven notifications |
 | Infra | Postgres + Redis + Docker Compose | Shared local/dev/prod container entrypoints |
 
@@ -82,7 +82,7 @@ podman compose --env-file .env.docker.dev -f docker-compose.yml -f docker-compos
 
 ```text
 backend/   FastAPI app, database models, feature modules, Alembic migrations
-frontend/  Next.js app, auth/session UX, dashboard pages, runtime-aware components
+frontend/  React + Vite app, auth/session UX, dashboard pages, runtime-aware components
 mobile/    Flutter app, native auth/session flows, notifications, profile/settings
 docs/      Requirements, architecture, onboarding, deployment, and operations guides
 scripts/   Bootstrap, env-copy, health, and docs validation helpers

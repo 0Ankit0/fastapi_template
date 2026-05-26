@@ -7,7 +7,7 @@ This document is the fastest way to understand how the template is put together,
 This repository is a reusable full-stack starter made of three main application layers:
 
 - Backend: FastAPI API, auth/session handling, admin APIs, runtime configuration, observability, providers, background jobs, and database access.
-- Frontend: Next.js web app that discovers what the backend has enabled and adapts its UI from runtime APIs instead of assuming every feature exists.
+- Frontend: React + Vite web app that discovers what the backend has enabled and adapts its UI from runtime APIs instead of assuming every feature exists.
 - Mobile: Flutter client with the same capability-driven approach for runtime features and public configuration.
 
 The template is built to be configuration-first. Most project customization should start by changing settings, feature flags, and provider choices before writing new branching logic.

@@ -2,7 +2,7 @@
 
 ```mermaid
 flowchart TB
-  Web[Next.js Container]
+  Web[React + Vite Container]
   Mobile[Flutter Release Build]
   API[FastAPI Container]
   Worker[Celery Worker]
