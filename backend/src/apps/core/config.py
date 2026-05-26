@@ -198,7 +198,7 @@ class Settings(BaseSettings):
 
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = "password"
+    POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_DB: str = "app"
     DATABASE_URL: str | None = None
     DB_POOL_SIZE: int = 10
