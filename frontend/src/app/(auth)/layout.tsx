@@ -1,9 +1,9 @@
-import Link from 'next/link';
+import { Link } from '@/lib/router';
 import { CheckCircle2 } from 'lucide-react';
 
 const authHighlights = [
   'Postgres-first backend with SQLAlchemy and Alembic',
-  'Typed Next.js frontend with shared auth flows',
+  'Typed React + Vite frontend with shared auth flows',
   'RBAC, notifications, and background workers included',
 ];
 
@@ -32,7 +32,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
               Sign in to a stack that already matches the production shape.
             </h1>
             <p className="text-lg leading-8 text-slate-600">
-              Authentication sits on top of the same FastAPI, PostgreSQL, and Next.js foundation
+              Authentication sits on top of the same FastAPI, PostgreSQL, and React foundation
               as the rest of the template, so the first user flow feels like part of the platform.
             </p>
           </div>

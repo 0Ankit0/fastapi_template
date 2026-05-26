@@ -1,14 +1,14 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from '@/lib/router';
 import { analytics } from '@/lib/analytics';
 
 /**
  * AnalyticsProvider
  *
  * Drop this inside your Providers component.  It automatically tracks page
- * views whenever the Next.js router path changes, so individual pages don't
+ * views whenever the client router path changes, so individual pages don't
  * need to call analytics.page() manually.
  *
  * Renders nothing — purely a side-effect component.

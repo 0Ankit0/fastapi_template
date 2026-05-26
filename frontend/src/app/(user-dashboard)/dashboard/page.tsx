@@ -5,7 +5,7 @@ import { useNotifications } from '@/hooks/use-notifications';
 import { useTokens } from '@/hooks/use-tokens';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Bell, Shield, Key, AlertTriangle } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from '@/lib/router';
 
 export default function DashboardPage() {
   const { user } = useAuthStore();

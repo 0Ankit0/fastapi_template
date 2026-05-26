@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { Link, useRouter } from '@/lib/router';
 import { useAuthStore } from '@/store/auth-store';
 import {
   ArrowRight,
@@ -30,7 +29,7 @@ const heroPillars = [
   {
     icon: Sparkles,
     title: 'Launch-ready interface',
-    description: 'A typed Next.js app shell, auth routes, dashboards, and settings flows are in place before product work begins.',
+    description: 'A typed React + Vite app shell, auth routes, dashboards, and settings flows are in place before product work begins.',
   },
 ];
 
@@ -55,13 +54,13 @@ const platformHighlights = [
 const foundationStats = [
   { value: 'Postgres', label: 'single database target' },
   { value: 'SQLAlchemy', label: 'ORM and migrations' },
-  { value: 'Next.js', label: 'typed UI shell' },
+  { value: 'React + Vite', label: 'typed UI shell' },
 ];
 
 const launchChecklist = [
   'FastAPI + SQLAlchemy + Alembic',
   'PostgreSQL-only data layer',
-  'Next.js app router and auth flows',
+  'React Router auth and dashboard flows',
   'Redis-backed workers and queues',
   'Multitenant RBAC and notifications',
   'Containerized local development',
@@ -124,7 +123,7 @@ export default function Home() {
               </h1>
 
               <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600 sm:text-xl">
-                FastAPI Template pairs a typed Next.js interface with a PostgreSQL-only backend,
+                FastAPI Template pairs a typed React + Vite interface with a PostgreSQL-only backend,
                 SQLAlchemy models, background workers, and security defaults that are already
                 coherent across the stack.
               </p>

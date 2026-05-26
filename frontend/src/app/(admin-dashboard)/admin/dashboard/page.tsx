@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { Link } from '@/lib/router';
 import { useAuthStore } from '@/store/auth-store';
 import { useListUsers } from '@/hooks/use-users';
 import { useTokens } from '@/hooks/use-tokens';

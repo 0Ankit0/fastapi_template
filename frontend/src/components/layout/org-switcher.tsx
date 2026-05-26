@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import Link from 'next/link';
+import { Link } from '@/lib/router';
 import { ChevronsUpDown, Check, Building2, Plus } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 import { useTenants, useSwitchTenant } from '@/hooks/use-tenants';

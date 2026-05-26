@@ -1,8 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { Link, useSearchParams, useRouter } from '@/lib/router';
 import { useVerifyEmail, useResendVerification } from '@/hooks/use-auth';
 import { MailCheck, XCircle, Loader2, RefreshCw } from 'lucide-react';
 

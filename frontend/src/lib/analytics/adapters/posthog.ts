@@ -17,7 +17,7 @@ export class PostHogAdapter implements AnalyticsAdapter {
     posthog.init(apiKey, {
       api_host: host,
       // Respect user privacy — disable automatic pageview capture;
-      // we call page() explicitly from the Next.js router.
+      // we call page() explicitly from the client router.
       capture_pageview: false,
       // Persist identity across sessions
       persistence: 'localStorage',

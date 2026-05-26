@@ -32,7 +32,7 @@ import {
   PaintBucket,
   Sparkles,
 } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from '@/lib/router';
 
 const TABS = [
   { id: 'account',       label: 'Account',       icon: Mail },

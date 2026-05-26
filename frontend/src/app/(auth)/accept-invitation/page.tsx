@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams, useRouter } from '@/lib/router';
 import { useAcceptInvitation } from '@/hooks/use-tenants';
 import { useAuthStore } from '@/store/auth-store';
 

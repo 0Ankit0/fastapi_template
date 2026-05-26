@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/router';
 import { ProtectedRoute } from './protected-route';
 import { useAuthStore } from '@/store/auth-store';
 

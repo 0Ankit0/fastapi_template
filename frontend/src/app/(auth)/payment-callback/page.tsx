@@ -1,10 +1,9 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { Link, useSearchParams, useRouter } from '@/lib/router';
 import { useVerifyPayment } from '@/hooks/use-finances';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
-import Link from 'next/link';
 import type { PaymentProvider } from '@/types';
 
 /**

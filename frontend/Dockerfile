@@ -34,12 +34,12 @@ ENV NODE_ENV=production \
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json package-lock.json ./
-COPY next.config.ts postcss.config.mjs tsconfig.json ./
+COPY vite.config.ts postcss.config.mjs tsconfig.json ./
 COPY docker ./docker
 COPY public ./public
 COPY src ./src
 
-RUN --mount=type=cache,target=/app/.next/cache \
+RUN --mount=type=cache,target=/app/node_modules/.vite \
     npm run build
 
 FROM node:20-alpine AS runner
@@ -47,20 +47,21 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production \
-    NEXT_TELEMETRY_DISABLED=1 \
+    HUSKY=0 \
     PORT=3000 \
     HOSTNAME=0.0.0.0
 
 RUN addgroup --system --gid 1001 nodejs \
-    && adduser --system --uid 1001 nextjs
+    && adduser --system --uid 1001 appuser
 
-COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/docker ./docker
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=deps --chown=appuser:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=appuser:nodejs /app/package.json ./package.json
+COPY --from=builder --chown=appuser:nodejs /app/package-lock.json ./package-lock.json
+COPY --from=builder --chown=appuser:nodejs /app/docker ./docker
+COPY --from=builder --chown=appuser:nodejs /app/dist ./dist
 
-USER nextjs
+USER appuser
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+CMD ["npm", "run", "start"]
