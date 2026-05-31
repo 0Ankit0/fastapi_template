@@ -13,7 +13,7 @@ REST endpoints
 
 Encryption handshake
 ─────────────────────
-1. Client connects with ``?token=<jwt>``.
+1. Client connects with ``?token=<paseto_token>``.
 2. Server authenticates, then sends a plaintext HANDSHAKE frame:
        {"type": "handshake", "session_key": "<base64-32-bytes>"}
 3. All subsequent frames in both directions are ``WSEncryptedFrame``:
@@ -71,7 +71,7 @@ async def _handle_connection(
     """
     Core WebSocket connection loop (shared by both endpoints).
 
-    1. Authenticate via JWT query param.
+    1. Authenticate via access token query param.
     2. Accept + register connection with the session key.
     3. Send HANDSHAKE frame with the base64 session key.
     4. If initial_room provided, join that room automatically.
@@ -202,7 +202,7 @@ async def ws_global(
     """
     Global WebSocket connection.
 
-    Authenticate with ``?token=<jwt>``.  Receives personal events pushed
+    Authenticate with ``?token=<paseto_token>``.  Receives personal events pushed
     by the server (e.g. notifications, payment updates).  Can join rooms
     dynamically via JOIN_ROOM messages.
     """

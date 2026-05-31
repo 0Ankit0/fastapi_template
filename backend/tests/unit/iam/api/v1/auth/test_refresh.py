@@ -14,9 +14,8 @@ class TestTokenRefresh:
     async def test_refresh_token_success(self, client: AsyncClient, db_session: AsyncSession):
         """Test successful token refresh."""
         from datetime import datetime, timedelta, timezone
-        from jose import jwt
         from src.apps.iam.models.token_tracking import TokenTracking
-        from src.apps.core.security import TokenType, ALGORITHM
+        from src.apps.core.security import TokenType
         
         # Create user
         hashed_pw = security.get_password_hash("TestPass123")
@@ -33,7 +32,7 @@ class TestTokenRefresh:
         refresh_token = security.create_refresh_token(user.id)
         
         # Extract JTI from the token and create tracking entry
-        refresh_payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        refresh_payload = security.decode_token(refresh_token)
         refresh_jti = refresh_payload.get("jti")
         
         token_tracking = TokenTracking(
@@ -66,9 +65,8 @@ class TestTokenRefresh:
         db_session: AsyncSession,
     ):
         from datetime import datetime, timedelta, timezone
-        from jose import jwt
         from src.apps.iam.models.token_tracking import TokenTracking
-        from src.apps.core.security import TokenType, ALGORITHM
+        from src.apps.core.security import TokenType
 
         user = UserFactory.build(
             username="refreshcookieuser",
@@ -80,7 +78,7 @@ class TestTokenRefresh:
         await db_session.refresh(user)
 
         refresh_token = security.create_refresh_token(user.id)
-        refresh_payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        refresh_payload = security.decode_token(refresh_token)
         db_session.add(
             TokenTracking(
                 user_id=user.id,

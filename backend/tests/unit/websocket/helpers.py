@@ -1,14 +1,13 @@
 import json
+from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock
 
 from fastapi.websockets import WebSocketDisconnect
 from httpx import AsyncClient
-from jose import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.apps.core import security
-from src.apps.core.config import settings
-from src.apps.core.security import ALGORITHM, TokenType
+from src.apps.core.security import TokenType
 from src.apps.iam.models.token_tracking import TokenTracking
 from src.apps.websocket.crypto import derive_session_key, encrypt
 from src.apps.websocket.schemas.messages import WSEncryptedFrame
@@ -38,8 +37,7 @@ async def get_token(client: AsyncClient, db_session: AsyncSession):
 
 
 async def setup_user_and_token(db_session: AsyncSession):
-    from datetime import datetime, timedelta, timezone
-    import uuid
+    from datetime import datetime, timezone
 
     user = UserFactory.build(
         username="wshandshake",
@@ -51,13 +49,10 @@ async def setup_user_and_token(db_session: AsyncSession):
     await db_session.commit()
     await db_session.refresh(user)
 
-    jti = str(uuid.uuid4())
-    expires = datetime.now(timezone.utc) + timedelta(hours=1)
-    token = jwt.encode(
-        {"sub": str(user.id), "jti": jti, "exp": expires, "type": "access"},
-        settings.SECRET_KEY,
-        algorithm=ALGORITHM,
-    )
+    token = security.create_access_token(user.id, expires_delta=timedelta(hours=1))
+    payload = security.decode_token(token)
+    jti = str(payload["jti"])
+    expires = security.payload_expiration(payload)
 
     tracking = TokenTracking(
         user_id=user.id,

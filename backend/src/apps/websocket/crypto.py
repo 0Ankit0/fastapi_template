@@ -3,7 +3,7 @@ WebSocket payload encryption — AES-256-GCM with per-session keys.
 
 Protocol:
 ─────────
-1. Server derives a **session key** (32 bytes) from the user's JWT *jti*
+1. Server derives a **session key** (32 bytes) from the user's token *jti*
    (unique per token) and the server's SECRET_KEY using HKDF-SHA256.
 2. After the WebSocket handshake the server sends a ``HANDSHAKE`` frame
    containing the session key encoded in base64.  In production this

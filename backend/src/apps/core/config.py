@@ -39,8 +39,6 @@ NON_RUNTIME_EDITABLE_SETTING_KEYS = frozenset(
         "FCM_SERVICE_ACCOUNT_JSON",
         "FCM_SERVICE_ACCOUNT_FILE",
         "ONESIGNAL_API_KEY",
-        "TWILIO_ACCOUNT_SID",
-        "TWILIO_AUTH_TOKEN",
         "VONAGE_API_KEY",
         "VONAGE_API_SECRET",
         "KHALTI_SECRET_KEY",
@@ -273,11 +271,8 @@ class Settings(BaseSettings):
     ONESIGNAL_WEB_APP_ID: str = ""
 
     SMS_ENABLED: bool = False
-    SMS_PROVIDER: str = "twilio"
+    SMS_PROVIDER: str = "vonage"
     SMS_FALLBACK_PROVIDERS: list[str] = []
-    TWILIO_ACCOUNT_SID: str = ""
-    TWILIO_AUTH_TOKEN: str = ""
-    TWILIO_FROM_NUMBER: str = ""
     VONAGE_API_KEY: str = ""
     VONAGE_API_SECRET: str = ""
     VONAGE_FROM_NUMBER: str = ""

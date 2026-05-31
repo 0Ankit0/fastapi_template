@@ -17,7 +17,6 @@ class PushProvider(str, Enum):
 
 
 class SmsProvider(str, Enum):
-    TWILIO = "twilio"
     VONAGE = "vonage"
 
 

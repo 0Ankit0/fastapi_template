@@ -3,7 +3,7 @@ ConnectionManager — manages all active WebSocket connections.
 
 Every outbound message is AES-256-GCM encrypted with the per-session key
 before being sent.  Incoming frames are decrypted before dispatch.
-The session key is derived from the user's JWT jti via HKDF (see crypto.py).
+The session key is derived from the user's token jti via HKDF (see crypto.py).
 
 Features
 ────────

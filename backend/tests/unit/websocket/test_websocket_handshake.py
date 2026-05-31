@@ -56,7 +56,7 @@ class TestWSHandshakeAndMessages:
         ws.close = AsyncMock()
         ws.send_json = AsyncMock()
         ws.send_text = AsyncMock()
-        ws.query_params = {"token": "invalid.jwt.token"}
+        ws.query_params = {"token": "invalid.paseto.token"}
         ws.headers = {}
 
         from src.apps.websocket.api.v1.ws import _handle_connection

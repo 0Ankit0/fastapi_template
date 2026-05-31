@@ -179,10 +179,10 @@ async def verify_email(
             )
         
         user_id = token_data.get("user_id")
-        jwt_token = token_data.get("token")
+        paseto_token = token_data.get("token")
         purpose = token_data.get("purpose")
         
-        if not all([user_id, jwt_token]) or purpose != "email_verification":
+        if not all([user_id, paseto_token]) or purpose != "email_verification":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid verification token data"
@@ -190,7 +190,7 @@ async def verify_email(
         
         
         # Verify the embedded PASETO token
-        payload = security.verify_token(str(jwt_token), token_type=TokenType.EMAIL_VERIFICATION)
+        payload = security.verify_token(str(paseto_token), token_type=TokenType.EMAIL_VERIFICATION)
         token_jti = payload.get("jti")
         
         # Verify user_id matches

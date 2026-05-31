@@ -1,12 +1,10 @@
 import pytest
 from datetime import timedelta, datetime, timezone
-from jose import jwt, JWTError
 from hypothesis import given, strategies as st, settings as hypothesis_settings
 from hypothesis import HealthCheck
 
 from src.apps.core import security
-from src.apps.core.security import TokenType
-from src.apps.core.config import settings
+from src.apps.core.security import TokenType, TokenValidationError
 
 
 class TestPasswordHashing:
@@ -66,7 +64,7 @@ class TestAccessToken:
         assert isinstance(token, str)
         
         # Verify token structure
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
+        payload = security.decode_token(token)
         assert payload["sub"] == str(user_id)
         assert payload["type"] == TokenType.ACCESS.value
         assert "jti" in payload
@@ -78,8 +76,8 @@ class TestAccessToken:
         expires_delta = timedelta(minutes=30)
         token = security.create_access_token(user_id, expires_delta=expires_delta)
         
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
-        exp_time = datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
+        payload = security.decode_token(token)
+        exp_time = security.payload_expiration(payload)
         now = datetime.now(timezone.utc)
         
         # Check that expiry is approximately 30 minutes from now (within 1 minute tolerance)
@@ -100,7 +98,7 @@ class TestAccessToken:
         user_id = 123
         token = security.create_access_token(user_id)
         
-        with pytest.raises(JWTError):
+        with pytest.raises(TokenValidationError):
             security.verify_token(token, token_type=TokenType.REFRESH)
 
 
@@ -113,7 +111,7 @@ class TestRefreshToken:
         token = security.create_refresh_token(user_id)
         assert token is not None
         
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
+        payload = security.decode_token(token)
         assert payload["sub"] == str(user_id)
         assert payload["type"] == TokenType.REFRESH.value
         assert "jti" in payload
@@ -137,7 +135,7 @@ class TestPasswordResetToken:
         token = security.create_password_reset_token(user_id)
         assert token is not None
         
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
+        payload = security.decode_token(token)
         assert payload["sub"] == str(user_id)
         assert payload["type"] == TokenType.PASSWORD_RESET.value
         assert "jti" in payload
@@ -160,7 +158,7 @@ class TestEmailVerificationToken:
         token = security.create_email_verification_token(user_id)
         assert token is not None
         
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
+        payload = security.decode_token(token)
         assert payload["sub"] == str(user_id)
         assert payload["type"] == TokenType.EMAIL_VERIFICATION.value
     
@@ -182,7 +180,7 @@ class TestTempAuthToken:
         token = security.create_temp_auth_token(user_id)
         assert token is not None
         
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
+        payload = security.decode_token(token)
         assert payload["sub"] == str(user_id)
         assert payload["type"] == TokenType.TEMP_AUTH.value
 
@@ -213,7 +211,7 @@ class TestSecureUrlToken:
         token = security.create_secure_url_token(data)
         tampered_token = token[:-5] + "xxxxx"
         
-        with pytest.raises(JWTError):
+        with pytest.raises(TokenValidationError):
             security.verify_secure_url_token(tampered_token)
     
     @given(st.dictionaries(

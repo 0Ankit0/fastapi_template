@@ -310,33 +310,6 @@ class OneSignalPushProvider(PushProviderBase):
         )
 
 
-class TwilioSmsProvider(SmsProviderBase):
-    name = SmsProvider.TWILIO.value
-
-    def is_configured(self) -> bool:
-        return settings.SMS_ENABLED and bool(
-            settings.TWILIO_ACCOUNT_SID
-            and settings.TWILIO_AUTH_TOKEN
-            and settings.TWILIO_FROM_NUMBER
-        )
-
-    def send(self, *, to_number: str, body: str) -> DeliveryResult:
-        from twilio.rest import Client
-
-        client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-        message = client.messages.create(
-            body=body,
-            from_=settings.TWILIO_FROM_NUMBER,
-            to=to_number,
-        )
-        return DeliveryResult(
-            channel="sms",
-            provider=self.name,
-            success=True,
-            message_id=message.sid,
-        )
-
-
 class VonageSmsProvider(SmsProviderBase):
     name = SmsProvider.VONAGE.value
 

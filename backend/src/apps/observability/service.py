@@ -7,7 +7,7 @@ from typing import Any
 
 from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.db.query import col, func, select
+from src.db.query import col, func, select, update
 
 from src.apps.core.config import settings
 from src.apps.core.logging import get_log_context, log_output_enabled, set_log_context
@@ -167,6 +167,18 @@ async def prune_old_log_entries(db: AsyncSession) -> int:
             select(ObservabilityLogEntry).where(ObservabilityLogEntry.timestamp < cutoff)
         )
     ).scalars().all()
+
+    if not stale_logs:
+        return 0
+
+    stale_log_ids = [entry.id for entry in stale_logs if entry.id is not None]
+    if stale_log_ids:
+        await db.execute(
+            update(SecurityIncident)
+            .where(col(SecurityIncident.related_log_id).in_(stale_log_ids))
+            .values(related_log_id=None)
+        )
+
     for entry in stale_logs:
         await db.delete(entry)
     return len(stale_logs)

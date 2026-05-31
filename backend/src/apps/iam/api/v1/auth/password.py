@@ -83,17 +83,17 @@ async def confirm_password_reset(
             )
         
         user_id = token_data.get("user_id")
-        jwt_token = token_data.get("token")
+        paseto_token = token_data.get("token")
         purpose = token_data.get("purpose")
         
-        if not all([user_id, jwt_token]) or purpose != "password_reset":
+        if not all([user_id, paseto_token]) or purpose != "password_reset":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid reset token data"
             )
         
         # Verify the embedded PASETO token
-        payload = security.verify_token(jwt_token, token_type=TokenType.PASSWORD_RESET)
+        payload = security.verify_token(paseto_token, token_type=TokenType.PASSWORD_RESET)
         token_jti = payload.get("jti")
         
         # Verify user_id matches

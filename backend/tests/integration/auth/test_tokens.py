@@ -3,12 +3,10 @@ import asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta, timezone
-from jose import jwt
 
 from src.apps.iam.models.token_tracking import TokenTracking
 from src.apps.core import security
-from src.apps.core.config import settings
-from src.apps.core.security import TokenType, ALGORITHM
+from src.apps.core.security import TokenType
 from tests.factories import UserFactory
 
 
@@ -37,7 +35,7 @@ class TestTokenManagement:
         refresh_token = security.create_refresh_token(user.id)
         
         # Extract JTI from the token and create tracking entry
-        refresh_payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        refresh_payload = security.decode_token(refresh_token)
         refresh_jti = refresh_payload.get("jti")
         assert refresh_jti is not None
         
@@ -100,7 +98,7 @@ class TestTokenManagement:
         
         # Create and track a refresh token
         refresh_token = security.create_refresh_token(user.id)
-        refresh_payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        refresh_payload = security.decode_token(refresh_token)
         refresh_jti = refresh_payload.get("jti")
         assert refresh_jti is not None
         

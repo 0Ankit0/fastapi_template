@@ -10,7 +10,6 @@ from .providers import (
     ResendEmailProvider,
     SesEmailProvider,
     SmtpEmailProvider,
-    TwilioSmsProvider,
     VonageSmsProvider,
     WebPushProvider,
     render_template,
@@ -35,7 +34,6 @@ class CommunicationsService:
             "onesignal": OneSignalPushProvider(),
         }
         self._sms_providers: dict[str, SmsProviderBase] = {
-            "twilio": TwilioSmsProvider(),
             "vonage": VonageSmsProvider(),
         }
         self._analytics_providers: dict[str, bool] = {
