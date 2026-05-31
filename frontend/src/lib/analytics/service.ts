@@ -82,10 +82,10 @@ function buildService(): AnalyticsService {
     return new AnalyticsService(null);
   }
 
-  const enabled = process.env.NEXT_PUBLIC_ANALYTICS_ENABLED === 'true';
-  const apiKey = process.env.NEXT_PUBLIC_POSTHOG_KEY ?? '';
-  const host = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://us.i.posthog.com';
-  const provider = process.env.NEXT_PUBLIC_ANALYTICS_PROVIDER ?? 'posthog';
+  const enabled = import.meta.env.VITE_ANALYTICS_ENABLED === 'true';
+  const apiKey = import.meta.env.VITE_POSTHOG_KEY ?? '';
+  const host = import.meta.env.VITE_POSTHOG_HOST ?? 'https://us.i.posthog.com';
+  const provider = import.meta.env.VITE_ANALYTICS_PROVIDER ?? 'posthog';
 
   if (!enabled || !apiKey) {
     return new AnalyticsService(null);

@@ -30,6 +30,33 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       port: 3000,
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes('node_modules')) {
+              return;
+            }
+
+            if (id.includes('firebase')) {
+              return 'vendor-firebase';
+            }
+
+            if (id.includes('posthog-js') || id.includes('mixpanel-browser')) {
+              return 'vendor-analytics';
+            }
+
+            if (id.includes('react-router-dom') || id.includes('@tanstack/react-query')) {
+              return 'vendor-routing-data';
+            }
+
+            if (id.includes('react') || id.includes('scheduler')) {
+              return 'vendor-react';
+            }
+          },
+        },
+      },
+    },
     test: {
       environment: 'jsdom',
       globals: true,

@@ -100,7 +100,7 @@ export function useWebSocket({
 /** Connect to the global WebSocket endpoint. Invalidates notification queries on incoming events. */
 export function useNotificationWebSocket() {
   const queryClient = useQueryClient();
-  const wsBase = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000';
+  const wsBase = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
 
   return useWebSocket({
     url: `${wsBase}/api/v1/ws/`,
@@ -115,7 +115,7 @@ export function useNotificationWebSocket() {
 /** Connect to a room WebSocket endpoint (e.g. per-tenant broadcasts). */
 export function useTenantWebSocket(tenantId: string | undefined) {
   const queryClient = useQueryClient();
-  const wsBase = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000';
+  const wsBase = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
 
   return useWebSocket({
     url: tenantId ? `${wsBase}/api/v1/ws/room/${tenantId}/` : '',

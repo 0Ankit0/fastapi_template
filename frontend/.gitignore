@@ -16,7 +16,6 @@
 # vite
 /.vite/
 /dist/
-/.next/
 
 # production
 /build

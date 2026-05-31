@@ -2,8 +2,8 @@
  * PostHog analytics adapter.
  *
  * Adapts the posthog-js browser SDK to the AnalyticsAdapter interface.
- * Only instantiated client-side when NEXT_PUBLIC_ANALYTICS_ENABLED=true
- * and NEXT_PUBLIC_POSTHOG_KEY is set.
+ * Only instantiated client-side when VITE_ANALYTICS_ENABLED=true
+ * and VITE_POSTHOG_KEY is set.
  *
  * To add a new provider (e.g. Mixpanel):
  *   1. Create adapters/mixpanel.ts implementing AnalyticsAdapter.
