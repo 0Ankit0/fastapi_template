@@ -7,6 +7,7 @@ from src.db.query import col, func, select
 from src.db.session import get_session
 from src.apps.iam.models import Role, Permission, User
 from src.apps.iam.api.deps import get_current_active_superuser
+from src.apps.iam.rbac import get_current_rbac_admin
 from src.apps.iam.schemas.rbac import (
     RoleCreate,
     RoleResponse,
@@ -18,6 +19,9 @@ from src.apps.iam.schemas.rbac import (
     CheckPermissionResponse,
     UserRolesResponse,
     RolePermissionsResponse,
+    RoleUsersResponse,
+    RoleUserSummary,
+    RolePolicyResponse,
     RoleAssignmentResponse,
     CasbinRolesResponse,
     CasbinPermissionsResponse,
@@ -29,6 +33,8 @@ from src.apps.iam.utils.rbac import (
     remove_permission_from_role,
     get_user_roles,
     get_role_permissions,
+    get_role_users,
+    list_role_permission_policies,
     check_permission,
     resolve_authorization_domain,
 )
@@ -40,6 +46,7 @@ from src.apps.observability.service import record_admin_role_change
 
 
 router = APIRouter()
+get_current_active_superuser = get_current_rbac_admin
 
 
 def _serialize_role_cache(role: Role | RoleResponse) -> dict[str, object]:
@@ -293,6 +300,21 @@ async def get_user_roles_endpoint(
     return response
 
 
+@router.get("/roles/{role_id}/users", response_model=RoleUsersResponse)
+async def get_role_users_endpoint(
+    role_id: str,
+    current_user: User = Depends(get_current_active_superuser),
+    session: AsyncSession = Depends(get_session),
+):
+    del current_user
+    rid = decode_id_or_404(role_id)
+    users = await get_role_users(rid, session)
+    return RoleUsersResponse(
+        role_id=rid,
+        users=[RoleUserSummary.model_validate(user) for user in users],
+    )
+
+
 # ==== Permission-Role Assignment ====
 
 @router.post("/roles/assign-permission", status_code=status.HTTP_200_OK, response_model=PermissionAssignmentResponse)
@@ -378,6 +400,17 @@ async def get_role_permissions_endpoint(
         ttl=300,
     )
     return response
+
+
+@router.get("/policies", response_model=list[RolePolicyResponse])
+async def list_policies(
+    domain: str = Query(default=GLOBAL_DOMAIN, description="Authorization domain to inspect."),
+    current_user: User = Depends(get_current_active_superuser),
+    session: AsyncSession = Depends(get_session),
+):
+    del current_user
+    policies = await list_role_permission_policies(session, domain)
+    return [RolePolicyResponse.model_validate(policy) for policy in policies]
 
 
 # ==== Permission Checking ====

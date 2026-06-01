@@ -126,6 +126,43 @@ class RolePermissionsResponse(BaseModel):
         return encode_id(value)
 
 
+class RoleUserSummary(BaseModel):
+    id: int
+    username: str
+    email: str
+    is_active: bool
+    is_superuser: bool
+
+    model_config = {"from_attributes": True}
+
+    @field_serializer("id")
+    def serialize_id(self, value: int) -> str:
+        return encode_id(value)
+
+
+class RoleUsersResponse(BaseModel):
+    role_id: int
+    users: list[RoleUserSummary]
+
+    @field_serializer("role_id")
+    def serialize_role_id(self, value: int) -> str:
+        return encode_id(value)
+
+
+class RolePolicyResponse(BaseModel):
+    domain: str
+    role_id: int
+    role_name: str
+    permission_id: int
+    resource: str
+    action: str
+    description: str
+
+    @field_serializer("role_id", "permission_id")
+    def serialize_ids(self, value: int) -> str:
+        return encode_id(value)
+
+
 class RoleAssignmentResponse(BaseModel):
     message: str
     user_role_id: int

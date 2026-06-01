@@ -17,10 +17,11 @@ from src.apps.iam.api import api_router
 from src.apps.finance.api import finance_router
 from src.apps.multitenancy.api import multitenancy_router
 from src.db.session import engine, init_db
-from src.apps.iam.casbin_enforcer import CasbinEnforcer
+from src.apps.iam.rbac import CasbinEnforcer, bootstrap_rbac_catalog
 from src.apps.websocket.api import ws_router
 from src.apps.websocket.manager import manager as ws_manager
 from src.apps.core.cache import RedisCache
+from src.apps.communications import get_kafka_service
 from src.apps.notification.api import notification_router
 from src.apps.analytics import init_analytics, shutdown_analytics
 from src.apps.analytics.api import router as analytics_router
@@ -56,15 +57,19 @@ async def lifespan(app: FastAPI):
 
     # Analytics service (no-op when disabled)
     app.state.analytics = init_analytics()
+    app.state.kafka = get_kafka_service()
+    await app.state.kafka.start()
 
     from src.db.session import async_session_factory
     async with async_session_factory() as session:
+        await bootstrap_rbac_catalog(session)
         await prune_old_log_entries(session)
         await session.commit()
 
     yield
 
     # Cleanup on shutdown
+    await app.state.kafka.stop()
     await ws_manager.teardown()
     await RedisCache.close()
     await shutdown_analytics()

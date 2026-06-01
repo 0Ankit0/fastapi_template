@@ -28,6 +28,7 @@ dependencies = [
     "casbin>=1.37.0",
     "casbin-sqlalchemy-adapter>=0.6.0",
     "casbin-async-sqlalchemy-adapter>=0.3.3",
+    "aiokafka>=0.12.0",
     "celery>=5.4.0",
     "redis>=5.2.0",
     "httpx>=0.28.0",

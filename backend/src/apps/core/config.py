@@ -1,3 +1,9 @@
+"""Application settings.
+
+The complete backend configuration reference lives in
+`docs/implementation/backend-config-reference.md`.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -29,6 +35,15 @@ NON_RUNTIME_EDITABLE_SETTING_KEYS = frozenset(
         "CELERY_BROKER_URL",
         "CELERY_RESULT_BACKEND",
         "GOOGLE_MAPS_API_KEY",
+        "KAFKA_BOOTSTRAP_SERVERS",
+        "KAFKA_CLIENT_ID",
+        "KAFKA_SECURITY_PROTOCOL",
+        "KAFKA_SASL_MECHANISM",
+        "KAFKA_USERNAME",
+        "KAFKA_PASSWORD",
+        "KAFKA_TOPIC_PREFIX",
+        "KAFKA_DEFAULT_TOPIC",
+        "KAFKA_CONSUMER_GROUP",
         "EMAIL_HOST_PASSWORD",
         "RESEND_API_KEY",
         "AWS_ACCESS_KEY_ID",
@@ -72,6 +87,7 @@ PUBLIC_GENERAL_SETTING_KEYS = frozenset(
         "ANALYTICS_ENABLED",
         "ANALYTICS_PROVIDER",
         "MAP_PROVIDER",
+        "KAFKA_ENABLED",
         "KHALTI_ENABLED",
         "ESEWA_ENABLED",
         "STRIPE_ENABLED",
@@ -234,6 +250,19 @@ class Settings(BaseSettings):
     MAP_DEFAULT_LONGITUDE: float = 85.3240
     MAP_DEFAULT_ZOOM: int = 13
 
+    KAFKA_ENABLED: bool = False
+    KAFKA_BOOTSTRAP_SERVERS: list[str] = ["localhost:9092"]
+    KAFKA_CLIENT_ID: str = "fastapi-template"
+    KAFKA_SECURITY_PROTOCOL: str = "PLAINTEXT"
+    KAFKA_SASL_MECHANISM: str = ""
+    KAFKA_USERNAME: str = ""
+    KAFKA_PASSWORD: SecretStr = SecretStr("")
+    KAFKA_TOPIC_PREFIX: str = "fastapi-template"
+    KAFKA_DEFAULT_TOPIC: str = "application.events"
+    KAFKA_CONSUMER_GROUP: str = "fastapi-template"
+    KAFKA_REQUEST_TIMEOUT_MS: int = 15000
+    KAFKA_ENABLE_IDEMPOTENCE: bool = True
+
     EMAIL_ENABLED: bool = False
     EMAIL_PROVIDER: str = "smtp"
     EMAIL_FALLBACK_PROVIDERS: list[str] = []
@@ -336,6 +365,8 @@ class Settings(BaseSettings):
         "FACEBOOK_ENABLED",
         "OSM_MAPS_ENABLED",
         "GOOGLE_MAPS_ENABLED",
+        "KAFKA_ENABLED",
+        "KAFKA_ENABLE_IDEMPOTENCE",
         "LOG_SQL_QUERIES",
         "S3_USE_PATH_STYLE",
         mode="before",
@@ -437,6 +468,7 @@ class Settings(BaseSettings):
         "PROXY_TRUSTED_HOSTS",
         "FORWARDED_ALLOW_IPS",
         "WS_ALLOWED_ORIGINS",
+        "KAFKA_BOOTSTRAP_SERVERS",
         mode="before",
     )
     @classmethod

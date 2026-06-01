@@ -4,6 +4,7 @@ from typing import Any
 from src.apps.core.config import settings
 
 from .interfaces import EmailProviderBase, PushProviderBase, SmsProviderBase
+from .kafka import get_kafka_service
 from .providers import (
     FcmPushProvider,
     OneSignalPushProvider,
@@ -23,6 +24,7 @@ _service: "CommunicationsService | None" = None
 
 class CommunicationsService:
     def __init__(self) -> None:
+        self._kafka = get_kafka_service()
         self._email_providers: dict[str, EmailProviderBase] = {
             "smtp": SmtpEmailProvider(),
             "resend": ResendEmailProvider(),
@@ -58,6 +60,7 @@ class CommunicationsService:
                 "websockets": settings.FEATURE_WEBSOCKETS,
                 "finance": settings.FEATURE_FINANCE,
                 "analytics": settings.FEATURE_ANALYTICS,
+                "kafka": settings.KAFKA_ENABLED,
                 "social_auth": settings.FEATURE_SOCIAL_AUTH,
                 "maps": settings.FEATURE_MAPS,
             },
@@ -66,12 +69,14 @@ class CommunicationsService:
                 "push": settings.PUSH_PROVIDER if settings.PUSH_ENABLED else None,
                 "sms": settings.SMS_PROVIDER if settings.SMS_ENABLED else None,
                 "analytics": settings.ANALYTICS_PROVIDER if settings.ANALYTICS_ENABLED else None,
+                "kafka": "kafka" if settings.KAFKA_ENABLED else None,
                 "maps": settings.MAP_PROVIDER if settings.FEATURE_MAPS else None,
             },
             fallback_providers={
                 "email": settings.EMAIL_FALLBACK_PROVIDERS,
                 "push": settings.PUSH_FALLBACK_PROVIDERS,
                 "sms": settings.SMS_FALLBACK_PROVIDERS,
+                "kafka": [],
                 "maps": [],
             },
         )
@@ -119,6 +124,18 @@ class CommunicationsService:
                     fallback=False,
                 )
             )
+        kafka_status = self._kafka.status()
+        statuses.append(
+            ProviderStatus(
+                channel="kafka",
+                provider="kafka",
+                active=kafka_status["enabled"],
+                enabled=kafka_status["enabled"],
+                configured=kafka_status["configured"],
+                fallback=False,
+                details=kafka_status,
+            )
+        )
         return statuses
 
     def send_email(

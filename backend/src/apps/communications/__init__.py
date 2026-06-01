@@ -1,3 +1,4 @@
+from .kafka import KafkaService, get_kafka_service
 from .service import CommunicationsService, get_communications_service
 from .types import (
     CapabilitySummary,
@@ -13,8 +14,10 @@ __all__ = [
     "CommunicationsService",
     "DeliveryResult",
     "EmailProvider",
+    "KafkaService",
     "ProviderStatus",
     "PushProvider",
     "SmsProvider",
     "get_communications_service",
+    "get_kafka_service",
 ]
