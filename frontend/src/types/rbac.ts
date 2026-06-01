@@ -47,9 +47,44 @@ export interface RolePermissionsResponse {
   permissions: Permission[];
 }
 
+export interface RoleUserSummary {
+  id: string;
+  username: string;
+  email: string;
+  is_active: boolean;
+  is_superuser: boolean;
+}
+
+export interface RoleUsersResponse {
+  role_id: string;
+  users: RoleUserSummary[];
+}
+
+export interface RolePolicyResponse {
+  domain: string;
+  role_id: string;
+  role_name: string;
+  permission_id: string;
+  resource: string;
+  action: string;
+  description: string;
+}
+
 export interface CheckPermissionResponse {
   user_id: string;
   resource: string;
   action: string;
   allowed: boolean;
+}
+
+export interface CasbinRolesResponse {
+  user_id: string;
+  domain: string;
+  roles: string[];
+}
+
+export interface CasbinPermissionsResponse {
+  user_id: string;
+  domain: string;
+  permissions: string[][];
 }

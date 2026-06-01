@@ -24,11 +24,15 @@ import TenantsPage from '@/app/(user-dashboard)/tenants/page';
 import MapsPage from '@/app/(user-dashboard)/maps/page';
 import RbacPage from '@/app/(user-dashboard)/rbac/page';
 import RoleManagePage from '@/app/(user-dashboard)/rbac/[roleId]/page';
+import RbacPoliciesPage from '@/app/(user-dashboard)/rbac/policies/page';
+import RbacAccessCheckPage from '@/app/(user-dashboard)/rbac/access-check/page';
 import AdminDashboardLayout from '@/app/(admin-dashboard)/layout';
 import AdminDashboardPage from '@/app/(admin-dashboard)/admin/dashboard/page';
 import AdminUsersPage from '@/app/(admin-dashboard)/admin/users/page';
 import AdminRbacPage from '@/app/(admin-dashboard)/admin/rbac/page';
 import AdminRoleManagePage from '@/app/(admin-dashboard)/admin/rbac/[roleId]/page';
+import AdminRbacPoliciesPage from '@/app/(admin-dashboard)/admin/rbac/policies/page';
+import AdminRbacAccessCheckPage from '@/app/(admin-dashboard)/admin/rbac/access-check/page';
 import AdminSecurityReviewPage from '@/app/(admin-dashboard)/admin/security-review/page';
 
 function RootProviders() {
@@ -109,6 +113,22 @@ export function AppRouter() {
                 </SuperuserRoute>
               }
             />
+            <Route
+              path="rbac/policies"
+              element={
+                <SuperuserRoute>
+                  <RbacPoliciesPage />
+                </SuperuserRoute>
+              }
+            />
+            <Route
+              path="rbac/access-check"
+              element={
+                <SuperuserRoute>
+                  <RbacAccessCheckPage />
+                </SuperuserRoute>
+              }
+            />
           </Route>
 
           <Route element={<AdminRouteLayout />}>
@@ -117,6 +137,8 @@ export function AppRouter() {
             <Route path="admin/users" element={<AdminUsersPage />} />
             <Route path="admin/rbac" element={<AdminRbacPage />} />
             <Route path="admin/rbac/:roleId" element={<AdminRoleManagePage />} />
+            <Route path="admin/rbac/policies" element={<AdminRbacPoliciesPage />} />
+            <Route path="admin/rbac/access-check" element={<AdminRbacAccessCheckPage />} />
             <Route path="admin/security-review" element={<AdminSecurityReviewPage />} />
           </Route>
 

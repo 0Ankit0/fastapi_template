@@ -9,8 +9,8 @@ const authHighlights = [
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[linear-gradient(180deg,#f8fbff_0%,#eef4ff_44%,#ffffff_100%)]">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[36rem] bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.18),transparent_34%),radial-gradient(circle_at_center_right,rgba(14,165,233,0.14),transparent_28%)]" />
+    <div className="app-shell-gradient relative min-h-screen overflow-hidden">
+      <div className="app-shell-orbs pointer-events-none absolute inset-x-0 top-0 h-[36rem]" />
 
       <div className="relative mx-auto grid min-h-screen max-w-6xl gap-12 px-4 py-10 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(420px,460px)] lg:items-center lg:px-8">
         <div className="hidden max-w-xl lg:block">
@@ -41,7 +41,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             {authHighlights.map((highlight) => (
               <div
                 key={highlight}
-                className="flex items-center gap-3 rounded-2xl border border-white/70 bg-white/75 px-4 py-3 text-sm text-slate-700 shadow-sm backdrop-blur"
+                className="app-glass-panel flex items-center gap-3 rounded-2xl px-4 py-3 text-sm text-slate-700 shadow-sm"
               >
                 <CheckCircle2 className="h-4 w-4 shrink-0 text-blue-600" />
                 <span>{highlight}</span>

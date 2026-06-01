@@ -11,7 +11,11 @@ import type {
   PermissionAssignment,
   UserRolesResponse,
   RolePermissionsResponse,
+  RoleUsersResponse,
+  RolePolicyResponse,
   CheckPermissionResponse,
+  CasbinRolesResponse,
+  CasbinPermissionsResponse,
   PaginatedResponse,
 } from '@/types';
 
@@ -126,6 +130,34 @@ export function useRolePermissions(roleId: string) {
   });
 }
 
+export function useRoleUsers(roleId: string) {
+  return useQuery({
+    queryKey: ['rbac', 'role-users', roleId],
+    queryFn: async () => {
+      const response = await apiClient.get<RoleUsersResponse>(`/roles/${roleId}/users`);
+      return response.data;
+    },
+    enabled: !!roleId,
+  });
+}
+
+export function usePolicies(scope?: AuthorizationScopeOptions) {
+  const resolvedScope = {
+    domain: scope?.domain,
+  };
+  return useQuery({
+    queryKey: ['rbac', 'policies', resolvedScope],
+    queryFn: async () => {
+      const response = await apiClient.get<RolePolicyResponse[]>('/policies', {
+        params: {
+          domain: resolvedScope.domain,
+        },
+      });
+      return response.data;
+    },
+  });
+}
+
 export function useAssignPermission() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -193,7 +225,7 @@ export function useCasbinRoles(userId: string, scope?: AuthorizationScopeOptions
   return useQuery({
     queryKey: ['rbac', 'casbin-roles', userId, resolvedScope],
     queryFn: async () => {
-      const response = await apiClient.get<{ user_id: string; domain: string; roles: string[] }>(
+      const response = await apiClient.get<CasbinRolesResponse>(
         `/casbin/roles/${userId}`,
         {
           params: {
@@ -218,7 +250,7 @@ export function useCasbinPermissions(userId: string, scope?: AuthorizationScopeO
   return useQuery({
     queryKey: ['rbac', 'casbin-permissions', userId, resolvedScope],
     queryFn: async () => {
-      const response = await apiClient.get<{ user_id: string; domain: string; permissions: string[][] }>(
+      const response = await apiClient.get<CasbinPermissionsResponse>(
         `/casbin/permissions/${userId}`,
         {
           params: {

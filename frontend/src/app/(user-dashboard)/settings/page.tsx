@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useAuthStore } from '@/store/auth-store';
-import { getAllThemes, type ThemeMode } from '@/lib/themes';
+import { buildTheme, getAllThemes, type ThemeMode } from '@/lib/themes';
 import {
   useNotificationDevices,
   useNotificationPreferences,
@@ -182,6 +182,15 @@ export default function SettingsPage() {
   const resend = useResendVerification();
   const [resentOk, setResentOk] = useState(false);
   const allThemes = getAllThemes(customThemes);
+  const previewTheme = buildTheme({
+    id: 'preview',
+    name: themeDraft.name || 'Custom Theme',
+    mode: themeDraft.mode,
+    background: themeDraft.background,
+    surface: themeDraft.surface,
+    textPrimary: themeDraft.textPrimary,
+    accent: themeDraft.accent,
+  });
   const handleResend = () => {
     resend.mutate(undefined, {
       onSuccess: () => setResentOk(true),
@@ -475,13 +484,16 @@ export default function SettingsPage() {
                         <Sparkles className="h-4 w-4 text-[var(--accent)]" />
                         Live preview
                       </p>
-                      <div className="mt-4 rounded-2xl border border-gray-200 p-4" style={{ backgroundColor: themeDraft.background }}>
+                      <div
+                        className="mt-4 rounded-2xl border border-gray-200 p-4"
+                        style={{ backgroundColor: previewTheme.palette.background }}
+                      >
                         <div
                           className="rounded-2xl border p-4"
                           style={{
-                            backgroundColor: themeDraft.surface,
-                            color: themeDraft.textPrimary,
-                            borderColor: themeDraft.accent,
+                            backgroundColor: previewTheme.palette.surface,
+                            color: previewTheme.palette.textPrimary,
+                            borderColor: previewTheme.palette.borderColor,
                           }}
                         >
                           <div className="flex items-center justify-between gap-3">
@@ -492,8 +504,8 @@ export default function SettingsPage() {
                             <span
                               className="rounded-full px-3 py-1 text-xs font-semibold"
                               style={{
-                                backgroundColor: themeDraft.accent,
-                                color: themeDraft.mode === 'dark' ? '#020617' : '#ffffff',
+                                backgroundColor: previewTheme.palette.accent,
+                                color: previewTheme.palette.accentForeground,
                               }}
                             >
                               Accent
@@ -506,13 +518,13 @@ export default function SettingsPage() {
                                 className="rounded-xl p-3"
                                 style={{
                                   backgroundColor:
-                                    index === 1 ? themeDraft.accent : themeDraft.background,
+                                    index === 1
+                                      ? previewTheme.palette.accent
+                                      : previewTheme.palette.surfaceSubtle,
                                   color:
                                     index === 1
-                                      ? themeDraft.mode === 'dark'
-                                        ? '#020617'
-                                        : '#ffffff'
-                                      : themeDraft.textPrimary,
+                                      ? previewTheme.palette.accentForeground
+                                      : previewTheme.palette.textPrimary,
                                 }}
                               >
                                 <p className="text-xs opacity-80">Card {index}</p>

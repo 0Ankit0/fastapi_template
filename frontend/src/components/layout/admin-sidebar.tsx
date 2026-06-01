@@ -17,6 +17,8 @@ const adminNavigation = [
   { name: 'Security Review', href: '/admin/security-review', icon: ShieldAlert },
   { name: 'Manage Users', href: '/admin/users', icon: Users },
   { name: 'Roles & Permissions', href: '/admin/rbac', icon: Shield },
+  { name: 'Policy Explorer', href: '/admin/rbac/policies', icon: Shield },
+  { name: 'Access Check', href: '/admin/rbac/access-check', icon: Shield },
 ];
 
 export function AdminSidebar() {

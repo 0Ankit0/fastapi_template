@@ -10,7 +10,7 @@ import {
 } from '@/hooks/use-rbac';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui';
-import { ShieldCheck, Key, Plus, Settings2 } from 'lucide-react';
+import { ShieldCheck, Key, Plus, Settings2, Waypoints, SearchCheck } from 'lucide-react';
 import type { Role } from '@/types';
 
 type Tab = 'roles' | 'permissions';
@@ -84,6 +84,33 @@ export default function RBACPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Roles & Permissions</h1>
         <p className="text-gray-500">Manage role and permission definitions for the platform</p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Link
+          href="/admin/rbac/policies"
+          className="rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-blue-400 hover:bg-blue-50"
+        >
+          <div className="flex items-center gap-3">
+            <Waypoints className="h-5 w-5 text-blue-600" />
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Policy Explorer</p>
+              <p className="text-xs text-gray-500">Inspect every role-to-policy binding in the active Casbin catalog.</p>
+            </div>
+          </div>
+        </Link>
+        <Link
+          href="/admin/rbac/access-check"
+          className="rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-blue-400 hover:bg-blue-50"
+        >
+          <div className="flex items-center gap-3">
+            <SearchCheck className="h-5 w-5 text-blue-600" />
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Access Check</p>
+              <p className="text-xs text-gray-500">Verify a user, resource, and action against the current role assignments.</p>
+            </div>
+          </div>
+        </Link>
       </div>
 
       <div className="flex gap-2 border-b border-gray-200">

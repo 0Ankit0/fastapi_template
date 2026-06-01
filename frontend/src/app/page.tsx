@@ -83,8 +83,8 @@ export default function Home() {
   }, [isAuthenticated, router]);
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[linear-gradient(180deg,#f8fbff_0%,#eef4ff_42%,#ffffff_100%)] text-slate-950">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[34rem] bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.2),transparent_34%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.16),transparent_30%)]" />
+    <div className="app-shell-gradient min-h-screen overflow-x-hidden text-slate-950">
+      <div className="app-shell-orbs pointer-events-none absolute inset-x-0 top-0 h-[34rem]" />
 
       <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/80 backdrop-blur-xl">
         <div className="mx-auto flex h-20 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -113,7 +113,7 @@ export default function Home() {
         <section className="px-4 pb-20 pt-14 sm:px-6 lg:px-8 lg:pb-28 lg:pt-20">
           <div className="mx-auto grid max-w-6xl gap-14 lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)] lg:items-center">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm backdrop-blur">
+              <div className="app-glass-panel inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-slate-700 shadow-sm">
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
                 Ready for new product work on day one
               </div>
@@ -142,7 +142,7 @@ export default function Home() {
                 {foundationStats.map((stat) => (
                   <div
                     key={stat.label}
-                    className="rounded-3xl border border-white/70 bg-white/75 px-5 py-4 shadow-sm shadow-slate-900/5 backdrop-blur"
+                    className="app-glass-panel rounded-3xl px-5 py-4 shadow-sm shadow-slate-900/5"
                   >
                     <p className="text-lg font-semibold text-slate-950">{stat.value}</p>
                     <p className="mt-1 text-sm text-slate-600">{stat.label}</p>
@@ -152,8 +152,8 @@ export default function Home() {
             </div>
 
             <div className="relative">
-              <div className="absolute inset-0 -z-10 rounded-[2rem] bg-[linear-gradient(135deg,rgba(15,23,42,0.96),rgba(30,41,59,0.88),rgba(37,99,235,0.84))] shadow-[0_30px_80px_rgba(15,23,42,0.24)]" />
-              <div className="rounded-[2rem] border border-white/40 bg-white/10 p-6 backdrop-blur-xl">
+              <div className="app-hero-surface absolute inset-0 -z-10 rounded-[2rem] shadow-[0_30px_80px_rgba(15,23,42,0.24)]" />
+              <div className="app-glass-panel rounded-[2rem] p-6">
                 <div className="rounded-[1.5rem] border border-white/10 bg-slate-950/25 p-6">
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -229,7 +229,7 @@ export default function Home() {
               {platformHighlights.map((highlight) => (
                 <div
                   key={highlight.title}
-                  className="rounded-[1.75rem] border border-slate-200/80 bg-white/85 p-7 shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur"
+                  className="app-soft-panel rounded-[1.75rem] p-7 shadow-[0_18px_45px_rgba(15,23,42,0.06)]"
                 >
                   <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
                     <highlight.icon className="h-7 w-7" />
@@ -269,14 +269,14 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="rounded-[2rem] border border-slate-200/80 bg-white/90 p-8 shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur">
+            <div className="app-soft-panel rounded-[2rem] p-8 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
               <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue-600">
                 What ships in the box
               </p>
               <h3 className="mt-4 text-2xl font-semibold text-slate-950">Template coverage across the stack.</h3>
               <div className="mt-6 space-y-4">
                 {heroPillars.map((pillar) => (
-                  <div key={pillar.title} className="rounded-3xl bg-slate-50 px-5 py-4">
+                  <div key={pillar.title} className="rounded-3xl bg-gray-50 px-5 py-4">
                     <p className="text-sm font-semibold text-slate-950">{pillar.title}</p>
                     <p className="mt-1 text-sm leading-6 text-slate-600">{pillar.description}</p>
                   </div>

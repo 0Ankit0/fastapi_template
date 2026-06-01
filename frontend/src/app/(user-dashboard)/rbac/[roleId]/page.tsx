@@ -5,6 +5,7 @@ import { Link, useParams } from '@/lib/router';
 import {
   useRole,
   useRolePermissions,
+  useRoleUsers,
   usePermissions,
   useAssignPermission,
   useRemovePermission,
@@ -26,6 +27,7 @@ export default function RoleManagePage() {
 
   const { data: role, isLoading: roleLoading } = useRole(roleId);
   const { data: rolePerms, isLoading: rolePermsLoading } = useRolePermissions(roleId);
+  const { data: roleUsers, isLoading: roleUsersLoading } = useRoleUsers(roleId);
   const { data: allPerms, isLoading: allPermsLoading } = usePermissions({ limit: 200 });
   const assignPerm = useAssignPermission();
   const removePerm = useRemovePermission();
@@ -92,7 +94,7 @@ export default function RoleManagePage() {
         <span className="text-xs text-gray-400 mt-1">ID: {role.id}</span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_1fr_320px]">
         {/* ── Assigned permissions ──────────────────────────────────────── */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
@@ -211,6 +213,30 @@ export default function RoleManagePage() {
                       <Plus className="h-3 w-3" />
                       Add
                     </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Assigned Users</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {roleUsersLoading ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-full" />)}
+              </div>
+            ) : !roleUsers?.users.length ? (
+              <p className="py-8 text-center text-sm text-gray-400">No users currently hold this role.</p>
+            ) : (
+              <div className="space-y-2">
+                {roleUsers.users.map((user) => (
+                  <div key={user.id} className="rounded-lg border border-gray-200 px-3 py-2">
+                    <p className="text-sm font-medium text-gray-900">{user.username}</p>
+                    <p className="text-xs text-gray-500">{user.email}</p>
                   </div>
                 ))}
               </div>

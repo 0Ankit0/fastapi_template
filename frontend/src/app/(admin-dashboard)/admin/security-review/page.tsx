@@ -60,9 +60,9 @@ export default function SecurityReviewPage() {
 
   return (
     <div className="space-y-6">
-      <Card className="overflow-hidden border-none bg-[linear-gradient(135deg,#1f2937_0%,#111827_45%,#7c2d12_100%)] text-white shadow-[0_24px_80px_rgba(15,23,42,0.24)]">
+      <Card className="app-hero-surface overflow-hidden border-none text-white shadow-[0_24px_80px_rgba(15,23,42,0.24)]">
         <CardContent className="relative px-6 py-8">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.18),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(248,113,113,0.16),transparent_28%)]" />
+          <div className="app-hero-overlay absolute inset-0" />
           <div className="relative grid gap-6 lg:grid-cols-[1.3fr,0.7fr]">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.26em] text-amber-200">Security Review</p>
@@ -248,7 +248,7 @@ export default function SecurityReviewPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="rounded-3xl border border-gray-200 bg-[#0f172a] p-4">
+                  <div className="app-code-surface rounded-3xl border border-gray-200 p-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">Metadata</p>
                     <pre className="mt-3 overflow-x-auto text-xs leading-6 text-slate-200">
                       {JSON.stringify(selectedIncident.metadata ?? {}, null, 2)}

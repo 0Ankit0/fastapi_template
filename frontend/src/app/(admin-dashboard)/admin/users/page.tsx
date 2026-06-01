@@ -83,7 +83,7 @@ function UserEditor({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm">
-      <div className="w-full max-w-3xl rounded-[28px] border border-white/40 bg-[#fcfbf8] p-6 shadow-[0_16px_40px_rgba(15,23,42,0.12)]">
+      <div className="app-soft-panel w-full max-w-3xl rounded-[28px] p-6 shadow-[0_16px_40px_rgba(15,23,42,0.12)]">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
@@ -278,7 +278,7 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-[32px] border border-[#d8d2c7] bg-[linear-gradient(140deg,#f7f1e8_0%,#fcfbf8_55%,#eef3ff_100%)] p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <div className="app-soft-gradient rounded-[32px] border border-gray-200 p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
@@ -300,8 +300,8 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      <Card className="overflow-hidden rounded-[28px] border-[#e2ddd4]">
-        <CardHeader className="border-b border-gray-100 bg-[#fcfbf8]">
+      <Card className="overflow-hidden rounded-[28px] border-gray-200">
+        <CardHeader className="app-soft-panel border-b border-gray-100">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <CardTitle className="text-xl">Roster</CardTitle>
@@ -345,7 +345,7 @@ export default function AdminUsersPage() {
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[860px]">
-              <thead className="bg-[#f8f6f0] text-left">
+              <thead className="app-table-head text-left">
                 <tr>
                   <th className="px-5 py-4 text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">
                     User
@@ -387,7 +387,7 @@ export default function AdminUsersPage() {
                     <tr key={user.id} className="border-t border-gray-100 bg-white">
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#eef3ff] font-semibold text-[#275efe]">
+                          <div className="app-accent-avatar flex h-11 w-11 items-center justify-center rounded-2xl font-semibold">
                             {(user.first_name?.[0] ?? user.username[0]).toUpperCase()}
                           </div>
                           <div>
