@@ -11,6 +11,11 @@ class UserStatus(str, Enum):
     SUSPENDED = "suspended"
     ARCHIVED = "archived"
 
+class OrganizationStatus(str, Enum):
+    ACTIVE = "active"
+    SUSPENDED = "suspended"
+    ARCHIVED = "archived"
+
 def enum_values(enum_cls: type[Enum]) -> list[str]:
     """Return the string values for a Python enum."""
 
