@@ -12,14 +12,9 @@ from db.mixins import TimestampMixin
 
 if TYPE_CHECKING:
     from apps.iam.models import Profile
+    from apps.organizations.models import Organization
 
 class User(Base, TimestampMixin):
-    """Represent a platform user account.
-
-    The user row is the root identity entity for authentication, profile data,
-    linked identities, memberships, sessions, and security logs. Related tables
-    hold specialized state so the core account record stays stable and compact.
-    """
 
     __tablename__ = "users"
 
@@ -52,4 +47,14 @@ class User(Base, TimestampMixin):
         back_populates="user",
         uselist=False,
         cascade="all, delete-orphan",
+    )
+    created_organizations: Mapped[list[Organization]] = relationship(
+        Organization,
+        back_populates="creator",
+        foreign_keys="Organization.created_by",
+    )
+    owned_organizations: Mapped[list[Organization]] = relationship(
+        Organization,
+        back_populates="owner",
+        foreign_keys="Organization.owner_id",
     )
