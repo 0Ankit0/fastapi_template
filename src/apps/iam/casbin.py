@@ -1,13 +1,16 @@
 import casbin
 from casbin_sqlalchemy_adapter import Adapter
-from core.config import settings
+from src.core.config import settings
+from pathlib import Path
+
+model_path = Path(__file__).parent / "model.conf"
 
 DATABASE_URL = settings.DATABASE_URL
 
 adapter = Adapter(DATABASE_URL)
 
 enforcer = casbin.Enforcer(
-    "model.conf",
+    str(model_path),
     adapter
 )
 

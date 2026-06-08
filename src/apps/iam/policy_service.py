@@ -84,6 +84,34 @@ class PolicyService:
         )
 
     # -------------------------
+    # Role Inheritance
+    # -------------------------
+
+    @staticmethod
+    def inherit_role(
+        role: str,
+        parent_role: str,
+        org: str,
+    ) -> bool:
+        return enforcer.add_grouping_policy(
+            role,
+            parent_role,
+            org,
+        )
+    
+    @staticmethod
+    def remove_role_inheritance(
+        role: str,
+        parent_role: str,
+        org: str,
+    ) -> bool:
+        return enforcer.remove_grouping_policy(
+            role,
+            parent_role,
+            org,
+        )
+
+    # -------------------------
     # Authorization Check
     # -------------------------
 
