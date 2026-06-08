@@ -16,6 +16,16 @@ class OrganizationStatus(str, Enum):
     SUSPENDED = "suspended"
     ARCHIVED = "archived"
 
+class RBACAction(str, Enum):
+    CREATE = "create"
+    READ = "read"
+    UPDATE = "update"
+    DELETE = "delete"
+
+class RBACModule(str, Enum):
+    USERS = "users"
+    RBAC = "rbac"
+
 def enum_values(enum_cls: type[Enum]) -> list[str]:
     """Return the string values for a Python enum."""
 
