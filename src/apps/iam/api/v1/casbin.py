@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter
 from apps.iam.dependencies import require_module_permission
 from apps.iam.models import User
 from apps.iam.policy_service import PolicyService
@@ -10,7 +10,8 @@ from core.dependencies import (
     CurrentOrg,
     CurrentUser,
 )
-
+from core.logging import get_logger
+from src.core.exceptions import NotFoundError, ConflictError
 from core.types import (
     ApiSuccessResponse,
     BaseSchema,
@@ -24,6 +25,8 @@ router = APIRouter(
         require_module_permission(Module.RBAC),
     ]
 )
+
+logger = get_logger(__name__)
 
 
 # =====================================================
@@ -71,13 +74,18 @@ async def add_permission(
         action=payload.action,
     )
 
-    return ApiSuccessResponse(
-        message=(
-            "Permission added successfully."
-            if success
-            else "Permission already exists."
-        ),
+    logger.info(
+        "Add permission: role=%s, org=%s, module=%s, action=%s, success=%s",
+        payload.role,
+        current_org.id,
+        payload.module,
+        payload.action,
+        success,
     )
+    if not success:
+        raise ConflictError(message="Permission already exists.")
+
+    return ApiSuccessResponse(message="Permission added successfully.")
 
 
 @router.delete(
@@ -95,13 +103,18 @@ async def remove_permission(
         action=payload.action,
     )
 
-    return ApiSuccessResponse(
-        message=(
-            "Permission removed successfully."
-            if success
-            else "Permission was not found."
-        ),
+    logger.info(
+        "Remove permission: role=%s, org=%s, module=%s, action=%s, success=%s",
+        payload.role,
+        current_org.id,
+        payload.module,
+        payload.action,
+        success,
     )
+    if not success:
+        raise NotFoundError(message="Permission not found.")
+
+    return ApiSuccessResponse(message="Permission removed successfully.")
 
 
 @router.get(
@@ -135,10 +148,7 @@ async def assign_role(
     user = db.get(User, payload.user_id)
 
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found.",
-        )
+        raise NotFoundError(message="User not found.")
 
     success = PolicyService.assign_role(
         user=user,
@@ -146,13 +156,17 @@ async def assign_role(
         org=str(current_org.id),
     )
 
-    return ApiSuccessResponse(
-        message=(
-            "Role assigned successfully."
-            if success
-            else "Role already assigned."
-        ),
+    logger.info(
+        "Assign role: user_id=%s, role=%s, org=%s, success=%s",
+        payload.user_id,
+        payload.role,
+        current_org.id,
+        success,
     )
+    if not success:
+        raise ConflictError(message="Role already assigned to user.")
+
+    return ApiSuccessResponse(message="Role assigned successfully.")
 
 
 @router.delete(
@@ -167,10 +181,7 @@ async def revoke_role(
     user = db.get(User, payload.user_id)
 
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found.",
-        )
+        raise NotFoundError(message="User not found.")
 
     success = PolicyService.revoke_role(
         user=user,
@@ -178,13 +189,17 @@ async def revoke_role(
         org=str(current_org.id),
     )
 
-    return ApiSuccessResponse(
-        message=(
-            "Role revoked successfully."
-            if success
-            else "Role assignment not found."
-        ),
+    logger.info(
+        "Revoke role: user_id=%s, role=%s, org=%s, success=%s",
+        payload.user_id,
+        payload.role,
+        current_org.id,
+        success,
     )
+    if not success:
+        raise NotFoundError(message="Role assignment not found.")
+
+    return ApiSuccessResponse(message="Role revoked successfully.")
 
 
 @router.get(
@@ -199,10 +214,7 @@ async def get_user_roles(
     user = db.get(User, user_id)
 
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found.",
-        )
+        raise NotFoundError(message="User not found.")
 
     roles = PolicyService.get_user_roles(
         user=user,
@@ -233,13 +245,17 @@ async def inherit_role(
         org=str(current_org.id),
     )
 
-    return ApiSuccessResponse(
-        message=(
-            "Role inheritance created successfully."
-            if success
-            else "Inheritance already exists."
-        ),
+    logger.info(
+        "Inherit role: role=%s, parent_role=%s, org=%s, success=%s",
+        payload.role,
+        payload.parent_role,
+        current_org.id,
+        success,
     )
+    if not success:
+        raise ConflictError(message="Inheritance already exists.")
+
+    return ApiSuccessResponse(message="Role inheritance added successfully.")
 
 
 @router.delete(
@@ -256,13 +272,17 @@ async def remove_role_inheritance(
         org=str(current_org.id),
     )
 
-    return ApiSuccessResponse(
-        message=(
-            "Role inheritance removed successfully."
-            if success
-            else "Inheritance relationship not found."
-        ),
+    logger.info(
+        "Remove role inheritance: role=%s, parent_role=%s, org=%s, success=%s",
+        payload.role,
+        payload.parent_role,
+        current_org.id,
+        success,
     )
+    if not success:
+        raise NotFoundError(message="Inheritance relationship not found.")
+
+    return ApiSuccessResponse(message="Role inheritance removed successfully.")
 
 
 # =====================================================
@@ -301,10 +321,7 @@ async def check_user_permission(
     user = db.get(User, payload.user_id)
 
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found.",
-        )
+        raise NotFoundError(message="User not found.")
 
     allowed = PolicyService.has_permission(
         user=user,
