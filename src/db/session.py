@@ -1,3 +1,5 @@
+from typing import AsyncGenerator
+
 from core.config import settings
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -8,23 +10,20 @@ if not settings.DATABASE_URL:
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.SQL_ECHO,
-    future=True,
+    pre_pool_ping=settings.DB_PRE_PING,
     pool_size=settings.DB_POOL_SIZE,
     max_overflow=settings.DB_MAX_OVERFLOW,
     pool_timeout=settings.DB_POOL_TIMEOUT,
     pool_recycle=settings.DB_POOL_RECYCLE,
 )
 
-AsyncSessionLocal = async_sessionmaker(
+async_session_factory = async_sessionmaker(
     bind=engine,
     expire_on_commit=False,
     class_=AsyncSession,
 )
 
-async def get_db():
-    """
-    Dependency that provides a database session to the path operation functions.
-    It ensures that the session is properly closed after use.
-    """
-    async with AsyncSessionLocal() as session:
+
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    async with async_session_factory() as session:
         yield session

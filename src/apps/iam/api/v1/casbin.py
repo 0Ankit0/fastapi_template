@@ -145,7 +145,7 @@ async def assign_role(
     db: DB,
     current_org: CurrentOrg,
 ):
-    user = db.get(User, payload.user_id)
+    user =await db.get(User, payload.user_id)
 
     if not user:
         raise NotFoundError(message="User not found.")
@@ -178,7 +178,7 @@ async def revoke_role(
     db: DB,
     current_org: CurrentOrg,
 ):
-    user = db.get(User, payload.user_id)
+    user = await db.get(User, payload.user_id)
 
     if not user:
         raise NotFoundError(message="User not found.")
@@ -211,7 +211,7 @@ async def get_user_roles(
     db: DB,
     current_org: CurrentOrg,
 ):
-    user = db.get(User, user_id)
+    user =await db.get(User, user_id)
 
     if not user:
         raise NotFoundError(message="User not found.")
@@ -318,7 +318,7 @@ async def check_user_permission(
     db: DB,
     current_org: CurrentOrg,
 ):
-    user = db.get(User, payload.user_id)
+    user = await db.get(User, payload.user_id)
 
     if not user:
         raise NotFoundError(message="User not found.")
