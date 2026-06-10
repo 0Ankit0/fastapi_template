@@ -4,6 +4,7 @@ from typing import Optional, TYPE_CHECKING
 from datetime import datetime
 from sqlalchemy import Enum as SAEnum, ForeignKey, String
 from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
+from src.db.mixins import CreatedAtMixin
 from src.core.security import TokenType
 from src.db.base import Base
 
@@ -11,7 +12,14 @@ if TYPE_CHECKING:
     from .user import User
 
 
-class TokenTrackingBase(MappedAsDataclass, kw_only=True):
+class TokenTracking(Base, CreatedAtMixin):
+    __tablename__ = "tokentracking"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        default=None,
+    )
     token_jti: Mapped[str] = mapped_column(String(255), index=True, unique=True)
     token_type: Mapped[TokenType] = mapped_column(
         SAEnum(
@@ -26,16 +34,4 @@ class TokenTrackingBase(MappedAsDataclass, kw_only=True):
     is_active: Mapped[bool] = mapped_column(default=True)
     revoked_at: Mapped[Optional[datetime]] = mapped_column(default=None)
     revoke_reason: Mapped[str] = mapped_column(String(255), default="")
-    created_at: Mapped[datetime] = mapped_column(default_factory=datetime.now)
-
-
-class TokenTracking(TokenTrackingBase, Base):
-    __tablename__ = "tokentracking"
-
-    id: Mapped[Optional[int]] = mapped_column(primary_key=True, init=False, default=None, nullable=False)
-    user_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey(User.id, ondelete="CASCADE"),
-        default=None,
-    )
-
-    user: Mapped[User | None] = relationship(back_populates="tokens", init=False)
+    user: Mapped["User | None"] = relationship(back_populates="tokens")

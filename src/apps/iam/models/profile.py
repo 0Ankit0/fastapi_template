@@ -7,14 +7,14 @@ from typing import TYPE_CHECKING
 from sqlalchemy import BigInteger, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from . import User
-from db.base import Base
-from db.mixins import TimestampMixin
+from src.db.base import Base
+from src.db.mixins import TimestampMixin
 
 if TYPE_CHECKING:
     from apps.iam.models import User
 
 
-class Profile(Base, TimestampMixin):
+class UserProfile(Base, TimestampMixin):
     """Represent editable user-facing profile data.
 
     Profile rows intentionally separate presentation-oriented information from
@@ -31,7 +31,7 @@ class Profile(Base, TimestampMixin):
         nullable=False,
         unique=True,
     )
-    display_name: Mapped[str | None] = mapped_column(String(50))
+    phone : Mapped[str | None] = mapped_column(String(20))
     avatar_url: Mapped[str | None] = mapped_column(Text)
     bio: Mapped[str | None] = mapped_column(Text)
 

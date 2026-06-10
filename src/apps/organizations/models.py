@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from db.base import Base
+from src.db.base import Base
 from sqlalchemy import BigInteger, Text, ForeignKey, Enum as SQLEnum
-from db.types import CITEXT_TYPE
-from db.mixins import TimestampMixin
-from core.eums import OrganizationStatus, enum_values
-from sqlalchemy import String, Integer
+from src.db.types import CITEXT_TYPE
+from src.db.mixins import TimestampMixin
+from src.core.eums import OrganizationStatus, enum_values
 
 if TYPE_CHECKING:
     from iam.models import User
@@ -43,13 +42,13 @@ class Organization(Base, TimestampMixin):
     billing_email: Mapped[str | None] = mapped_column(CITEXT_TYPE)
     created_by: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
 
-    creator: Mapped[User] = relationship(
-        User,
+    creator: Mapped["User"] = relationship(
+        "User",
         back_populates="created_organizations",
         foreign_keys=[created_by],
     )
-    owner: Mapped[User] = relationship(
-        User,
+    owner: Mapped["User"] = relationship(
+        "User",
         back_populates="owned_organizations",
         foreign_keys=[owner_id],
     )
