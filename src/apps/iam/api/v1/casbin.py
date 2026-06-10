@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 from apps.iam.dependencies import require_module_permission
 from apps.iam.models import User
-from apps.iam.policy_service import PolicyService
+from apps.iam.services.policy_service import PolicyService
 from core.eums import RBACModule as Module
 from core.dependencies import (
     DB,
