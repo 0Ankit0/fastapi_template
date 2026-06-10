@@ -8,5 +8,8 @@ dev:
 	uv run uvicorn src.main:app --reload
 
 migrate:
-	uv run task alembic upgrade head
+	uv run alembic upgrade head
 
+MSG ?= "migration"
+makemigrations:
+	uv run alembic revision --autogenerate -m "$(MSG)"
