@@ -12,6 +12,7 @@ from db.mixins import TimestampMixin
 
 if TYPE_CHECKING:
     from apps.iam.models import Profile
+    from apps.iam.models import TokenTracking
     from apps.organizations.models import Organization
 
 class User(Base, TimestampMixin):
@@ -57,4 +58,9 @@ class User(Base, TimestampMixin):
         Organization,
         back_populates="owner",
         foreign_keys="Organization.owner_id",
+    )
+    tokens: Mapped[list[TokenTracking]] = relationship(
+        "TokenTracking",
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
