@@ -1,17 +1,18 @@
 from __future__ import annotations
+from datetime import datetime
 
 from sqlalchemy import Column, DateTime, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 class CreatedAtMixin:
-    created_at: Mapped[DateTime] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), 
         server_default=func.now(), 
         nullable=False
     )
 
 class TimestampMixin(CreatedAtMixin):
-    updated_at: Mapped[DateTime] = mapped_column(
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), 
         server_default=func.now(), 
         onupdate=func.now(), 

@@ -58,3 +58,9 @@ class ValidationError(AppError):
 
     code = "common.validation_error"
     status_code = 400
+
+class RateLimitError(AppError):
+    """Raised when a client exceeds allowed request limits."""
+
+    code = "common.rate_limit_exceeded"
+    status_code = 429
