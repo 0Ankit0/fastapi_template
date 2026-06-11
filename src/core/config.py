@@ -14,7 +14,21 @@ class Settings(BaseSettings):
         extra="ignore",
         case_sensitive=True,
     )
-     
+    
+    MEDIA_DIR: str = "media"
+    MEDIA_URL: str = "/media"
+    STORAGE_BACKEND: str = "local"
+    SERVER_HOST: str = "http://localhost:8000"
+    MEDIA_BASE_URL: str = ""
+    S3_BUCKET: str = ""
+    S3_REGION: str = "us-east-1"
+    S3_ENDPOINT_URL: str = ""
+    S3_USE_PATH_STYLE: bool = False
+    MAX_AVATAR_SIZE_MB: int = 5
+
+    AWS_ACCESS_KEY_ID: str = ""
+    AWS_SECRET_ACCESS_KEY: SecretStr = SecretStr("")
+
     APP_INSTANCE_NAME: str = "fastapi_template"
     CELERY_BROKER_URL: str = ""
     CELERY_RESULT_BACKEND: str = ""
@@ -49,6 +63,7 @@ class Settings(BaseSettings):
 
     RATE_LIMIT_LOGIN: str = "5/minute"
     RATE_LIMIT_SIGNUP: str = "2/minute"
+    RATE_LIMIT_PASSWORD_RESET: str = "3/minute"
     MAX_LOGIN_ATTEMPTS: int = 5
     ACCOUNT_LOCKOUT_DURATION_MINUTES: int = 15
 
