@@ -31,6 +31,8 @@ class UserProfile(Base, TimestampMixin):
         nullable=False,
         unique=True,
     )
+    first_name: Mapped[str | None] = mapped_column(String(50))
+    last_name: Mapped[str | None] = mapped_column(String(50))
     phone : Mapped[str | None] = mapped_column(String(20))
     avatar_url: Mapped[str | None] = mapped_column(Text)
     bio: Mapped[str | None] = mapped_column(Text)
