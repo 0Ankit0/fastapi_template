@@ -110,6 +110,14 @@ async def get_current_user(
     request.state.current_user_id = user.id
     return user
 
+def get_current_active_superuser(
+    current_user: User = Depends(get_current_user)
+):
+    if not current_user.is_superuser and not current_user.status == UserStatus.ACTIVE:
+        raise AuthorizationError(
+            message="Insufficient permissions"
+        )
+    return current_user
 
 def require_module_permission(module: Module):
     async def checker(request: Request):
