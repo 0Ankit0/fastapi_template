@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from fastapi import APIRouter
-from apps.iam.dependencies import require_module_permission
+from fastapi import APIRouter, Depends
+from apps.iam.dependencies import get_current_active_superuser, require_module_permission
 from apps.iam.models import User
 from apps.iam.services.policy_service import PolicyService
 from core.eums import RBACModule as Module
@@ -14,8 +14,13 @@ from core.logging import get_logger
 from src.core.exceptions import NotFoundError, ConflictError
 from core.types import (
     ApiSuccessResponse,
-    BaseSchema,
     HashId,
+)
+from src.apps.iam.schemas.casbin import (
+    PermissionRequest,
+    UserRoleRequest,
+    RoleInheritanceRequest,
+    PermissionCheckRequest,
 )
 
 router = APIRouter(
@@ -23,36 +28,13 @@ router = APIRouter(
     tags=["RBAC"],
     dependencies=[
         require_module_permission(Module.RBAC),
+        # Depends(get_current_active_superuser)
     ]
 )
 
 logger = get_logger(__name__)
 
 
-# =====================================================
-# Schemas
-# =====================================================
-
-class PermissionRequest(BaseSchema):
-    role: str
-    module: str
-    action: str
-
-
-class UserRoleRequest(BaseSchema):
-    user_id: HashId
-    role: str
-
-
-class RoleInheritanceRequest(BaseSchema):
-    role: str
-    parent_role: str
-
-
-class PermissionCheckRequest(BaseSchema):
-    user_id: HashId
-    module: str
-    action: str
 
 
 # =====================================================
@@ -145,6 +127,7 @@ async def assign_role(
     db: DB,
     current_org: CurrentOrg,
 ):
+    
     user =await db.get(User, payload.user_id)
 
     if not user:
