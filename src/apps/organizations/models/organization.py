@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from apps.organizations.models.organization_members import OrganizationMember
 from src.db.base import Base
 from sqlalchemy import BigInteger, Text, ForeignKey, Enum as SQLEnum
 from src.db.types import CITEXT_TYPE
@@ -10,6 +11,7 @@ from src.core.eums import OrganizationStatus, enum_values
 
 if TYPE_CHECKING:
     from iam.models import User
+    from . import OrganizationMember
 
 class Organization(Base, TimestampMixin):
     """Represent a tenant organization within the shared application database.
@@ -51,4 +53,9 @@ class Organization(Base, TimestampMixin):
         "User",
         back_populates="owned_organizations",
         foreign_keys=[owner_id],
+    )
+    members: Mapped[list["OrganizationMember"]] = relationship(
+        "OrganizationMember",
+        back_populates="organization",
+        cascade="all, delete-orphan",
     )

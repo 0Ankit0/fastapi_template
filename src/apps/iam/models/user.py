@@ -12,7 +12,7 @@ from src.db.mixins import TimestampMixin
 
 if TYPE_CHECKING:
     from apps.iam.models import UserProfile as Profile, TokenTracking, LoginAttempt, UsedToken
-    from apps.organizations.models import Organization
+    from apps.organizations.models import Organization, OrganizationMember
 
 
 class User(Base, TimestampMixin):
@@ -85,4 +85,9 @@ class User(Base, TimestampMixin):
         "UsedToken",
         back_populates="user",
         cascade="all, delete-orphan",  
+    )
+    organization_memberships: Mapped[list[OrganizationMember]] = relationship(
+        "OrganizationMember",
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
