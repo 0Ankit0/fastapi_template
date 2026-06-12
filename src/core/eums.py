@@ -25,6 +25,8 @@ class RBACAction(str, Enum):
 class RBACModule(str, Enum):
     USERS = "users"
     RBAC = "rbac"
+    ORGANIZATIONS = "organizations"
+    ORGANIZATION_MEMBERS = "organization_members"
 
 def enum_values(enum_cls: type[Enum]) -> list[str]:
     """Return the string values for a Python enum."""
