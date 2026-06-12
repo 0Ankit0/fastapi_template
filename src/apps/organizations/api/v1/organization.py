@@ -1,0 +1,231 @@
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from src.apps.iam.dependencies import get_current_active_superuser
+from apps.organizations.schemas import organization
+from src.core.exceptions import NotFoundError
+from src.apps.organizations.dependencies import get_current_org 
+from src.apps.organizations.models.organization import Organization
+from src.apps.organizations.schemas.organization import OrganizationPartialUpdate, OrganizationResponse, OrganizationCreate, OrganizationUpdate
+from src.db.session import get_session
+from src.db.query import select, or_
+from src.core.utils import decode_cursor, encode_cursor
+from src.core.dependencies import DB
+from src.core.types import CursorPage, CursorPagination
+from src.core.eums import OrganizationStatus
+from src.core.cache import RedisCache
+from slugify import slugify
+
+
+router = APIRouter(prefix="/organizations", tags=["Organizations"])
+
+async def _invalidate_org_cache(org_id: int):
+   await RedisCache.delete(f"org:{org_id}")
+   await RedisCache.clear_pattern(f"org:{org_id}:*")
+
+
+@router.get("/", response_model=OrganizationResponse)
+async def list_organizations(
+   pagination: CursorPagination = Depends(),
+   search: str | None = Query(
+      default=None,
+        description="Search term to filter organizations by name or description",
+   ),
+   org_status: OrganizationStatus | None = Query(
+      default=None,
+      description="Filter organizations by status"
+   ),
+   db: DB = Depends(get_session)
+):
+    """
+    List organizations with optional search and cursor pagination.
+    """
+    cache_key = (
+      f"org:list:"
+      f"{pagination.cursor}:"
+      f"{pagination.limit}:"
+      f"{search}"
+    )
+    cached_result = await RedisCache.get(cache_key)
+    if cached_result:
+      return cached_result
+   
+    query = select(Organization)
+
+    if search:
+        search_term = f"%{search}%"
+        query = query.where(
+            or_(
+                Organization.name.ilike(search_term),
+                Organization.description.ilike(search_term)
+            )
+        )
+    if org_status is not None:
+        query = query.where(Organization.status == org_status)
+
+    if pagination.cursor:
+       _, cursor_id = decode_cursor(pagination.cursor)
+       query = query.where(Organization.id > int(cursor_id))
+
+    query = (
+        query
+        .order_by(Organization.id)
+        .limit(pagination.limit + 1)  # Fetch one extra for pagination
+    )
+
+    result = await db.execute(query)
+    organizations = result.scalars().all()
+
+    has_next_page = (
+       len(organizations) > pagination.limit
+    )
+    if has_next_page:
+       organizations = organizations[:pagination.limit]
+
+    items =[
+       OrganizationResponse.model_validate(org)
+       for org in organizations
+    ]
+    next_cursor = None
+
+    if has_next_page and organizations:
+       next_cursor = encode_cursor(
+          organizations[-1].id
+    )
+
+    response = CursorPage[OrganizationResponse](
+       items=items,
+       next_cursor=next_cursor,
+    )
+
+    await RedisCache.set(
+       cache_key,
+       response.model_dump_json(),
+       ttl=120
+    )
+    return response
+
+@router.get("/{org_id}", response_model=OrganizationResponse)
+async def get_organization(
+   org_id: int,
+   db: DB = Depends(get_session)
+):
+    """
+    Get organization details by ID.
+    """
+    cache_key = f"org:{org_id}"
+    cached_org = await RedisCache.get(cache_key)
+    if cached_org:
+       return OrganizationResponse.model_validate_json(cached_org)
+
+    query = select(Organization).where(Organization.id == org_id)
+    result = await db.execute(query)
+    organization = result.scalar_one_or_none()
+
+    if not organization:
+        raise NotFoundError(message="Organization not found")
+
+    org_response = OrganizationResponse.model_validate(organization)
+    await RedisCache.set(
+       cache_key,
+       org_response.model_dump_json(),
+       ttl=300
+    )
+    return org_response
+
+@router.post("/", response_model=OrganizationResponse, status_code=status.HTTP_201_CREATED)
+async def create_organization(
+   org_data: OrganizationCreate,
+   db: DB = Depends(get_session)
+):
+    """
+    Create a new organization.
+    """
+    new_org = Organization(
+        name=org_data.name,
+        slug=slugify(org_data.name),
+        description=org_data.description,
+        status=OrganizationStatus.ACTIVE
+    )
+    db.add(new_org)
+    await db.commit()
+    await db.refresh(new_org)
+
+    # Invalidate relevant cache entries
+    await _invalidate_org_cache(new_org.id)
+
+    return OrganizationResponse.model_validate(new_org)
+
+@router.put("/{org_id}", response_model=OrganizationResponse)
+async def update_organization(
+   org_id: int,
+   org_data: OrganizationUpdate,
+   db: DB = Depends(get_session)
+):
+    """
+    Update an existing organization.
+    """
+    query = select(Organization).where(Organization.id == org_id)
+    result = await db.execute(query)
+    organization = result.scalar_one_or_none()
+
+    if not organization:
+        raise NotFoundError(message="Organization not found")
+
+    organization.name = org_data.name
+    organization.description = org_data.description
+    await db.commit()
+    await db.refresh(organization)
+
+    # Invalidate relevant cache entries
+    await _invalidate_org_cache(organization.id)
+
+    return OrganizationResponse.model_validate(organization)
+
+@router.patch("/{org_id}", response_model=OrganizationResponse)
+async def partial_update_organization(
+   org_id: int,
+   org_data: OrganizationPartialUpdate,
+   db: DB = Depends(get_session)
+):
+   """
+   Partially update an existing organization.
+   """
+   query = select(Organization).where(Organization.id == org_id)
+   result = await db.execute(query)
+   organization = result.scalar_one_or_none()
+
+   if not organization:
+      raise NotFoundError(message="Organization not found")
+
+   organization.status = org_data.status
+
+   await db.commit()
+   await db.refresh(organization)
+
+   # Invalidate relevant cache entries
+   await _invalidate_org_cache(organization.id)
+
+   return OrganizationResponse.model_validate(organization)
+
+@router.delete("/{org_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_organization(
+   org_id: int,
+   db: DB = Depends(get_session),
+   _ = Depends(get_current_active_superuser)
+):
+    """
+    Delete an organization by ID.
+    """
+    query = select(Organization).where(Organization.id == org_id)
+    result = await db.execute(query)
+    organization = result.scalar_one_or_none()
+
+    if not organization:
+        raise NotFoundError(message="Organization not found")
+
+    await db.delete(organization)
+    await db.commit()
+
+    # Invalidate relevant cache entries
+    await _invalidate_org_cache(org_id)
+
+    return None

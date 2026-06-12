@@ -21,4 +21,5 @@ dependencies = [
     "qrcode>=8.2",
     "redis>=8.0.0",
     "slowapi>=0.1.9",
+    "slugify>=0.0.1",
 ]

@@ -1,0 +1,29 @@
+from pydantic import BaseModel
+from src.core.types import HashId
+from src.core.eums import OrganizationStatus
+
+class OrganizationBase(BaseModel):
+    name: str
+    description: str | None = None
+
+
+class OrganizationCreate(OrganizationBase):
+    slug: str
+    status: OrganizationStatus = OrganizationStatus.ACTIVE
+
+class OrganizationUpdate(OrganizationBase):
+    status: OrganizationStatus | None = None
+    pass
+
+class OrganizationPartialUpdate(BaseModel):
+    status: OrganizationStatus
+
+
+class OrganizationResponse(OrganizationBase):
+    id: HashId
+    slug: str
+    status: OrganizationStatus
+
+    class Config:
+        orm_mode = True
+

@@ -55,6 +55,7 @@ class PolicyService:
         role: str,
         org: str,
     ) -> bool:
+        # TODO: Validate that the user belongs to the organization and that the role exists
         return enforcer.add_grouping_policy(
             user.id,
             role,

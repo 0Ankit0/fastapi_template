@@ -3,13 +3,11 @@ User management endpoints with caching and pagination
 """
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Request
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from apps.organizations.dependencies import get_current_org
 from src.core.eums import UserStatus
 from src.core.utils import decode_cursor, encode_cursor
 from src.db.query import col, func, or_, select
-from typing import Optional
 from src.core.dependencies import DB, CurrentOrg, get_current_user, get_session
 from src.apps.iam.models.user import User
 from src.apps.iam.schemas.user import UserResponse, UserUpdate
@@ -47,9 +45,9 @@ def _serialize_user_response(user: User) -> dict[str, object]:
 async def _invalidate_user_cache(user_id: int) -> None:
     await RedisCache.delete(f"user:profile:{user_id}")
     await RedisCache.clear_pattern(f"user:{user_id}:*")
-    await RedisCache.clear_pattern(f"casbin:roles:{user_id}:*")
-    await RedisCache.clear_pattern(f"casbin:permissions:{user_id}:*")
-    await RedisCache.clear_pattern(f"permission:check:{user_id}:*")
+    # await RedisCache.clear_pattern(f"casbin:roles:{user_id}:*")
+    # await RedisCache.clear_pattern(f"casbin:permissions:{user_id}:*")
+    # await RedisCache.clear_pattern(f"permission:check:{user_id}:*")
 
 
 @router.get("/", response_model=CursorPage[UserResponse])
