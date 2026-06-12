@@ -1,10 +1,11 @@
 from typing import Optional, List
-from pydantic import BaseModel, EmailStr, field_serializer, field_validator, model_validator, ValidationInfo
-from core.types import HashId
+from pydantic import  EmailStr, field_serializer, field_validator, model_validator, ValidationInfo
+from src.core.schemas import BaseSchema
+from src.core.types import HashId
 from src.core.security import validate_password_strength
 
 
-class UserBase(BaseModel):
+class UserBase(BaseSchema):
     username: str
     email: EmailStr
     is_active: Optional[bool] = True
@@ -30,7 +31,7 @@ class UserCreate(UserBase):
         return value
 
 
-class UserUpdate(BaseModel):
+class UserUpdate(BaseSchema):
     email: Optional[EmailStr] = None
     password: Optional[str] = None
     first_name: Optional[str] = None
@@ -40,17 +41,17 @@ class UserUpdate(BaseModel):
     is_superuser: Optional[bool] = None
 
 
-class LoginRequest(BaseModel):
+class LoginRequest(BaseSchema):
     organization: Optional[str] = None
     username: str
     password: str
 
 
-class ResetPasswordRequest(BaseModel):
+class ResetPasswordRequest(BaseSchema):
     email: EmailStr
 
 
-class ResetPasswordConfirm(BaseModel):
+class ResetPasswordConfirm(BaseSchema):
     token: str
     new_password: str
     confirm_password: str
@@ -67,7 +68,7 @@ class ResetPasswordConfirm(BaseModel):
         return value
 
 
-class ChangePasswordRequest(BaseModel):
+class ChangePasswordRequest(BaseSchema):
     current_password: str
     new_password: str
     confirm_password: str
@@ -84,16 +85,16 @@ class ChangePasswordRequest(BaseModel):
         return value
 
 
-class VerifyOTPRequest(BaseModel):
+class VerifyOTPRequest(BaseSchema):
     otp_code: str
     temp_token: str
 
 
-class DisableOTPRequest(BaseModel):
+class DisableOTPRequest(BaseSchema):
     password: str
 
 
-class UserResponse(BaseModel):
+class UserResponse(BaseSchema):
     id: HashId
     username: str
     email: EmailStr
@@ -109,7 +110,6 @@ class UserResponse(BaseModel):
     bio: Optional[str] = None
     roles: List[str] = []
 
-    model_config = {"from_attributes": True}
 
     @model_validator(mode='before')
     @classmethod

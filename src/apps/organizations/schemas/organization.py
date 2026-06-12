@@ -1,8 +1,9 @@
-from pydantic import BaseModel
-from src.core.types import HashId
+from __future__ import annotations
+
+from src.core.types import HashId, BaseSchema
 from src.core.eums import OrganizationStatus
 
-class OrganizationBase(BaseModel):
+class OrganizationBase(BaseSchema):
     name: str
     description: str | None = None
 
@@ -15,7 +16,7 @@ class OrganizationUpdate(OrganizationBase):
     status: OrganizationStatus | None = None
     pass
 
-class OrganizationPartialUpdate(BaseModel):
+class OrganizationPartialUpdate(BaseSchema):
     status: OrganizationStatus
 
 

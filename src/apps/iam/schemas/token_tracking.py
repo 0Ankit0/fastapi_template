@@ -1,12 +1,13 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, computed_field, field_serializer
+from pydantic import  computed_field
+from src.core.schemas import BaseSchema
 from core.eums import UserStatus
 from src.core.types import HashId
 from src.core.security import TokenType
 
 
-class TokenTrackingResponse(BaseModel):
+class TokenTrackingResponse(BaseSchema):
     id: HashId
     user_id: HashId
     token_jti: str
@@ -24,4 +25,3 @@ class TokenTrackingResponse(BaseModel):
     def is_active(self) -> bool:
         return self.status == UserStatus.ACTIVE
 
-    model_config = {"from_attributes": True}

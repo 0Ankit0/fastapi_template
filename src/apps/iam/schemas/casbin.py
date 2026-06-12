@@ -1,4 +1,5 @@
-from src.core.types import BaseSchema, HashId
+from src.core.types import  HashId
+from src.core.schemas import BaseSchema
 
 class PermissionRequest(BaseSchema):
     role: str

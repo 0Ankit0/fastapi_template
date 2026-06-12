@@ -1,11 +1,12 @@
 from typing import Optional
-from pydantic import BaseModel
+from src.core.schemas import BaseSchema
 
-class Token(BaseModel):
+class Token(BaseSchema):
     access: str
     refresh: str
     token_type: str = "bearer"
 
-class TokenPayload(BaseModel):
+class TokenPayload(BaseSchema):
     sub: Optional[str] = None
     refresh: Optional[bool] = False
+
