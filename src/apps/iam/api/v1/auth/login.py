@@ -1,9 +1,10 @@
 from datetime import timedelta, datetime, timezone
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from core.dependencies import DB
-from core.eums import UserStatus
-from core.exceptions import ValidationError
+from src.core.dependencies import DB
+from src.core.eums import UserStatus
+from src.core.exceptions import ValidationError
+from src.core.schemas import ApiSuccessResponse
 from src.db.query import col, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from slowapi import Limiter
@@ -17,7 +18,8 @@ from src.core.dependencies import get_current_user, get_session
 from src.apps.iam.models.user import User
 from src.apps.iam.models import LoginAttempt
 from src.apps.iam.models.token_tracking import TokenTracking
-from src.apps.iam.schemas.token import Token
+from src.apps.iam.schemas.token import  Token
+from src.apps.iam.schemas.otp import OtpRequiredResponse
 from src.apps.iam.schemas.user import LoginRequest
 from src.apps.iam.utils.ip_access import revoke_tokens_for_ip, get_client_ip
 
@@ -25,7 +27,7 @@ router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
 
-@router.post("/login/")
+@router.post("/login/", response_model = ApiSuccessResponse[Token] | ApiSuccessResponse[OtpRequiredResponse])
 @limiter.limit(lambda: settings.RATE_LIMIT_LOGIN)
 async def login_access_token(
     request: Request,
@@ -33,7 +35,7 @@ async def login_access_token(
     login_data: LoginRequest,
     set_cookie: bool = False,
     db: DB = Depends(get_session),
-) -> Token | dict[str, Any]:
+) -> ApiSuccessResponse[Token] | ApiSuccessResponse[OtpRequiredResponse]:
     """
     OAuth2 compatible token login, get an access token for future requests
     """
@@ -127,11 +129,13 @@ async def login_access_token(
         # Check if OTP is enabled for this user
         if user.otp_enabled and user.otp_verified:
             temp_token = security.create_temp_auth_token(user.id, login_data.organization)
-            return {
-                "requires_otp": True,
-                "temp_token": temp_token,
-                "message": "Please provide OTP code"
-            }
+            return ApiSuccessResponse[OtpRequiredResponse](
+                data=OtpRequiredResponse(
+                    requires_otp=True,
+                    temp_token=temp_token
+                ),
+                message="OTP verification required"
+            )
         
         # Successful login
         login_attempt = LoginAttempt(
@@ -197,16 +201,29 @@ async def login_access_token(
                 access_token=access_token,
                 refresh_token=refresh_token,
             )
-            return {"message": "Logged in successfully"}
+            return ApiSuccessResponse[Token](
+                data=Token(
+                    access="",
+                    refresh="",
+                    token_type=TokenType.BEARER.value
+                ),
+                message="Logged in successfully"
+            )
         
-        return Token(
+        token_data = Token(
             access=access_token,
             refresh=refresh_token,
             token_type=TokenType.BEARER.value
         )
+        return ApiSuccessResponse[Token](
+            data=token_data,
+            message="Logged in successfully"
+        )
     except HTTPException:
+        await db.rollback()
         raise
     except Exception as ex:
+        await db.rollback()
         login_attempt = LoginAttempt(
             user_id=user.id if user else None,
             ip_address=ip_address,
@@ -216,7 +233,6 @@ async def login_access_token(
             failure_reason=f"Server error: {str(ex)}"
         )
         db.add(login_attempt)
-        await db.commit()
         await db.commit()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -278,6 +294,7 @@ async def logout(
         # await analytics.capture(str(current_user.id), AuthEvents.LOGGED_OUT)
         return {"message": "Successfully logged out from this device"}
     except Exception:
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred during logout"

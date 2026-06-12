@@ -1,6 +1,8 @@
 from datetime import timedelta, datetime, timezone
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from apps.iam.schemas.otp import OtpEnableResponse
+from core.schemas import ApiSuccessResponse
 from src.core.exceptions import AuthorizationError, RateLimitError, ValidationError, NotFoundError
 from src.db.query import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,11 +29,11 @@ logger = get_logger(__name__)
 router = APIRouter()
 
 
-@router.post("/otp/enable/")
+@router.post("/otp/enable/", response_model=ApiSuccessResponse[OtpEnableResponse])
 async def enable_otp(
     current_user: User = Depends(get_current_user),
     db: DB = Depends(get_session)
-) -> dict[str, str]:
+) -> ApiSuccessResponse[OtpEnableResponse]:
     """
     Enable 2FA/OTP for the user account
     """
@@ -68,12 +70,16 @@ async def enable_otp(
         current_user.otp_verified = False
         await db.commit()
         
-        return {
-            "otp_base32": otp_base32,
-            "otp_auth_url": otp_auth_url,
-            "qr_code": f"data:image/png;base64,{qr_code_base64}"
-        }
+        return ApiSuccessResponse[OtpEnableResponse](
+            message="OTP setup initiated. Please verify OTP code to enable.",
+            data=OtpEnableResponse(
+                otp_base32=otp_base32,
+                auth_uri=otp_auth_url,
+                qr_code=f"data:image/png;base64,{qr_code_base64}"
+            )
+        )
     except HTTPException:
+        await db.rollback()
         raise
     except Exception:
         await db.rollback()
@@ -83,12 +89,12 @@ async def enable_otp(
         )
 
 
-@router.post("/otp/verify/")
+@router.post("/otp/verify/", response_model=ApiSuccessResponse[None])
 async def verify_otp(
     otp_data: VerifyOTPRequest,
     current_user: User = Depends(get_current_user),
     db: DB = Depends(get_session),
-) -> dict[str, str]:
+) -> ApiSuccessResponse[None]:
     """
     Verify and activate OTP for the user
     """
@@ -112,8 +118,9 @@ async def verify_otp(
         # Invalidate user cache
         await RedisCache.delete(f"user:profile:{current_user.id}")
 
-        return {"message": "OTP verified and enabled successfully"}
+        return ApiSuccessResponse[None](message="OTP verified and enabled successfully")
     except HTTPException:
+        await db.rollback()
         raise
     except Exception:
         await db.rollback()
@@ -123,12 +130,12 @@ async def verify_otp(
         )
 
 
-@router.post("/otp/disable/")
+@router.post("/otp/disable/", response_model=ApiSuccessResponse[None])
 async def disable_otp(
     otp_data: DisableOTPRequest,
     current_user: User = Depends(get_current_user),
     db: DB = Depends(get_session),
-) -> dict[str, str]:
+) -> ApiSuccessResponse[None]:
     """
     Disable 2FA/OTP for the user account
     """
@@ -154,8 +161,9 @@ async def disable_otp(
         # Invalidate user cache
         await RedisCache.delete(f"user:profile:{current_user.id}")
 
-        return {"message": "OTP disabled successfully"}
+        return ApiSuccessResponse[None](message="OTP disabled successfully")
     except HTTPException:
+        await db.rollback()
         raise
     except Exception:
         await db.rollback()
@@ -165,14 +173,14 @@ async def disable_otp(
         )
 
 
-@router.post("/otp/validate/")
+@router.post("/otp/validate/", response_model=ApiSuccessResponse[Token] | ApiSuccessResponse[None])
 async def validate_otp_login(
     otp_data: VerifyOTPRequest,
     request: Request,
     response: Response,
     set_cookie: bool = False,
     db: DB = Depends(get_session),
-) -> Token | dict[str, Any]:
+) -> ApiSuccessResponse[Token] | ApiSuccessResponse[None]:
     """
     Validate OTP during login process (called after username/password validation).
     Pass set_cookie=true to receive the access token via HttpOnly cookie instead of JSON.
@@ -303,16 +311,19 @@ async def validate_otp_login(
                 access_token=access_token,
                 refresh_token=refresh_token,
             )
-            return {"message": "OTP validated successfully"}
+            return ApiSuccessResponse[None](message="OTP validated successfully")
         
-        return Token(
+        token_data = Token(
             access=access_token,
             refresh=refresh_token,
             token_type=TokenType.BEARER.value
         )
+        return ApiSuccessResponse[Token](message="OTP validated successfully", data=token_data)
     except HTTPException:
+        await db.rollback()
         raise
     except Exception as ex:
+        await db.rollback()
         if user:
             login_attempt = LoginAttempt(
                 user_id=user.id,

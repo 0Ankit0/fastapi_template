@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import cast
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from core.schemas import ApiSuccessResponse
 from src.core.exceptions import ValidationError
 from src.db.query import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,13 +24,13 @@ router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
 
-@router.post("/password-reset-request/")
+@router.post("/password-reset-request/", response_model=ApiSuccessResponse[None])
 @limiter.limit(lambda: settings.RATE_LIMIT_PASSWORD_RESET)
 async def request_password_reset(
     request: Request,
     reset_data: ResetPasswordRequest,
     db: AsyncSession = Depends(get_session),
-) -> dict[str, str]:
+) -> ApiSuccessResponse[None]:
     """
     Request a password reset link via email
     """
@@ -40,28 +41,30 @@ async def request_password_reset(
         user = result.scalars().first()
         
         if not user:
-            return {"message": "If the email exists, a password reset link has been sent"}
+            return ApiSuccessResponse[None](message="If the email exists, a password reset link has been sent")
         
         reset_token = security.create_password_reset_token(user.id)
         
         from src.apps.iam.services.email import AuthEmailService
         await AuthEmailService.send_password_reset_email(user, reset_token)
 
-        return {"message": "If the email exists, a password reset link has been sent"}
+        return ApiSuccessResponse[None](message="If the email exists, a password reset link has been sent")
     except HTTPException:
+        await db.rollback()
         raise
     except Exception:
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred processing password reset request"
         )
 
 
-@router.post("/password-reset-confirm/")
+@router.post("/password-reset-confirm/", response_model=ApiSuccessResponse[None])
 async def confirm_password_reset(
     body: ResetPasswordConfirm,
     db: DB = Depends(get_session),
-) -> dict[str, str]:
+) -> ApiSuccessResponse[None]:
     """
     Confirm password reset. Pass the token and new password in the request body.
     """
@@ -101,8 +104,10 @@ async def confirm_password_reset(
                 raise ValidationError("This password reset link has already been used")
                 
     except HTTPException:
+        await db.rollback()
         raise
     except Exception:
+        await db.rollback()
         raise ValidationError("Invalid or expired reset token")
     
     try:
@@ -143,7 +148,7 @@ async def confirm_password_reset(
         await RedisCache.delete(f"user:profile:{user_id}")
         await RedisCache.clear_pattern(f"tokens:active:{user_id}:*")
 
-        return {"message": "Password has been reset successfully"}
+        return ApiSuccessResponse[None](message="Password has been reset successfully")
     except HTTPException:
         raise
     except Exception:
@@ -154,12 +159,12 @@ async def confirm_password_reset(
         )
 
 
-@router.post("/change-password/")
+@router.post("/change-password/", response_model=ApiSuccessResponse[None])
 async def change_password(
     password_data: ChangePasswordRequest,
     current_user: User = Depends(get_current_user),
     db: DB = Depends(get_session),
-) -> dict[str, str]:
+) -> ApiSuccessResponse[None]:
     """
     Change password for authenticated user
     """
@@ -189,8 +194,9 @@ async def change_password(
         await RedisCache.delete(f"user:profile:{current_user.id}")
         await RedisCache.clear_pattern(f"tokens:active:{current_user.id}:*")
 
-        return {"message": "Password changed successfully"}
+        return ApiSuccessResponse[None](message="Password changed successfully")
     except HTTPException:
+        await db.rollback()
         raise
     except Exception:
         await db.rollback()

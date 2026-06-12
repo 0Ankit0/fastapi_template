@@ -9,7 +9,7 @@ from src.db.session import get_session
 from src.db.query import select, or_
 from src.core.utils import decode_cursor, encode_cursor
 from src.core.dependencies import DB
-from src.core.types import CursorPage, CursorPagination
+from src.core.schemas import CursorPage, CursorPagination, ApiSuccessResponse
 from src.core.eums import OrganizationStatus
 from src.core.cache import RedisCache
 from slugify import slugify
@@ -22,7 +22,7 @@ async def _invalidate_org_cache(org_id: int):
    await RedisCache.clear_pattern(f"org:{org_id}:*")
 
 
-@router.get("/", response_model=OrganizationResponse)
+@router.get("/", response_model=CursorPage[OrganizationResponse])
 async def list_organizations(
    pagination: CursorPagination = Depends(),
    search: str | None = Query(
@@ -103,7 +103,7 @@ async def list_organizations(
     )
     return response
 
-@router.get("/{org_id}", response_model=OrganizationResponse)
+@router.get("/{org_id}", response_model=ApiSuccessResponse[OrganizationResponse])
 async def get_organization(
    org_id: int,
    db: DB = Depends(get_session)
@@ -114,7 +114,10 @@ async def get_organization(
     cache_key = f"org:{org_id}"
     cached_org = await RedisCache.get(cache_key)
     if cached_org:
-       return OrganizationResponse.model_validate_json(cached_org)
+       return ApiSuccessResponse[OrganizationResponse](
+           message="Organization retrieved successfully",
+           data=OrganizationResponse.model_validate_json(cached_org)
+         )
 
     query = select(Organization).where(Organization.id == org_id)
     result = await db.execute(query)
@@ -129,9 +132,12 @@ async def get_organization(
        org_response.model_dump_json(),
        ttl=300
     )
-    return org_response
+    return ApiSuccessResponse[OrganizationResponse](
+        message="Organization retrieved successfully",
+        data=org_response
+    )
 
-@router.post("/", response_model=OrganizationResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=ApiSuccessResponse[OrganizationResponse], status_code=status.HTTP_201_CREATED)
 async def create_organization(
    org_data: OrganizationCreate,
    db: DB = Depends(get_session)
@@ -152,9 +158,12 @@ async def create_organization(
     # Invalidate relevant cache entries
     await _invalidate_org_cache(new_org.id)
 
-    return OrganizationResponse.model_validate(new_org)
+    return ApiSuccessResponse[OrganizationResponse](
+        message="Organization created successfully",
+        data=OrganizationResponse.model_validate(new_org)
+    )
 
-@router.put("/{org_id}", response_model=OrganizationResponse)
+@router.put("/{org_id}", response_model=ApiSuccessResponse[OrganizationResponse])
 async def update_organization(
    org_id: int,
    org_data: OrganizationUpdate,
@@ -178,9 +187,12 @@ async def update_organization(
     # Invalidate relevant cache entries
     await _invalidate_org_cache(organization.id)
 
-    return OrganizationResponse.model_validate(organization)
+    return ApiSuccessResponse[OrganizationResponse](
+        message="Organization updated successfully",
+        data=OrganizationResponse.model_validate(organization)
+    )
 
-@router.patch("/{org_id}", response_model=OrganizationResponse)
+@router.patch("/{org_id}", response_model=ApiSuccessResponse[OrganizationResponse])
 async def partial_update_organization(
    org_id: int,
    org_data: OrganizationPartialUpdate,
@@ -204,9 +216,12 @@ async def partial_update_organization(
    # Invalidate relevant cache entries
    await _invalidate_org_cache(organization.id)
 
-   return OrganizationResponse.model_validate(organization)
+   return ApiSuccessResponse[OrganizationResponse](
+       message="Organization updated successfully",
+       data=OrganizationResponse.model_validate(organization)
+   )
 
-@router.delete("/{org_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{org_id}", response_model=ApiSuccessResponse[None], status_code=status.HTTP_204_NO_CONTENT)
 async def delete_organization(
    org_id: int,
    db: DB = Depends(get_session),
@@ -228,4 +243,7 @@ async def delete_organization(
     # Invalidate relevant cache entries
     await _invalidate_org_cache(org_id)
 
-    return None
+    return ApiSuccessResponse[None](
+        message="Organization deleted successfully",
+        data=None
+    )

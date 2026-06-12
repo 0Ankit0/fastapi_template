@@ -1,6 +1,7 @@
 from datetime import timedelta, datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from apps.iam.models.profile import UserProfile
+from core.schemas import ApiSuccessResponse
 from src.db.query import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from slowapi import Limiter
@@ -23,7 +24,7 @@ router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
 
-@router.post("/signup/")
+@router.post("/signup/", response_model = ApiSuccessResponse[Token])
 @limiter.limit(lambda: settings.RATE_LIMIT_SIGNUP)
 async def signup(
     request: Request,
@@ -31,7 +32,7 @@ async def signup(
     login_data: UserCreate,
     set_cookie: bool = False,
     db: DB = Depends(get_session),
-) -> Token | dict[str, str]:
+) -> ApiSuccessResponse[Token]:
     """
     Create a new user account
     """
@@ -109,7 +110,6 @@ async def signup(
         )
         db.add(refresh_token_tracking)
         await db.commit()
-        await db.commit()
 
         if set_cookie:
             set_auth_cookies(
@@ -117,14 +117,20 @@ async def signup(
                 access_token=access_token,
                 refresh_token=refresh_token,
             )
-            return {"message": "Account created successfully"}
+            return ApiSuccessResponse[Token](message="Account created successfully", data=Token(
+                access="",
+                refresh="",
+                token_type=TokenType.BEARER.value
+            ))
         
-        return Token(
+        token_data = Token(
             access=access_token,
             refresh=refresh_token,
             token_type=TokenType.BEARER.value
         )
+        return ApiSuccessResponse[Token](message="Account created successfully", data=token_data)
     except HTTPException:
+        await db.rollback()
         raise
     except Exception:
         await db.rollback()
@@ -134,12 +140,12 @@ async def signup(
         )
 
 
-@router.post("/verify-email/")
+@router.post("/verify-email/", response_model=ApiSuccessResponse[None])
 async def verify_email(
     t: str,
     request: Request,
     db: DB = Depends(get_session),
-) -> dict[str, str]:
+) -> ApiSuccessResponse[None]:
     """
     Verify user email with secure token sent via email
     """
@@ -220,8 +226,9 @@ async def verify_email(
         # Invalidate user cache
         await RedisCache.delete(f"user:profile:{user_id}")
 
-        return {"message": "Email verified successfully"}
+        return ApiSuccessResponse[None](message="Email verified successfully")
     except HTTPException:
+        await db.rollback()
         raise
     except Exception:
         await db.rollback()
@@ -231,10 +238,10 @@ async def verify_email(
         )
 
 
-@router.post("/resend-verification/")
+@router.post("/resend-verification/", response_model=ApiSuccessResponse[None])
 async def resend_verification_email(
     current_user: User = Depends(get_current_user)
-) -> dict[str, str]:
+) -> ApiSuccessResponse[None]:
     """
     Resend email verification link
     """
@@ -249,7 +256,7 @@ async def resend_verification_email(
         from src.apps.iam.services.email import AuthEmailService 
         await AuthEmailService.send_verification_email(current_user, verification_token)
         
-        return {"message": "Verification email sent"}
+        return ApiSuccessResponse[None](message="Verification email sent")
     except HTTPException:
         raise
     except Exception:

@@ -1,5 +1,6 @@
 from datetime import timedelta, datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status, Body
+from core.schemas import ApiSuccessResponse
 from src.core.eums import UserStatus
 from src.core.exceptions import AuthorizationError
 from src.db.query import select
@@ -18,14 +19,14 @@ from src.apps.iam.utils.ip_access import revoke_tokens_for_ip, get_client_ip
 router = APIRouter()
 
 
-@router.post("/refresh/")
+@router.post("/refresh/", response_model=ApiSuccessResponse[Token] | ApiSuccessResponse[None])
 async def refresh_token(
     response: Response,
     request: Request,
     set_cookie: bool = False,
     refresh_token: str | None = Body(None, embed=True),
     db: DB = Depends(get_session),
-) -> Token | dict[str, str]:
+) -> ApiSuccessResponse[Token] | ApiSuccessResponse[None]:
     """
     Refresh access token using a valid refresh token
     """
@@ -120,16 +121,19 @@ async def refresh_token(
                 access_token=access_token,
                 refresh_token=new_refresh_token,
             )
-            return {"message": "Token refreshed successfully"}
+            return ApiSuccessResponse[Token](message="Token refreshed successfully")
         
-        return Token(
+        token_data = Token(
             access=access_token,
             refresh=new_refresh_token,
             token_type=TokenType.BEARER.value
         )
+        return ApiSuccessResponse[Token](message="Token refreshed successfully", data=token_data)
     except HTTPException:
+        await db.rollback()
         raise
     except Exception:
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred during token refresh"

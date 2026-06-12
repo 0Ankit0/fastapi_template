@@ -11,7 +11,7 @@ from src.db.query import col, func, or_, select
 from src.core.dependencies import DB, CurrentOrg, get_current_user, get_session
 from src.apps.iam.models.user import User
 from src.apps.iam.schemas.user import UserResponse, UserUpdate
-from src.core.types import CursorPage, CursorPagination
+from src.core.schemas import CursorPage, CursorPagination
 from src.core.cache import RedisCache
 from src.core.config import settings
 from src.apps.iam.models import UserProfile

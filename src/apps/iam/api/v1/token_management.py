@@ -7,7 +7,7 @@ from src.core.dependencies import DB, get_current_user, get_session
 from src.apps.iam.models.user import User
 from src.apps.iam.models.token_tracking import TokenTracking
 from src.apps.iam.schemas.token_tracking import TokenTrackingResponse
-from src.core.types import CursorPage, CursorPagination
+from src.core.schemas import CursorPage, CursorPagination
 from src.core.cache import RedisCache
 from src.db.query import or_, and_
 
