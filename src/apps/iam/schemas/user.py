@@ -41,6 +41,7 @@ class UserUpdate(BaseModel):
 
 
 class LoginRequest(BaseModel):
+    organization: Optional[str] = None
     username: str
     password: str
 

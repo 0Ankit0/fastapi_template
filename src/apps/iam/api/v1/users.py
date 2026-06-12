@@ -91,7 +91,7 @@ async def list_users(
             selectinload(User.profile),
         )
     )
-    roles = await PolicyService.get_user_roles(current_user,str(current_org.id))
+    roles = await PolicyService.get_user_roles(current_user,current_org.slug)
 
     if search:
         search_filter = or_(

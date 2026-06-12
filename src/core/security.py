@@ -74,12 +74,14 @@ def _coerce_expiration(payload: dict[str, Any]) -> datetime:
 
 def _build_token_payload(
     subject: Union[str, Any],
+    Organization: str | None,
     token_type: str,
     expires_at: datetime,
     extra_claims: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "exp": expires_at.astimezone(timezone.utc).isoformat(),
+        "org": Organization or "global",
         "sub": str(subject),
         "type": token_type,
         "jti": str(uuid.uuid4()),
@@ -112,37 +114,39 @@ def payload_expiration(payload: dict[str, Any]) -> datetime:
 
 def create_access_token(
     subject: Union[str, Any],
+    Organization: str | None = None,
     expires_delta: timedelta | None = None,
+    extra_claims: dict[str, Any] | None = None,
 ) -> str:
     expire = (
         datetime.now(timezone.utc) + expires_delta
         if expires_delta
         else datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
-    return _encode_payload(_build_token_payload(subject, TokenType.ACCESS.value, expire))
+    return _encode_payload(_build_token_payload(subject, Organization, TokenType.ACCESS.value, expire, extra_claims))
 
-def create_refresh_token(subject: Union[str, Any], expires_delta: timedelta | None = None) -> str:
+def create_refresh_token(subject: Union[str, Any], Organization: str | None = None, expires_delta: timedelta | None = None, extra_claims: dict[str, Any] | None = None) -> str:
     expire = (
         datetime.now(timezone.utc) + expires_delta
         if expires_delta
         else datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     )
-    return _encode_payload(_build_token_payload(subject, TokenType.REFRESH.value, expire))
+    return _encode_payload(_build_token_payload(subject, Organization, TokenType.REFRESH.value, expire, extra_claims))
 
-def create_password_reset_token(subject: Union[str, Any]) -> str:
+def create_password_reset_token(subject: Union[str, Any], Organization: str | None = None, extra_claims: dict[str, Any] | None = None) -> str:
     """Create a password reset token valid for 1 hour"""
     expire = datetime.now(timezone.utc) + timedelta(hours=1)
-    return _encode_payload(_build_token_payload(subject, TokenType.PASSWORD_RESET.value, expire))
+    return _encode_payload(_build_token_payload(subject, Organization, TokenType.PASSWORD_RESET.value, expire, extra_claims))
 
-def create_email_verification_token(subject: Union[str, Any]) -> str:
+def create_email_verification_token(subject: Union[str, Any], Organization: str | None = None, extra_claims: dict[str, Any] | None = None) -> str:
     """Create an email verification token valid for 24 hours"""
     expire = datetime.now(timezone.utc) + timedelta(hours=24)
-    return _encode_payload(_build_token_payload(subject, TokenType.EMAIL_VERIFICATION.value, expire))
+    return _encode_payload(_build_token_payload(subject, Organization, TokenType.EMAIL_VERIFICATION.value, expire, extra_claims))
 
-def create_temp_auth_token(subject: Union[str, Any]) -> str:
+def create_temp_auth_token(subject: Union[str, Any], Organization: str | None = None, extra_claims: dict[str, Any] | None = None) -> str:
     """Create a temporary auth token for OTP validation, valid for 5 minutes"""
     expire = datetime.now(timezone.utc) + timedelta(minutes=5)
-    return _encode_payload(_build_token_payload(subject, TokenType.TEMP_AUTH.value, expire))
+    return _encode_payload(_build_token_payload(subject, Organization, TokenType.TEMP_AUTH.value, expire, extra_claims))
 
 def verify_token(token: str, token_type: TokenType | None = None) -> dict:
     """
@@ -197,6 +201,7 @@ def create_secure_url_token(data: dict[str, Any], expires_hours: int = 24) -> st
     encoded_token = _encode_payload(
         _build_token_payload(
             "secure-url",
+            "global",
             "secure_url",
             expire,
             extra_claims={"data": data},

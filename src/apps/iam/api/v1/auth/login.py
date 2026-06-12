@@ -33,7 +33,6 @@ async def login_access_token(
     login_data: LoginRequest,
     set_cookie: bool = False,
     db: DB = Depends(get_session),
-    # analytics: AnalyticsService = Depends(get_analytics),
 ) -> Token | dict[str, Any]:
     """
     OAuth2 compatible token login, get an access token for future requests
@@ -48,6 +47,8 @@ async def login_access_token(
         )
         user = result.scalars().first()
 
+        # TODO: Also check for organization access
+
         if not user:
             login_attempt = LoginAttempt(
                 user_id=None,
@@ -58,14 +59,6 @@ async def login_access_token(
                 failure_reason="User not found"
             )
             db.add(login_attempt)
-            await db.commit()
-            # await record_failed_login_event(
-            #     db,
-            #     username=login_data.username,
-            #     ip_address=ip_address,
-            #     failure_reason="User not found",
-            #     request=request,
-            # )
             await db.commit()
             raise ValidationError(
                 message="Invalid username or password"
@@ -111,7 +104,6 @@ async def login_access_token(
             )
             db.add(login_attempt)
             await db.commit()
-            await db.commit()
             raise ValidationError(
                 message="Invalid username or password"
             )
@@ -127,7 +119,6 @@ async def login_access_token(
             )
             db.add(login_attempt)
             await db.commit()
-            await db.commit()
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Inactive user"
@@ -135,7 +126,7 @@ async def login_access_token(
         
         # Check if OTP is enabled for this user
         if user.otp_enabled and user.otp_verified:
-            temp_token = security.create_temp_auth_token(user.id)
+            temp_token = security.create_temp_auth_token(user.id, login_data.organization)
             return {
                 "requires_otp": True,
                 "temp_token": temp_token,
@@ -155,9 +146,9 @@ async def login_access_token(
         
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = security.create_access_token(
-            user.id, expires_delta=access_token_expires
+            user.id,login_data.organization, expires_delta=access_token_expires
         )
-        refresh_token = security.create_refresh_token(user.id)
+        refresh_token = security.create_refresh_token(user.id,login_data.organization)
         
         access_payload = security.decode_token(access_token)
         refresh_payload = security.decode_token(refresh_token)
