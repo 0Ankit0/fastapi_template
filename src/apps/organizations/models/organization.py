@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from apps.organizations.models.organization_members import OrganizationMember
+from src.apps.organizations.models.organization_members import OrganizationMember
 from src.db.base import Base
 from sqlalchemy import BigInteger, Text, ForeignKey, Enum as SQLEnum
 from src.db.types import CITEXT_TYPE

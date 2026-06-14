@@ -3,7 +3,8 @@ from src.core.utils import decode_cursor, encode_cursor
 from src.db.query import col, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone
-from src.core.dependencies import DB, get_current_user, get_session
+from src.core.dependencies import DB
+from src.apps.iam.dependencies import get_current_user
 from src.apps.iam.models.user import User
 from src.apps.iam.models.token_tracking import TokenTracking
 from src.apps.iam.schemas.token_tracking import TokenTrackingResponse
@@ -19,9 +20,9 @@ router = APIRouter()
     response_model=CursorPage[TokenTrackingResponse],
 )
 async def list_active_tokens(
+    db: DB,
     pagination: CursorPagination = Depends(),
     current_user: User = Depends(get_current_user),
-    db: DB = Depends(get_session),
 ):
     try:
         query = (
@@ -93,8 +94,8 @@ async def list_active_tokens(
 async def revoke_token(
     token_id: str,
     request: Request,
+    db: DB,
     current_user: User = Depends(get_current_user),
-    db: DB = Depends(get_session),
 ) -> dict[str, str]:
     """
     Revoke a specific token
@@ -141,9 +142,9 @@ async def revoke_token(
 
 @router.post("/revoke-all")
 async def revoke_all_tokens(
+    db: DB,
     request: Request,
     current_user: User = Depends(get_current_user),
-    db: DB = Depends(get_session),
 ) -> dict[str, str]:
     """
     Revoke all active tokens for the current user

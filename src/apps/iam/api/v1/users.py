@@ -1,14 +1,17 @@
 """
 User management endpoints with caching and pagination
 """
+from typing import Annotated
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Request
 from sqlalchemy.orm import selectinload
-from apps.organizations.dependencies import get_current_org
+from src.apps.organizations.dependencies import get_current_org
+from src.apps.iam.dependencies import get_current_user
+from src.apps.organizations.models.organization import Organization
 from src.core.eums import UserStatus
 from src.core.utils import decode_cursor, encode_cursor
 from src.db.query import col, func, or_, select
-from src.core.dependencies import DB, CurrentOrg, get_current_user, get_session
+from src.core.dependencies import DB
 from src.apps.iam.models.user import User
 from src.apps.iam.schemas.user import UserResponse, UserUpdate
 from src.core.schemas import CursorPage, CursorPagination
@@ -52,6 +55,7 @@ async def _invalidate_user_cache(user_id: int) -> None:
 
 @router.get("/", response_model=CursorPage[UserResponse])
 async def list_users(
+    db: DB,
     pagination: CursorPagination = Depends(),
     search: str | None = Query(
         default=None,
@@ -64,8 +68,7 @@ async def list_users(
     current_user: User = Depends(
         get_current_active_superuser
     ),
-    current_org : CurrentOrg = Depends(get_current_org),
-    db: DB = Depends(get_session),
+    current_org : Annotated[Organization, Depends(get_current_org)] = Depends(get_current_org),
 ):
     """
     List all users with cursor pagination and optional filters.
@@ -175,9 +178,9 @@ async def get_current_user_profile(
 
 @router.post("/me/avatar", response_model=UserResponse)
 async def upload_avatar(
+    db: DB,
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
-    db: DB = Depends(get_session),
 ):
     """Upload or replace the current user's avatar image."""
     ALLOWED_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
@@ -231,8 +234,8 @@ async def upload_avatar(
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user(
     user_id: str,
-    current_user: User = Depends(get_current_active_superuser),
-    db: DB = Depends(get_session)
+    db: DB,
+    current_user: User = Depends(get_current_active_superuser)
 ):
     """
     Get user by ID (admin only)
@@ -267,8 +270,8 @@ async def get_user(
 @router.patch("/me", response_model=UserResponse)
 async def update_current_user(
     user_update: UserUpdate,
+    db: DB,
     current_user: User = Depends(get_current_user),
-    db: DB = Depends(get_session),
 ):
     """
     Update current user's profile
@@ -318,9 +321,9 @@ async def update_current_user(
 async def update_user(
     user_id: str,
     user_update: UserUpdate,
+    db: DB,
     request: Request,
     current_user: User = Depends(get_current_active_superuser),
-    db: DB = Depends(get_session)
 ):
     """
     Update user by ID (admin only)
@@ -402,8 +405,8 @@ async def update_user(
 @router.delete("/{user_id}")
 async def delete_user(
     user_id: str,
+    db: DB,
     current_user: User = Depends(get_current_active_superuser),
-    db: DB = Depends(get_session)
 ):
     """
     Delete user by ID (admin only)

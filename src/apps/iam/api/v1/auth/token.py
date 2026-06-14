@@ -1,6 +1,6 @@
 from datetime import timedelta, datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status, Body
-from core.schemas import ApiSuccessResponse
+from src.core.schemas import ApiSuccessResponse
 from src.core.eums import UserStatus
 from src.core.exceptions import AuthorizationError
 from src.db.query import select
@@ -10,7 +10,8 @@ from src.core import security
 from src.core.security import TokenType
 from src.core.cache import RedisCache
 from src.core.cookies import set_auth_cookies
-from src.core.dependencies import DB, get_current_user, get_session
+from src.core.dependencies import DB, get_session
+from src.apps.iam.dependencies import get_current_user
 from src.apps.iam.models.user import User
 from src.apps.iam.models.token_tracking import TokenTracking
 from src.apps.iam.schemas.token import Token
@@ -23,9 +24,9 @@ router = APIRouter()
 async def refresh_token(
     response: Response,
     request: Request,
+    db: DB,
     set_cookie: bool = False,
     refresh_token: str | None = Body(None, embed=True),
-    db: DB = Depends(get_session),
 ) -> ApiSuccessResponse[Token] | ApiSuccessResponse[None]:
     """
     Refresh access token using a valid refresh token

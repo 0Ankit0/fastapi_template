@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from src.core.types import HashId, BaseSchema
+from src.core.types import HashId
+from src.core.schemas import BaseSchema
 from src.core.eums import OrganizationStatus
 
 class OrganizationBase(BaseSchema):

@@ -55,38 +55,38 @@ class User(Base, TimestampMixin):
     )
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    profile: Mapped[Profile | None] = relationship(
+    profile: Mapped["Profile"] = relationship(
         "Profile",
         back_populates="user",
         uselist=False,
         cascade="all, delete-orphan",
     )
-    created_organizations: Mapped[list[Organization]] = relationship(
+    created_organizations: Mapped[list["Organization"]] = relationship(
         "Organization",
         back_populates="creator",
         foreign_keys="Organization.created_by",
     )
-    owned_organizations: Mapped[list[Organization]] = relationship(
+    owned_organizations: Mapped[list["Organization"]] = relationship(
         "Organization",
         back_populates="owner",
         foreign_keys="Organization.owner_id",
     )
-    tokens: Mapped[list[TokenTracking]] = relationship(
+    tokens: Mapped[list["TokenTracking"]] = relationship(
         "TokenTracking",
         back_populates="user",
         cascade="all, delete-orphan",
     )
-    login_attempts: Mapped[list[LoginAttempt]] = relationship(
+    login_attempts: Mapped[list["LoginAttempt"]] = relationship(
         "LoginAttempt",
         back_populates="user",
         cascade="all, delete-orphan",
     )
-    used_tokens: Mapped[list[UsedToken]] = relationship(
+    used_tokens: Mapped[list["UsedToken"]] = relationship(
         "UsedToken",
         back_populates="user",
         cascade="all, delete-orphan",  
     )
-    organization_memberships: Mapped[list[OrganizationMember]] = relationship(
+    organization_memberships: Mapped[list["OrganizationMember"]] = relationship(
         "OrganizationMember",
         back_populates="user",
         cascade="all, delete-orphan",

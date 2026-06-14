@@ -20,7 +20,7 @@ class TokenTracking(Base, CreatedAtMixin):
         ForeignKey("users.id", ondelete="CASCADE"),
         default=None,
     )
-    token_jti: Mapped[str] = mapped_column(String(255), index=True, unique=True)
+    token_jti: Mapped[str] = mapped_column(String(255), index=True, unique=True, doc="Unique identifier for the token (jti claim)")
     token_type: Mapped[TokenType] = mapped_column(
         SAEnum(
             TokenType,
@@ -28,10 +28,10 @@ class TokenTracking(Base, CreatedAtMixin):
             name="tokentype",
         )
     )
-    ip_address: Mapped[str] = mapped_column(String(45))
-    user_agent: Mapped[str] = mapped_column(String(255))
-    expires_at: Mapped[datetime]
+    ip_address: Mapped[str] = mapped_column(String(45), doc="IP address of the client that requested the token")
+    user_agent: Mapped[str] = mapped_column(String(255), doc="User agent string of the client that requested the token")
+    expires_at: Mapped[datetime] = mapped_column(doc="Timestamp when the token expires")
     is_active: Mapped[bool] = mapped_column(default=True)
-    revoked_at: Mapped[Optional[datetime]] = mapped_column(default=None)
-    revoke_reason: Mapped[str] = mapped_column(String(255), default="")
+    revoked_at: Mapped[Optional[datetime]] = mapped_column(doc="Timestamp when the token was revoked", default=None)
+    revoke_reason: Mapped[str] = mapped_column(String(255), doc="Reason for revoking the token", default="")
     user: Mapped["User | None"] = relationship(back_populates="tokens")

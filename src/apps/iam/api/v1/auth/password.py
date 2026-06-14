@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import cast
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from core.schemas import ApiSuccessResponse
+from src.core.schemas import ApiSuccessResponse
 from src.core.exceptions import ValidationError
 from src.db.query import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,7 +10,8 @@ from slowapi.util import get_remote_address
 from src.core.config import settings
 from src.core import security
 from src.core.security import TokenType
-from src.core.dependencies import DB, get_current_user, get_session
+from src.core.dependencies import DB, get_session
+from src.apps.iam.dependencies import get_current_user
 from src.apps.iam.models.user import User
 from src.apps.iam.models.token_tracking import TokenTracking
 from src.apps.iam.schemas.user import (
@@ -63,7 +64,7 @@ async def request_password_reset(
 @router.post("/password-reset-confirm/", response_model=ApiSuccessResponse[None])
 async def confirm_password_reset(
     body: ResetPasswordConfirm,
-    db: DB = Depends(get_session),
+    db: DB,
 ) -> ApiSuccessResponse[None]:
     """
     Confirm password reset. Pass the token and new password in the request body.
@@ -162,8 +163,8 @@ async def confirm_password_reset(
 @router.post("/change-password/", response_model=ApiSuccessResponse[None])
 async def change_password(
     password_data: ChangePasswordRequest,
+    db: DB,
     current_user: User = Depends(get_current_user),
-    db: DB = Depends(get_session),
 ) -> ApiSuccessResponse[None]:
     """
     Change password for authenticated user

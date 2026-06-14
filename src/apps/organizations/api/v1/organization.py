@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from src.apps.iam.dependencies import get_current_active_superuser
-from apps.organizations.schemas import organization
+from src.apps.organizations.schemas import organization
 from src.core.exceptions import NotFoundError
 from src.apps.organizations.dependencies import get_current_org 
 from src.apps.organizations.models.organization import Organization
@@ -24,6 +24,7 @@ async def _invalidate_org_cache(org_id: int):
 
 @router.get("/", response_model=CursorPage[OrganizationResponse])
 async def list_organizations(
+   db: DB,
    pagination: CursorPagination = Depends(),
    search: str | None = Query(
       default=None,
@@ -33,7 +34,6 @@ async def list_organizations(
       default=None,
       description="Filter organizations by status"
    ),
-   db: DB = Depends(get_session)
 ):
     """
     List organizations with optional search and cursor pagination.
@@ -106,7 +106,7 @@ async def list_organizations(
 @router.get("/{org_id}", response_model=ApiSuccessResponse[OrganizationResponse])
 async def get_organization(
    org_id: int,
-   db: DB = Depends(get_session)
+   db: DB 
 ):
     """
     Get organization details by ID.
@@ -140,7 +140,7 @@ async def get_organization(
 @router.post("/", response_model=ApiSuccessResponse[OrganizationResponse], status_code=status.HTTP_201_CREATED)
 async def create_organization(
    org_data: OrganizationCreate,
-   db: DB = Depends(get_session)
+   db: DB 
 ):
     """
     Create a new organization.
@@ -167,7 +167,7 @@ async def create_organization(
 async def update_organization(
    org_id: int,
    org_data: OrganizationUpdate,
-   db: DB = Depends(get_session)
+   db: DB 
 ):
     """
     Update an existing organization.
@@ -196,7 +196,7 @@ async def update_organization(
 async def partial_update_organization(
    org_id: int,
    org_data: OrganizationPartialUpdate,
-   db: DB = Depends(get_session)
+   db: DB
 ):
    """
    Partially update an existing organization.
@@ -221,10 +221,10 @@ async def partial_update_organization(
        data=OrganizationResponse.model_validate(organization)
    )
 
-@router.delete("/{org_id}", response_model=ApiSuccessResponse[None], status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{org_id}", response_model=ApiSuccessResponse[None])
 async def delete_organization(
    org_id: int,
-   db: DB = Depends(get_session),
+   db: DB ,
    _ = Depends(get_current_active_superuser)
 ):
     """

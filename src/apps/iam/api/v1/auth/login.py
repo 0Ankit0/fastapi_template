@@ -14,7 +14,8 @@ from src.core import security
 from src.core.security import TokenType
 from src.core.cache import RedisCache
 from src.core.cookies import clear_auth_cookies, set_auth_cookies
-from src.core.dependencies import get_current_user, get_session
+from src.core.dependencies import  get_session
+from src.apps.iam.dependencies import get_current_user
 from src.apps.iam.models.user import User
 from src.apps.iam.models import LoginAttempt
 from src.apps.iam.models.token_tracking import TokenTracking
@@ -33,8 +34,8 @@ async def login_access_token(
     request: Request,
     response: Response,
     login_data: LoginRequest,
+    db: DB,
     set_cookie: bool = False,
-    db: DB = Depends(get_session),
 ) -> ApiSuccessResponse[Token] | ApiSuccessResponse[OtpRequiredResponse]:
     """
     OAuth2 compatible token login, get an access token for future requests
@@ -244,8 +245,8 @@ async def login_access_token(
 async def logout(
     request: Request,
     response: Response,
+    db: DB,
     current_user: User = Depends(get_current_user),
-    db: DB = Depends(get_session),
 ) -> dict[str, str]:
     """
     Logout user by clearing cookies and revoking current session token only

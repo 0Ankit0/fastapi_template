@@ -1,12 +1,12 @@
 from fastapi import APIRouter
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+from .register import router as register_router
+from .token import router as token_router
+from .password import router as password_router
+from .login import router as login_router
 
-from . import login, logout, refresh, password_reset, email_verification, temp_auth
-
-router.include_router(login.router)
-router.include_router(logout.router)
-router.include_router(refresh.router)
-router.include_router(password_reset.router)
-router.include_router(email_verification.router)
-router.include_router(temp_auth.router)
+router.include_router(register_router)
+router.include_router(token_router)
+router.include_router(password_router)
+router.include_router(login_router)

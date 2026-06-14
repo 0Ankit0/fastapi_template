@@ -14,7 +14,8 @@ from src.core.config import settings
 from src.core import security
 from src.core.security import TokenType
 from src.core.cookies import set_auth_cookies
-from src.core.dependencies import DB, get_current_user, get_session
+from src.core.dependencies import DB, get_session
+from src.apps.iam.dependencies import get_current_user
 from src.apps.iam.models.user import User
 from src.apps.iam.models.login_attempt import LoginAttempt
 from src.apps.iam.models.token_tracking import TokenTracking
@@ -31,8 +32,8 @@ router = APIRouter()
 
 @router.post("/otp/enable/", response_model=ApiSuccessResponse[OtpEnableResponse])
 async def enable_otp(
+    db: DB,
     current_user: User = Depends(get_current_user),
-    db: DB = Depends(get_session)
 ) -> ApiSuccessResponse[OtpEnableResponse]:
     """
     Enable 2FA/OTP for the user account
@@ -92,8 +93,8 @@ async def enable_otp(
 @router.post("/otp/verify/", response_model=ApiSuccessResponse[None])
 async def verify_otp(
     otp_data: VerifyOTPRequest,
+    db: DB,
     current_user: User = Depends(get_current_user),
-    db: DB = Depends(get_session),
 ) -> ApiSuccessResponse[None]:
     """
     Verify and activate OTP for the user
@@ -133,8 +134,8 @@ async def verify_otp(
 @router.post("/otp/disable/", response_model=ApiSuccessResponse[None])
 async def disable_otp(
     otp_data: DisableOTPRequest,
+    db: DB,
     current_user: User = Depends(get_current_user),
-    db: DB = Depends(get_session),
 ) -> ApiSuccessResponse[None]:
     """
     Disable 2FA/OTP for the user account
@@ -178,8 +179,8 @@ async def validate_otp_login(
     otp_data: VerifyOTPRequest,
     request: Request,
     response: Response,
+    db: DB,
     set_cookie: bool = False,
-    db: DB = Depends(get_session),
 ) -> ApiSuccessResponse[Token] | ApiSuccessResponse[None]:
     """
     Validate OTP during login process (called after username/password validation).

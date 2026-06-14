@@ -1,7 +1,7 @@
 from datetime import timedelta, datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from apps.iam.models.profile import UserProfile
-from core.schemas import ApiSuccessResponse
+from src.apps.iam.models.profile import UserProfile
+from src.core.schemas import ApiSuccessResponse
 from src.db.query import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from slowapi import Limiter
@@ -11,7 +11,8 @@ from src.core import security
 from src.core.exceptions import ConflictError, ValidationError
 from src.core.security import TokenType
 from src.core.cookies import set_auth_cookies
-from src.core.dependencies import DB, get_current_user, get_session
+from src.core.dependencies import DB, get_session
+from src.apps.iam.dependencies import get_current_user
 from src.apps.iam.models import User, UserProfile
 from src.apps.iam.models.token_tracking import TokenTracking
 from src.apps.iam.schemas.token import Token
@@ -30,8 +31,8 @@ async def signup(
     request: Request,
     response: Response,
     login_data: UserCreate,
+    db: DB,
     set_cookie: bool = False,
-    db: DB = Depends(get_session),
 ) -> ApiSuccessResponse[Token]:
     """
     Create a new user account
@@ -144,7 +145,7 @@ async def signup(
 async def verify_email(
     t: str,
     request: Request,
-    db: DB = Depends(get_session),
+    db: DB,
 ) -> ApiSuccessResponse[None]:
     """
     Verify user email with secure token sent via email
