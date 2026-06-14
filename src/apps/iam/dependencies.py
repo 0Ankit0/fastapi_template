@@ -6,21 +6,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from alembic.util import status
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from apps.iam.schemas.token import TokenPayload
-from core import security
-from core.exceptions import AuthenticationError, AuthorizationError, ValidationError
+from src.apps.iam.schemas.token import TokenPayload
+from src.core import security
+from src.core.exceptions import AuthenticationError, AuthorizationError, ValidationError
 from src.core.config import settings
-from apps.iam.models.user import User
-from core.dependencies import DB
+from src.core.dependencies import DB
 from sqlalchemy.orm import selectinload
-from db.session import get_session
+from src.db.session import get_session
 from .casbin import enforcer
 from fastapi import Request
 from fastapi import status 
-from db.query import select
+from src.db.query import select
 from src.core.eums import RBACAction as Action, RBACModule as Module, UserStatus
 
-from iam.models import TokenTracking
+if TYPE_CHECKING:
+    from src.apps.iam.models import User, TokenTracking
 
 METHOD_ACTION_MAP = {
     "GET": Action.READ,
@@ -29,6 +29,7 @@ METHOD_ACTION_MAP = {
     "PATCH": Action.UPDATE,
     "DELETE": Action.DELETE,
 }
+
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async for session in get_session():
@@ -44,7 +45,7 @@ _bearer_scheme = HTTPBearer(auto_error=False)
 async def get_current_user(
     request: Request,
     credentials: Annotated[Optional[HTTPAuthorizationCredentials], Depends(_bearer_scheme)],
-    db: DB = Depends(get_db)
+    db: DB 
     ) -> User:
     # Prefer the Authorization: Bearer header (captured by HTTPBearer above),
     # fall back to the access_token cookie for browser-based clients.

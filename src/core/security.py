@@ -38,6 +38,7 @@ class TokenType(str, Enum):
     PASSWORD_RESET = "password_reset"
     EMAIL_VERIFICATION = "email_verification"
     TEMP_AUTH = "temp_auth"
+    ORGANIZATION_INVITATION = "organization_invitation"
     BEARER = "bearer"
 
 
@@ -147,6 +148,11 @@ def create_temp_auth_token(subject: Union[str, Any], Organization: str | None = 
     """Create a temporary auth token for OTP validation, valid for 5 minutes"""
     expire = datetime.now(timezone.utc) + timedelta(minutes=5)
     return _encode_payload(_build_token_payload(subject, Organization, TokenType.TEMP_AUTH.value, expire, extra_claims))
+
+def create_organization_invitation_token(subject: Union[str, Any], Organization: str, extra_claims: dict[str, Any] | None = None) -> str:
+    """Create an organization invitation token valid for 48 hours"""
+    expire = datetime.now(timezone.utc) + timedelta(hours=48)
+    return _encode_payload(_build_token_payload(subject, Organization, TokenType.BEARER.value, expire, extra_claims))
 
 def verify_token(token: str, token_type: TokenType | None = None) -> dict:
     """

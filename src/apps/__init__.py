@@ -7,9 +7,11 @@ def load_all_models() -> None:
 
 def get_all_routers() -> APIRouter:
     """Return a list of all API routers from the apps."""
-    from .iam.api.v1 import get_all_routers as get_iam_v1_routers
+    from .iam.api.v1 import get_all_iam_routers
+    from .organizations.api.v1 import get_all_organization_routers
 
     router = APIRouter()
-    router.include_router(get_iam_v1_routers())
+    router.include_router(get_all_iam_routers())
+    router.include_router(get_all_organization_routers())
 
     return router

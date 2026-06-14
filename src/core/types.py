@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Any, Annotated, Generic, TypeVar
+from typing import Any, Annotated, TypeVar
 
 from hashids import Hashids
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import  StringConstraints
 from pydantic.functional_serializers import PlainSerializer
 from pydantic.functional_validators import BeforeValidator
 
-from core.config import settings
+from src.core.config import settings
 
 T = TypeVar("T")
 

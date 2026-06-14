@@ -1,6 +1,6 @@
 from typing import AsyncGenerator
 
-from core.config import settings
+from src.core.config import settings
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -10,7 +10,7 @@ if not settings.DATABASE_URL:
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.SQL_ECHO,
-    pre_pool_ping=settings.DB_PRE_PING,
+    pool_pre_ping=settings.DB_PRE_PING,
     pool_size=settings.DB_POOL_SIZE,
     max_overflow=settings.DB_MAX_OVERFLOW,
     pool_timeout=settings.DB_POOL_TIMEOUT,
