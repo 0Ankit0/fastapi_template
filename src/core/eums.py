@@ -16,11 +16,22 @@ class OrganizationStatus(str, Enum):
     SUSPENDED = "suspended"
     ARCHIVED = "archived"
 
+class OrganizationMemberStatus(str, Enum):
+    ACTIVE = "active"
+    INVITED = "invited"
+    SUSPENDED = "suspended"
+    ARCHIVED = "archived"
+
 class RBACAction(str, Enum):
     CREATE = "create"
     READ = "read"
     UPDATE = "update"
     DELETE = "delete"
+
+class RBACRole(str, Enum):
+    OWNER = "owner"
+    ADMIN = "admin"
+    MEMBER = "member"
 
 class RBACModule(str, Enum):
     USERS = "users"

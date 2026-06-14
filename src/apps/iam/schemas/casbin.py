@@ -1,20 +1,21 @@
+from src.core.eums import RBACRole
 from src.core.types import  HashId
 from src.core.schemas import BaseSchema
 
 class PermissionRequest(BaseSchema):
-    role: str
+    role: RBACRole
     module: str
     action: str
 
 
 class UserRoleRequest(BaseSchema):
     user_id: HashId
-    role: str
+    role: RBACRole
 
 
 class RoleInheritanceRequest(BaseSchema):
-    role: str
-    parent_role: str
+    role: RBACRole
+    parent_role: RBACRole
 
 
 class PermissionCheckRequest(BaseSchema):
