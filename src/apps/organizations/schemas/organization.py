@@ -26,6 +26,4 @@ class OrganizationResponse(OrganizationBase):
     slug: str
     status: OrganizationStatus
 
-    class Config:
-        orm_mode = True
 

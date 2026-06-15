@@ -20,6 +20,3 @@ class OrganizationMembershipInvitationRequest(BaseSchema):
 class OrganizationMemberResponse(OrganizationMemberBase):
     id: HashId
     role: RBACRole
-
-    class Config:
-        orm_mode = True
