@@ -9,24 +9,22 @@ import json
 from passlib.context import CryptContext
 import pyseto
 from pyseto import Key, KeyInterface, PysetoError
+from src.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 from src.core.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(
+    schemes=["argon2"],
+    deprecated="auto"
+)
+def _normalize_password(password: str) -> str:
+    salted = password + (settings.PASSWORD_PEPPER or "")
+    return hashlib.sha256(salted.encode("utf-8")).hexdigest()
 
-
-def _apply_pepper(password: str) -> str:
-    """Append a secret pepper to the password before hashing/verifying.
-
-    The pepper is an additional secret value stored in the application
-    configuration layer, so if an attacker obtains the password hashes they
-    still need the pepper to brute-force passwords.
-    """
-    pepper = settings.PASSWORD_PEPPER or ""
-    return password + pepper
 
 ALGORITHM = "v4.local"
-
 
 class TokenValidationError(ValueError):
     pass
@@ -167,12 +165,12 @@ def verify_token(token: str, token_type: TokenType | None = None) -> dict:
     return payload
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(_apply_pepper(plain_password), hashed_password)
-
+    normalized = _normalize_password(plain_password)
+    return pwd_context.verify(normalized, hashed_password)
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(_apply_pepper(password))
-
+    normalized = _normalize_password(password)
+    return pwd_context.hash(normalized)
 
 def validate_password_strength(password: str) -> None:
     """Validate password strength based on current settings.

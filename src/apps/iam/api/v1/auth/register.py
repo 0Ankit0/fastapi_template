@@ -16,8 +16,11 @@ from src.apps.iam.dependencies import get_current_user
 from src.apps.iam.models import User, UserProfile
 from src.apps.iam.models.token_tracking import TokenTracking
 from src.apps.iam.schemas.token import Token
-from src.apps.iam.schemas.user import UserCreate
+from src.apps.iam.schemas.user import EmailVerificationRequest, UserCreate
 from src.core.cache import RedisCache
+from src.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 from src.apps.iam.utils.ip_access import revoke_tokens_for_ip, get_client_ip
 
@@ -51,10 +54,10 @@ async def signup(
             )
 
         hashed_password = security.get_password_hash(login_data.password)
-        new_user = User(
+        new_user : User = User(
            username=login_data.username,
            email=login_data.email,
-            hashed_password=hashed_password,
+           password_hash=hashed_password,
         )
         db.add(new_user)
         await db.flush()
@@ -135,10 +138,8 @@ async def signup(
         raise
     except Exception:
         await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred during signup"
-        )
+        logger.error("Error during signup", exc_info=True)
+        raise 
 
 
 @router.post("/verify-email/", response_model=ApiSuccessResponse[None])
@@ -194,9 +195,7 @@ async def verify_email(
     except HTTPException:
         raise
     except Exception:
-        raise ValidationError(
-            message="Invalid or expired verification token"
-        )
+        raise 
     
     try:
         if not user_id:
@@ -231,37 +230,39 @@ async def verify_email(
     except HTTPException:
         await db.rollback()
         raise
-    except Exception:
+    except Exception as e:
         await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred during email verification"
-        )
+        logger.error(f"Error during email verification: {str(e)}")
+        raise 
 
 
 @router.post("/resend-verification/", response_model=ApiSuccessResponse[None])
 async def resend_verification_email(
-    current_user: User = Depends(get_current_user)
+    data: EmailVerificationRequest,
+    db: DB,
 ) -> ApiSuccessResponse[None]:
     """
     Resend email verification link
     """
     try:
-        if current_user.is_confirmed:
-            raise ConflictError(
-                message="Email is already verified"
-            )
-        
-        verification_token = security.create_email_verification_token(current_user.id)
+        user_by_email = await db.execute(select(User).where(User.email == data.email))
+        user = user_by_email.scalar_one_or_none()
+
+        if not user:
+            return ApiSuccessResponse[None](
+                message="If an account with that email exists, a verification email has been sent"
+                )
+
+        verification_token = security.create_email_verification_token(user.id)
         
         from src.apps.iam.services.email import AuthEmailService 
-        await AuthEmailService.send_verification_email(current_user, verification_token)
+        await AuthEmailService.send_verification_email(user, verification_token)
         
-        return ApiSuccessResponse[None](message="Verification email sent")
+        return ApiSuccessResponse[None](
+            message="If an account with that email exists, a verification email has been sent"
+        )
     except HTTPException:
         raise
     except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred sending verification email"
-        )
+        logger.error("Error during resend verification email", exc_info=True)
+        raise 

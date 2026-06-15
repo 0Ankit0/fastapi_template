@@ -3,7 +3,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from src.core.dependencies import DB
 from src.core.eums import UserStatus
-from src.core.exceptions import ValidationError
+from src.core.exceptions import AuthorizationError, RateLimitError, ValidationError
 from src.core.schemas import ApiSuccessResponse
 from src.db.query import col, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,7 +23,9 @@ from src.apps.iam.schemas.token import  Token
 from src.apps.iam.schemas.otp import OtpRequiredResponse
 from src.apps.iam.schemas.user import LoginRequest
 from src.apps.iam.utils.ip_access import revoke_tokens_for_ip, get_client_ip
+from src.core.logging import get_logger
 
+logger = get_logger(__name__)
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
@@ -68,9 +70,8 @@ async def login_access_token(
             )
 
         if settings.REQUIRE_EMAIL_VERIFICATION and not user.is_confirmed:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Email verification is required before signing in"
+            raise AuthorizationError(
+                message="Email verification required. Please check your inbox."
             )
 
         if settings.MAX_LOGIN_ATTEMPTS > 0 and settings.ACCOUNT_LOCKOUT_DURATION_MINUTES > 0:
@@ -91,11 +92,10 @@ async def login_access_token(
                 remaining_seconds = int((lockout_expires - datetime.now()).total_seconds())
                 if remaining_seconds > 0:
                     remaining_minutes = (remaining_seconds + 59) // 60
-                    raise HTTPException(
-                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                        detail=f"Too many login attempts. Try again in {remaining_minutes} minutes."
+                    raise RateLimitError(
+                        message=f"Too many failed login attempts. Account locked for {remaining_minutes} more minutes."
                     )
-        
+
         if not security.verify_password(login_data.password, user.password_hash):
             login_attempt = LoginAttempt(
                 user_id=user.id,
@@ -122,9 +122,8 @@ async def login_access_token(
             )
             db.add(login_attempt)
             await db.commit()
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Inactive user"
+            raise ValidationError(
+                message="User account is inactive. Please contact support."
             )
         
         # Check if OTP is enabled for this user
@@ -224,7 +223,8 @@ async def login_access_token(
         await db.rollback()
         raise
     except Exception as ex:
-        await db.rollback()
+        # await db.rollback()
+        logger.error("Error during login for username %s from IP %s: %s", login_data.username, ip_address, str(ex), exc_info=True)
         login_attempt = LoginAttempt(
             user_id=user.id if user else None,
             ip_address=ip_address,
@@ -235,10 +235,7 @@ async def login_access_token(
         )
         db.add(login_attempt)
         await db.commit()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred during login"
-        )
+        raise 
 
 
 @router.post("/logout/")
