@@ -18,9 +18,8 @@ from fastapi import Request
 from fastapi import status 
 from src.db.query import select
 from src.core.eums import RBACAction as Action, RBACModule as Module, UserStatus
+from src.apps.iam.models import User, TokenTracking
 
-if TYPE_CHECKING:
-    from src.apps.iam.models import User, TokenTracking
 
 METHOD_ACTION_MAP = {
     "GET": Action.READ,

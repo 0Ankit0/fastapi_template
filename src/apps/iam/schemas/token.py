@@ -7,6 +7,10 @@ class Token(BaseSchema):
     token_type: str = "bearer"
 
 class TokenPayload(BaseSchema):
-    sub: Optional[str] = None
-    refresh: Optional[bool] = False
+    exp: str
+    org: str
+    sub: str
+    type: str
+    jti: str
+    refresh: bool | None = None
 

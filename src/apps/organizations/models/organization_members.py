@@ -45,6 +45,7 @@ class OrganizationMember(Base, TimestampMixin):
     )
     user: Mapped["User"] = relationship(
         "User",
+        foreign_keys=[user_id],
         back_populates="organization_memberships",
     )
 

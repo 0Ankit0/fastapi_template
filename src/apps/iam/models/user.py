@@ -11,7 +11,7 @@ from src.db.base import Base
 from src.db.mixins import TimestampMixin
 
 if TYPE_CHECKING:
-    from apps.iam.models import UserProfile as Profile, TokenTracking, LoginAttempt, UsedToken
+    from apps.iam.models import UserProfile, TokenTracking, LoginAttempt, UsedToken
     from apps.organizations.models import Organization, OrganizationMember
 
 
@@ -55,8 +55,8 @@ class User(Base, TimestampMixin):
     )
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    profile: Mapped["Profile"] = relationship(
-        "Profile",
+    profile: Mapped["UserProfile"] = relationship(
+        "UserProfile",
         back_populates="user",
         uselist=False,
         cascade="all, delete-orphan",
@@ -89,5 +89,6 @@ class User(Base, TimestampMixin):
     organization_memberships: Mapped[list["OrganizationMember"]] = relationship(
         "OrganizationMember",
         back_populates="user",
+        foreign_keys="OrganizationMember.user_id",
         cascade="all, delete-orphan",
     )

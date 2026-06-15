@@ -50,6 +50,8 @@ class LoginRequest(BaseSchema):
 class ResetPasswordRequest(BaseSchema):
     email: EmailStr
 
+class EmailVerificationRequest(BaseSchema):
+    email: EmailStr
 
 class ResetPasswordConfirm(BaseSchema):
     token: str
