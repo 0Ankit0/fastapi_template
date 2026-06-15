@@ -12,13 +12,13 @@ from fastapi_mail import (
 )
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from core.config import settings
-from core.logging import get_logger
+from src.core.config import settings
+from src.core.logging import get_logger
 from .schemas import DeliveryResult
 
 logger = get_logger(__name__)
 
-TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
+TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "apps"
 
 email_templates = Environment(
     loader=FileSystemLoader(str(TEMPLATES_DIR)),
@@ -104,6 +104,17 @@ class EmailService:
                 if context.get("text_body") is not None
                 else None
             )
+            if not settings.EMAIL_SERVICE_ENABLED and settings.DEBUG:
+                logger.info(
+                    "DEV EMAIL (not sent) template=%s recipients=%s",
+                    template_name,
+                    [r["email"] for r in recipients],
+                )
+                return DeliveryResult(
+                    channel="email",
+                    provider="dev",
+                    success=True,
+                )
 
             result = await self.send(
                 subject=subject,

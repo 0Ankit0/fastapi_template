@@ -9,9 +9,9 @@ celery_app = Celery(
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
     include=[
-        'src.apps.core.tasks',
+        'src.core.tasks',
         'src.apps.iam.tasks',
-        'src.apps.notification.tasks',
+        'src.apps.organizations.tasks',
     ]
 )
 

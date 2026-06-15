@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, cast
+from typing import cast
 
-from celery import Task, security
-from apps.iam.models import user
-from apps.iam.models.user import User
+from celery import Task
+from src.apps.iam.models.user import User
 from src.core.config import settings
 
 logger = logging.getLogger(__name__)

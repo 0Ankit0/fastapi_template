@@ -5,7 +5,8 @@ from typing import Any, cast
 
 from celery import Task
 
-from core.config import settings
+from src.apps.iam.models.user import User
+from src.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +96,7 @@ class AuthEmailService:
 
     @staticmethod
     async def send_verification_email(
-        user: Any,
+        user: User,
         token: str,
     ) -> None:
         from src.core import security
