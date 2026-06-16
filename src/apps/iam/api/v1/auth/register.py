@@ -8,7 +8,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from src.core.config import settings
 from src.core import security
-from src.core.exceptions import ConflictError, ValidationError
+from src.core.exceptions import AppError, ConflictError, ValidationError
 from src.core.security import TokenType
 from src.core.cookies import set_auth_cookies
 from src.core.dependencies import DB, get_session
@@ -133,7 +133,7 @@ async def signup(
             token_type=TokenType.BEARER.value
         )
         return ApiSuccessResponse[Token](message="Account created successfully", data=token_data)
-    except HTTPException:
+    except (HTTPException, AppError):
         await db.rollback()
         raise
     except Exception:
@@ -192,7 +192,7 @@ async def verify_email(
                     message="This verification link has already been used"
                 )
                 
-    except HTTPException:
+    except (HTTPException, AppError):
         raise
     except Exception:
         raise 
@@ -227,7 +227,7 @@ async def verify_email(
         await RedisCache.delete(f"user:profile:{user_id}")
 
         return ApiSuccessResponse[None](message="Email verified successfully")
-    except HTTPException:
+    except (HTTPException, AppError):
         await db.rollback()
         raise
     except Exception as e:
@@ -261,7 +261,7 @@ async def resend_verification_email(
         return ApiSuccessResponse[None](
             message="If an account with that email exists, a verification email has been sent"
         )
-    except HTTPException:
+    except (HTTPException, AppError):
         raise
     except Exception:
         logger.error("Error during resend verification email", exc_info=True)

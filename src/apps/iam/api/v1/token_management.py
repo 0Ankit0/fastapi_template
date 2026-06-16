@@ -12,7 +12,7 @@ from src.core.schemas import CursorPage, CursorPagination
 from src.core.cache import RedisCache
 from src.db.query import or_, and_
 
-router = APIRouter()
+router = APIRouter(prefix="/token-management", tags=["Token Management"])
 
 
 @router.get(

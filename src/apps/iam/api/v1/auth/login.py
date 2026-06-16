@@ -3,7 +3,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from src.core.dependencies import DB
 from src.core.eums import UserStatus
-from src.core.exceptions import AuthorizationError, RateLimitError, ValidationError
+from src.core.exceptions import AppError, AuthorizationError, RateLimitError, ValidationError
 from src.core.schemas import ApiSuccessResponse
 from src.db.query import col, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -219,7 +219,7 @@ async def login_access_token(
             data=token_data,
             message="Logged in successfully"
         )
-    except HTTPException:
+    except (HTTPException, AppError):
         await db.rollback()
         raise
     except Exception as ex:

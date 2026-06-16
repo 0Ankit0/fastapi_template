@@ -1,19 +1,20 @@
 from __future__ import annotations
+from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from apps.iam.dependencies import get_current_active_superuser, require_module_permission
-from apps.iam.models import User
-from apps.iam.services.policy_service import PolicyService
-from core.eums import RBACModule as Module
-from core.dependencies import (
+from src.apps.organizations.dependencies import get_current_org
+from src.apps.organizations.models.organization import Organization
+from src.apps.iam.dependencies import get_current_active_superuser, require_module_permission
+from src.apps.iam.models import User
+from src.apps.iam.services.policy_service import PolicyService
+from src.core.eums import RBACModule as Module
+from src.core.dependencies import (
     DB,
-    CurrentOrg,
-    CurrentUser,
 )
-from core.logging import get_logger
+from src.core.logging import get_logger
 from src.core.exceptions import NotFoundError, ConflictError
 from src.core.schemas import ApiSuccessResponse
-from core.types import (
+from src.core.types import (
     HashId,
 )
 from src.apps.iam.schemas.casbin import (
@@ -22,6 +23,9 @@ from src.apps.iam.schemas.casbin import (
     RoleInheritanceRequest,
     PermissionCheckRequest,
 )
+
+CurrentOrg = Annotated[Organization, Depends(get_current_org)]
+CurrentUser = Annotated[User, Depends(get_current_active_superuser)]
 
 router = APIRouter(
     prefix="/rbac",

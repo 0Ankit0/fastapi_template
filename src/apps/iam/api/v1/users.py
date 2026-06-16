@@ -22,7 +22,7 @@ from src.apps.iam.services.policy_service import PolicyService
 from src.apps.iam.dependencies import get_current_active_superuser
 from src.core.storage import save_media_bytes, delete_media
 
-router = APIRouter(prefix="/users")
+router = APIRouter(prefix="/users",tags=["Users"])
 
 
 def _serialize_user_response(user: User) -> dict[str, object]:
@@ -56,6 +56,8 @@ async def _invalidate_user_cache(user_id: int) -> None:
 @router.get("/", response_model=CursorPage[UserResponse])
 async def list_users(
     db: DB,
+    current_user: Annotated[User, Depends(get_current_active_superuser)],
+    current_org: Annotated[Organization, Depends(get_current_org)],
     pagination: CursorPagination = Depends(),
     search: str | None = Query(
         default=None,
@@ -65,10 +67,6 @@ async def list_users(
         default=None,
         description="Filter by active status",
     ),
-    current_user: User = Depends(
-        get_current_active_superuser
-    ),
-    current_org : Annotated[Organization, Depends(get_current_org)] = Depends(get_current_org),
 ):
     """
     List all users with cursor pagination and optional filters.

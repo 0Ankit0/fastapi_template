@@ -30,7 +30,7 @@ limiter = Limiter(key_func=get_remote_address)
 async def request_password_reset(
     request: Request,
     reset_data: ResetPasswordRequest,
-    db: AsyncSession = Depends(get_session),
+    db: DB,
 ) -> ApiSuccessResponse[None]:
     """
     Request a password reset link via email

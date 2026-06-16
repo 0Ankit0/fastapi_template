@@ -125,7 +125,7 @@ class UserResponse(BaseSchema):
             result['first_name'] = profile.first_name or None
             result['last_name'] = profile.last_name or None
             result['phone'] = profile.phone or None
-            result['image_url'] = profile.image_url or None
+            result['avatar_url'] = profile.avatar_url or None
             result['bio'] = profile.bio or None
         result['roles'] = [
             ur.role.name for ur in (result.get('user_roles') or []) if ur.role

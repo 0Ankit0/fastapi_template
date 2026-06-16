@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from pydantic import  computed_field
 from src.core.schemas import BaseSchema
-from core.eums import UserStatus
+from src.core.eums import UserStatus
 from src.core.types import HashId
 from src.core.security import TokenType
 
