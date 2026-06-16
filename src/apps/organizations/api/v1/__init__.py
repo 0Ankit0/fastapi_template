@@ -4,6 +4,6 @@ from fastapi import APIRouter
 
 def get_all_organization_routers() -> APIRouter:
     router = APIRouter(prefix="/v1")
-    router.include_router(organizations_router, prefix="/organizations", tags=["organizations"])
-    router.include_router(organization_members_router, prefix="/organization-members", tags=["organization-members"])
+    router.include_router(organizations_router)
+    router.include_router(organization_members_router)
     return router

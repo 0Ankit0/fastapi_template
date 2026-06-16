@@ -111,8 +111,8 @@ async def get_current_user(
     return user
 
 def get_current_active_superuser(
-    current_user: User = Depends(get_current_user)
-):
+current_user: Annotated[User, Depends(get_current_user)]
+) -> User:
     if not current_user.is_superuser and not current_user.status == UserStatus.ACTIVE:
         raise AuthorizationError(
             message="Insufficient permissions"

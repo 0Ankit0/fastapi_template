@@ -16,7 +16,7 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 async def get_current_org(
     request: Request,
     db: DB,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser,
 ) -> Organization | None:
     token = request.headers.get("Authorization", "").replace("Bearer ", "")
     org_slug = decode_token(token).get("org")

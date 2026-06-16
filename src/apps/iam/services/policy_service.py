@@ -1,7 +1,7 @@
 # app/services/policy_service.py
 
 from ..casbin import enforcer
-from apps.iam.models import User
+from src.apps.iam.models import User
 
 
 class PolicyService:
