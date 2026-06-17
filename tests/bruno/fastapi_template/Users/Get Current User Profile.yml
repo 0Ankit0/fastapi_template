@@ -1,0 +1,58 @@
+info:
+  name: Get Current User Profile
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{BASE_URI}}/api/v1/users/me"
+  body:
+    type: json
+    data: ""
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: success
+    request:
+      url: "{{BASE_URI}}/api/v1/users/me"
+      method: GET
+      body:
+        type: json
+        data: ""
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: date
+          value: Wed, 17 Jun 2026 06:39:07 GMT
+        - name: server
+          value: uvicorn
+        - name: content-length
+          value: "260"
+        - name: content-type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "id": "RQXPBOb6",
+            "username": "user",
+            "email": "user@example.com",
+            "is_active": true,
+            "is_superuser": true,
+            "is_confirmed": true,
+            "otp_enabled": false,
+            "otp_verified": false,
+            "first_name": "ram",
+            "last_name": "string",
+            "phone": "0000000000",
+            "image_url": null,
+            "bio": null,
+            "roles": []
+          }

@@ -1,0 +1,21 @@
+info:
+  name: Resend Verification Email
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: /api/v1/auth/resend-verification/
+  body:
+    type: json
+    data: |-
+      {
+      	"email": ""
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

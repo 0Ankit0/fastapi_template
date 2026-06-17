@@ -1,0 +1,28 @@
+info:
+  name: Resend Invite
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: /v1/organizations/{org}/members/{member_id}/resend-invite
+  params:
+    - name: org
+      value: ""
+      type: path
+      description: Organization slug
+  body:
+    type: json
+    data: |-
+      {
+      	"organization_id": 0,
+      	"member_id": 0,
+      	"role": ""
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

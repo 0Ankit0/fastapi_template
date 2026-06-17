@@ -1,0 +1,27 @@
+info:
+  name: Remove Organization Member
+  type: http
+  seq: 3
+
+http:
+  method: DELETE
+  url: /v1/organizations/{org}/members/{member_id}
+  params:
+    - name: member_id
+      value: ""
+      type: path
+      description: undefined
+    - name: org
+      value: ""
+      type: path
+      description: Organization slug
+  body:
+    type: json
+    data: ""
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

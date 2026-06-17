@@ -1,0 +1,27 @@
+info:
+  name: Revoke Role
+  type: http
+  seq: 5
+
+http:
+  method: DELETE
+  url: /api/v1/organizations/{org}/rbac/users/roles
+  params:
+    - name: org
+      value: ""
+      type: path
+      description: Organization slug
+  body:
+    type: json
+    data: |-
+      {
+      	"user_id": 0,
+      	"role": ""
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

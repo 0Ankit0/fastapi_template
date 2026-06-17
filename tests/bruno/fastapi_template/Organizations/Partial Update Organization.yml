@@ -1,0 +1,26 @@
+info:
+  name: Partial Update Organization
+  type: http
+  seq: 5
+
+http:
+  method: PATCH
+  url: /v1/organizations/{org_id}
+  params:
+    - name: org_id
+      value: ""
+      type: path
+      description: undefined
+  body:
+    type: json
+    data: |-
+      {
+      	"status": ""
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

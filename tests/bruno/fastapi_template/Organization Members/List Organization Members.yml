@@ -1,0 +1,35 @@
+info:
+  name: List Organization Members
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: /v1/organizations/{org}/members/?search=&limit=&cursor=
+  params:
+    - name: search
+      value: ""
+      type: query
+      description: Search term to filter organization members by name or email
+    - name: limit
+      value: ""
+      type: query
+      description: undefined
+    - name: cursor
+      value: ""
+      type: query
+      description: undefined
+    - name: org
+      value: ""
+      type: path
+      description: Organization slug
+  body:
+    type: json
+    data: ""
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,28 @@
+info:
+  name: Check User Permission
+  type: http
+  seq: 10
+
+http:
+  method: POST
+  url: /api/v1/organizations/{org}/rbac/permissions/check
+  params:
+    - name: org
+      value: ""
+      type: path
+      description: Organization slug
+  body:
+    type: json
+    data: |-
+      {
+      	"user_id": 0,
+      	"module": "",
+      	"action": ""
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

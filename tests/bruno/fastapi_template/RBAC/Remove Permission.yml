@@ -1,0 +1,28 @@
+info:
+  name: Remove Permission
+  type: http
+  seq: 2
+
+http:
+  method: DELETE
+  url: /api/v1/organizations/{org}/rbac/permissions
+  params:
+    - name: org
+      value: ""
+      type: path
+      description: Organization slug
+  body:
+    type: json
+    data: |-
+      {
+      	"role": "",
+      	"module": "",
+      	"action": ""
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

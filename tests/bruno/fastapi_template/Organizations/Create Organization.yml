@@ -1,0 +1,24 @@
+info:
+  name: Create Organization
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: /v1/organizations/
+  body:
+    type: json
+    data: |-
+      {
+      	"name": "",
+      	"description": "",
+      	"slug": "",
+      	"status": ""
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

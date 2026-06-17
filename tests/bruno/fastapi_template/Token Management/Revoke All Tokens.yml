@@ -1,0 +1,18 @@
+info:
+  name: Revoke All Tokens
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: /api/v1/token-management/revoke-all
+  body:
+    type: json
+    data: ""
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
