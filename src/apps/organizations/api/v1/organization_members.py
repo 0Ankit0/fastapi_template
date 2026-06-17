@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated
 from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from src.apps.iam.models.user import User
 from src.apps.iam.models.token_tracking import TokenTracking
 from src.apps.organizations.schemas.organization_members import OrganizationMemberResponse, OrganizationMembershipInvitationRequest
 from src.core.utils import encode_cursor
@@ -18,15 +19,18 @@ from src.core.schemas import ApiSuccessResponse, CursorPage, CursorPagination
 from src.db.query import select, or_, and_
 import src.core.security as security
 from src.apps.iam.dependencies import  get_current_user, require_module_permission
+from src.apps.organizations.models import OrganizationMember, Organization
 
-if TYPE_CHECKING:
-    from src.apps.organizations.models import OrganizationMember, Organization
-router = APIRouter(prefix="/organizations/members",
+router = APIRouter(prefix="/organizations/{org}/members",
         tags=["Organization Members"],
         dependencies=[
             require_module_permission(RBACModule.ORGANIZATION_MEMBERS)
         ]
     )
+
+
+CurrentOrg = Annotated[Organization, Depends(get_current_org)]
+CurrentUser = Annotated[User, Depends(get_current_user)]
 
 async def _invalidate_org_members_cache(org_id: int):
     await RedisCache.clear_pattern(f"org:{org_id}:members:*")
@@ -35,19 +39,18 @@ async def _invalidate_org_members_cache(org_id: int):
 @router.get("/", status_code=status.HTTP_200_OK, response_model=CursorPage[OrganizationMemberResponse])
 async def list_organization_members(
     db: DB,
+    org: CurrentOrg,
     pagination: CursorPagination = Depends(),
-    org: str = Query(..., description="Organization slug to list members for"),
     search: str | None = Query(
         default=None,
         description="Search term to filter organization members by name or email",
     ),
-    current_user=Depends(get_current_user)
 ):
     """
     List organization members with optional search and cursor pagination.
     """
     cache_key = (
-        f"org:{org}:members:"
+        f"org:{org.id}:members:"
         f"{pagination.cursor}:"
         f"{pagination.limit}:"
         f"{search}"
@@ -56,13 +59,8 @@ async def list_organization_members(
     if cached_result:
         return cached_result
     
-    # TODO: check if the user can access the current organization
-    organization_by_slug = await db.execute(select(Organization).where(Organization.slug == org))
-    organization = organization_by_slug.scalar_one_or_none()
-    if not organization:
-        raise NotFoundError(message="Organization not found")
     
-    query = select(OrganizationMember).where(OrganizationMember.organization_id == organization.id)
+    query = select(OrganizationMember).where(OrganizationMember.organization_id == org.id)
 
     if search:
         search_term = f"%{search}%"
@@ -113,13 +111,12 @@ async def list_organization_members(
 async def get_organization_member(
     db: DB,
     member_id: HashId,
-    org: str = Query(..., description="Organization slug to list members for"),
-    current_user=Depends(get_current_user)
+    org: CurrentOrg,
 ) -> ApiSuccessResponse[OrganizationMemberResponse]:
     """
     Get details of a specific organization member by their ID.
     """
-    cache_key = f"org:{org}:member:{member_id}"
+    cache_key = f"org:{org.id}:member:{member_id}"
     cached_result = await RedisCache.get(cache_key)
     if cached_result:
         return ApiSuccessResponse[OrganizationMemberResponse](
@@ -127,13 +124,9 @@ async def get_organization_member(
             data=OrganizationMemberResponse.model_validate_json(cached_result)
         )
     
-    organization_by_slug = await db.execute(select(Organization).where(Organization.slug == org))
-    organization = organization_by_slug.scalar_one_or_none()
-    if not organization:
-        raise NotFoundError(message="Organization not found")
     
     query = select(OrganizationMember).where(
-        OrganizationMember.organization_id == organization.id,
+        OrganizationMember.organization_id == org.id,
         OrganizationMember.id == member_id
     )
     result = await db.execute(query)
@@ -156,13 +149,12 @@ async def get_organization_member(
 async def resend_invite(
     invite_request: OrganizationMembershipInvitationRequest,
     db: DB,
-    current_user=Depends(get_current_user)
+    _: CurrentOrg,
 ) -> ApiSuccessResponse[OrganizationMemberResponse]:
     """
     Resend an invitation email to a specific organization member by their ID.
     """
 
-    # TODO: check if the user can access the current organization
     query = select(OrganizationMember).where(
         OrganizationMember.organization_id == invite_request.organization_id,
         OrganizationMember.id == invite_request.member_id
@@ -290,27 +282,18 @@ async def accept_invitation(
             detail="An error occurred during password reset"
         )
 
- 
-
 @router.delete("/{member_id}", status_code=status.HTTP_200_OK, response_model=ApiSuccessResponse[None])
 async def remove_organization_member(
     member_id: HashId,
     db: DB,
-    org: str = Query(..., description="Organization slug to list members for"),
-    current_user=Depends(get_current_user)
+    org: CurrentOrg,
 ) -> ApiSuccessResponse[None]:
     """
     Remove a specific organization member by their ID.
     """
-    # TODO: check if the user can access the current organization
-    query = select(Organization).where(Organization.slug == org)
-    result = await db.execute(query)
-    organization = result.scalar_one_or_none()
-    if not organization:
-        raise NotFoundError(message="Organization not found")
     
     query = select(OrganizationMember).where(
-        OrganizationMember.organization_id == organization.id,
+        OrganizationMember.organization_id == org.id,
         OrganizationMember.id == member_id
     )
     result = await db.execute(query)
@@ -319,7 +302,7 @@ async def remove_organization_member(
         raise NotFoundError(message="Organization member not found")
     
     # TODO: For the user and organization remove it from the cache as well as the casbin rules
-    await _invalidate_org_members_cache(organization.id)
+    await _invalidate_org_members_cache(org.id)
     await db.delete(member)
     await db.commit()
 

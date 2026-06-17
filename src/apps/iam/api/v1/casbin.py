@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from src.apps.organizations.dependencies import get_current_org
 from src.apps.organizations.models.organization import Organization
 from src.apps.iam.dependencies import get_current_active_superuser, require_module_permission
@@ -28,7 +28,7 @@ CurrentOrg = Annotated[Organization, Depends(get_current_org)]
 CurrentUser = Annotated[User, Depends(get_current_active_superuser)]
 
 router = APIRouter(
-    prefix="/rbac",
+    prefix="/organizations/{org}/rbac",
     tags=["RBAC"],
     dependencies=[
         require_module_permission(Module.RBAC),
@@ -51,11 +51,11 @@ logger = get_logger(__name__)
 )
 async def add_permission(
     payload: PermissionRequest,
-    current_org: CurrentOrg,
+    org: CurrentOrg,
 ):
     success = PolicyService.add_permission(
         role=payload.role,
-        org=str(current_org.id),
+        org=str(org.id),
         module=payload.module,
         action=payload.action,
     )
@@ -63,7 +63,7 @@ async def add_permission(
     logger.info(
         "Add permission: role=%s, org=%s, module=%s, action=%s, success=%s",
         payload.role,
-        current_org.id,
+        org.id,
         payload.module,
         payload.action,
         success,
@@ -80,11 +80,11 @@ async def add_permission(
 )
 async def remove_permission(
     payload: PermissionRequest,
-    current_org: CurrentOrg,
+    org: CurrentOrg,
 ):
     success = PolicyService.remove_permission(
         role=payload.role,
-        org=str(current_org.id),
+        org=str(org.id),
         module=payload.module,
         action=payload.action,
     )
@@ -92,7 +92,7 @@ async def remove_permission(
     logger.info(
         "Remove permission: role=%s, org=%s, module=%s, action=%s, success=%s",
         payload.role,
-        current_org.id,
+        org.id,
         payload.module,
         payload.action,
         success,
@@ -109,8 +109,9 @@ async def remove_permission(
 )
 async def get_permissions(
     role: str,
+    org: CurrentOrg,
 ):
-    permissions = PolicyService.get_permissions(role)
+    permissions = PolicyService.get_permissions(role, str(org.id))
 
     return ApiSuccessResponse(
         message="Permissions retrieved successfully.",
@@ -129,7 +130,7 @@ async def get_permissions(
 async def assign_role(
     payload: UserRoleRequest,
     db: DB,
-    current_org: CurrentOrg,
+    org: CurrentOrg,
 ):
     
     user =await db.get(User, payload.user_id)
@@ -140,14 +141,14 @@ async def assign_role(
     success = PolicyService.assign_role(
         user=user,
         role=payload.role,
-        org=str(current_org.id),
+        org=str(org.id),
     )
 
     logger.info(
         "Assign role: user_id=%s, role=%s, org=%s, success=%s",
         payload.user_id,
         payload.role,
-        current_org.id,
+        org.id,
         success,
     )
     if not success:
@@ -163,7 +164,7 @@ async def assign_role(
 async def revoke_role(
     payload: UserRoleRequest,
     db: DB,
-    current_org: CurrentOrg,
+    org: CurrentOrg,
 ):
     user = await db.get(User, payload.user_id)
 
@@ -173,14 +174,14 @@ async def revoke_role(
     success = PolicyService.revoke_role(
         user=user,
         role=payload.role,
-        org=str(current_org.id),
+        org=str(org.id),
     )
 
     logger.info(
         "Revoke role: user_id=%s, role=%s, org=%s, success=%s",
         payload.user_id,
         payload.role,
-        current_org.id,
+        org.id,
         success,
     )
     if not success:
@@ -196,7 +197,7 @@ async def revoke_role(
 async def get_user_roles(
     user_id: HashId,
     db: DB,
-    current_org: CurrentOrg,
+    org: CurrentOrg,
 ):
     user =await db.get(User, user_id)
 
@@ -205,7 +206,7 @@ async def get_user_roles(
 
     roles = PolicyService.get_user_roles(
         user=user,
-        org=str(current_org.id),
+        org=str(org.id),
     )
 
     return ApiSuccessResponse(
@@ -224,19 +225,19 @@ async def get_user_roles(
 )
 async def inherit_role(
     payload: RoleInheritanceRequest,
-    current_org: CurrentOrg,
+    org: CurrentOrg,
 ):
     success = PolicyService.inherit_role(
         role=payload.role,
         parent_role=payload.parent_role,
-        org=str(current_org.id),
+        org=str(org.id),
     )
 
     logger.info(
         "Inherit role: role=%s, parent_role=%s, org=%s, success=%s",
         payload.role,
         payload.parent_role,
-        current_org.id,
+        org.id,
         success,
     )
     if not success:
@@ -251,19 +252,19 @@ async def inherit_role(
 )
 async def remove_role_inheritance(
     payload: RoleInheritanceRequest,
-    current_org: CurrentOrg,
+    org: CurrentOrg,
 ):
     success = PolicyService.remove_role_inheritance(
         role=payload.role,
         parent_role=payload.parent_role,
-        org=str(current_org.id),
+        org=str(org.id),
     )
 
     logger.info(
         "Remove role inheritance: role=%s, parent_role=%s, org=%s, success=%s",
         payload.role,
         payload.parent_role,
-        current_org.id,
+        org.id,
         success,
     )
     if not success:
@@ -283,11 +284,11 @@ async def check_my_permission(
     module: str,
     action: str,
     current_user: CurrentUser,
-    current_org: CurrentOrg,
+    org: CurrentOrg,
 ):
     allowed = PolicyService.has_permission(
         user=current_user,
-        org=str(current_org.id),
+        org=str(org.id),
         module=module,
         action=action,
     )
@@ -303,7 +304,7 @@ async def check_my_permission(
 async def check_user_permission(
     payload: PermissionCheckRequest,
     db: DB,
-    current_org: CurrentOrg,
+    org: CurrentOrg,
 ):
     user = await db.get(User, payload.user_id)
 
@@ -312,7 +313,7 @@ async def check_user_permission(
 
     allowed = PolicyService.has_permission(
         user=user,
-        org=str(current_org.id),
+        org=str(org.id),
         module=payload.module,
         action=payload.action,
     )

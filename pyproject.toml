@@ -20,10 +20,10 @@ dependencies = [
     "pyotp>=2.9.0",
     "pyseto>=1.9.3",
     "python-dotenv>=1.2.2",
+    "python-slugify>=8.0.4",
     "qrcode>=8.2",
     "redis>=8.0.0",
     "slowapi>=0.1.9",
-    "slugify>=0.0.1",
 ]
 
 [dependency-groups]

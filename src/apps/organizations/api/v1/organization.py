@@ -1,5 +1,9 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from src.apps.iam.dependencies import get_current_active_superuser
+from src.core.types import HashId
+from src.apps.iam.models.user import User
+from src.apps.iam.dependencies import get_current_active_superuser, get_current_user
 from src.apps.organizations.schemas import organization
 from src.core.exceptions import NotFoundError
 from src.apps.organizations.dependencies import get_current_org 
@@ -105,7 +109,7 @@ async def list_organizations(
 
 @router.get("/{org_id}", response_model=ApiSuccessResponse[OrganizationResponse])
 async def get_organization(
-   org_id: int,
+   org_id: HashId,
    db: DB 
 ):
     """
@@ -137,10 +141,11 @@ async def get_organization(
         data=org_response
     )
 
-@router.post("/", response_model=ApiSuccessResponse[OrganizationResponse], status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=ApiSuccessResponse[OrganizationResponse])
 async def create_organization(
    org_data: OrganizationCreate,
-   db: DB 
+   db: DB,
+   current_user:Annotated[User, Depends(get_current_active_superuser)],
 ):
     """
     Create a new organization.
@@ -149,7 +154,9 @@ async def create_organization(
         name=org_data.name,
         slug=slugify(org_data.name),
         description=org_data.description,
-        status=OrganizationStatus.ACTIVE
+        status=OrganizationStatus.ACTIVE,
+        owner_id=current_user.id,
+        created_by=current_user.id,
     )
     db.add(new_org)
     await db.commit()
@@ -165,7 +172,7 @@ async def create_organization(
 
 @router.put("/{org_id}", response_model=ApiSuccessResponse[OrganizationResponse])
 async def update_organization(
-   org_id: int,
+   org_id: HashId,
    org_data: OrganizationUpdate,
    db: DB 
 ):
@@ -194,7 +201,7 @@ async def update_organization(
 
 @router.patch("/{org_id}", response_model=ApiSuccessResponse[OrganizationResponse])
 async def partial_update_organization(
-   org_id: int,
+   org_id: HashId,
    org_data: OrganizationPartialUpdate,
    db: DB
 ):
@@ -223,7 +230,7 @@ async def partial_update_organization(
 
 @router.delete("/{org_id}", response_model=ApiSuccessResponse[None])
 async def delete_organization(
-   org_id: int,
+   org_id: HashId,
    db: DB ,
    _ = Depends(get_current_active_superuser)
 ):
