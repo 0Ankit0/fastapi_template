@@ -293,7 +293,4 @@ async def logout(
         return {"message": "Successfully logged out from this device"}
     except Exception:
         await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred during logout"
-        )
+        raise

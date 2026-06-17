@@ -16,6 +16,9 @@ from src.apps.iam.models.user import User
 from src.apps.iam.models.token_tracking import TokenTracking
 from src.apps.iam.schemas.token import Token
 from src.apps.iam.utils.ip_access import revoke_tokens_for_ip, get_client_ip
+from src.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 
@@ -132,10 +135,9 @@ async def refresh_token(
         return ApiSuccessResponse[Token](message="Token refreshed successfully", data=token_data)
     except HTTPException:
         await db.rollback()
+        logger.error("HTTP error during token refresh", exc_info=True)
         raise
     except Exception:
+        logger.exception("An error occurred during token refresh", exc_info=True)
         await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred during token refresh"
-        )
+        raise 

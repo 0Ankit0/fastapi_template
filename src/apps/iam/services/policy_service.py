@@ -39,10 +39,11 @@ class PolicyService:
         )
 
     @staticmethod
-    def get_permissions(role: str):
+    def get_permissions(role: str,org: str):
         return enforcer.get_filtered_policy(
             0,
             role,
+            org
         )
 
     # -------------------------

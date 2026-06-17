@@ -20,6 +20,9 @@ from src.apps.iam.schemas.user import (
     ChangePasswordRequest
 )
 from src.core.cache import RedisCache
+from src.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -52,13 +55,12 @@ async def request_password_reset(
         return ApiSuccessResponse[None](message="If the email exists, a password reset link has been sent")
     except HTTPException:
         await db.rollback()
+        logger.exception("An error occurred while processing password reset request", exc_info=True)
         raise
     except Exception:
+        logger.exception("An error occurred while processing password reset request", exc_info=True)
         await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred processing password reset request"
-        )
+        raise 
 
 
 @router.post("/password-reset-confirm/", response_model=ApiSuccessResponse[None])
@@ -108,6 +110,7 @@ async def confirm_password_reset(
         await db.rollback()
         raise
     except Exception:
+        logger.exception("An error occurred while verifying password reset token", exc_info=True)
         await db.rollback()
         raise ValidationError("Invalid or expired reset token")
     
@@ -151,13 +154,13 @@ async def confirm_password_reset(
 
         return ApiSuccessResponse[None](message="Password has been reset successfully")
     except HTTPException:
+        await db.rollback()
+        logger.exception("An error occurred while resetting password", exc_info=True)
         raise
     except Exception:
+        logger.exception("An error occurred while processing password reset request", exc_info=True)
         await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred during password reset"
-        )
+        raise 
 
 
 @router.post("/change-password/", response_model=ApiSuccessResponse[None])
@@ -198,10 +201,9 @@ async def change_password(
         return ApiSuccessResponse[None](message="Password changed successfully")
     except HTTPException:
         await db.rollback()
+        logger.exception("An error occurred while changing password", exc_info=True)
         raise
     except Exception:
         await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred during password change"
-        )
+        logger.exception("An error occurred while changing password", exc_info=True)
+        raise 

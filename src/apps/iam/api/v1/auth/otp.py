@@ -84,10 +84,7 @@ async def enable_otp(
         raise
     except Exception:
         await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred enabling OTP"
-        )
+        raise 
 
 
 @router.post("/otp/verify/", response_model=ApiSuccessResponse[None])
@@ -125,10 +122,7 @@ async def verify_otp(
         raise
     except Exception:
         await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred verifying OTP"
-        )
+        raise 
 
 
 @router.post("/otp/disable/", response_model=ApiSuccessResponse[None])
@@ -168,10 +162,7 @@ async def disable_otp(
         raise
     except Exception:
         await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred disabling OTP"
-        )
+        raise 
 
 
 @router.post("/otp/validate/", response_model=ApiSuccessResponse[Token] | ApiSuccessResponse[None])
@@ -337,8 +328,5 @@ async def validate_otp_login(
             db.add(login_attempt)
             await db.commit()
             logger.warning(f"Failed OTP validation for user_id={user.id} from IP={ip_address}: {str(ex)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred during OTP validation"
-        )
+        raise 
                

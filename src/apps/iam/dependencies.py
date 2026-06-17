@@ -54,7 +54,7 @@ async def get_current_user(
 
     if not token:
         raise AuthenticationError(
-            message="Not authenticated",
+            message="Not authenticated.",
             headers={"WWW-Authenticate": "Bearer"}
         )
     
@@ -110,7 +110,7 @@ async def get_current_user(
     request.state.current_user_id = user.id
     return user
 
-def get_current_active_superuser(
+async def get_current_active_superuser(
 current_user: Annotated[User, Depends(get_current_user)]
 ) -> User:
     if not current_user.is_superuser and not current_user.status == UserStatus.ACTIVE:

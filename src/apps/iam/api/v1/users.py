@@ -5,6 +5,7 @@ from typing import Annotated
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Request
 from sqlalchemy.orm import selectinload
+from src.core.types import HashId
 from src.apps.organizations.dependencies import get_current_org
 from src.apps.iam.dependencies import get_current_user
 from src.apps.organizations.models.organization import Organization
@@ -23,7 +24,6 @@ from src.apps.iam.dependencies import get_current_active_superuser
 from src.core.storage import save_media_bytes, delete_media
 
 router = APIRouter(prefix="/users",tags=["Users"])
-
 
 def _serialize_user_response(user: User) -> dict[str, object]:
     response = UserResponse.model_validate(user)
@@ -90,7 +90,8 @@ async def list_users(
             selectinload(User.profile),
         )
     )
-    roles = await PolicyService.get_user_roles(current_user,current_org.slug)
+    if current_org:
+        roles = await PolicyService.get_user_roles(current_user,current_org.slug)
 
     if search:
         search_filter = or_(
@@ -231,7 +232,7 @@ async def upload_avatar(
 
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user(
-    user_id: str,
+    user_id: HashId,
     db: DB,
     current_user: User = Depends(get_current_active_superuser)
 ):
@@ -317,7 +318,7 @@ async def update_current_user(
 
 @router.patch("/{user_id}", response_model=UserResponse)
 async def update_user(
-    user_id: str,
+    user_id: HashId,
     user_update: UserUpdate,
     db: DB,
     request: Request,
@@ -402,7 +403,7 @@ async def update_user(
 
 @router.delete("/{user_id}")
 async def delete_user(
-    user_id: str,
+    user_id: HashId,
     db: DB,
     current_user: User = Depends(get_current_active_superuser),
 ):

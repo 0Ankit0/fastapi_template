@@ -135,6 +135,7 @@ async def signup(
         return ApiSuccessResponse[Token](message="Account created successfully", data=token_data)
     except (HTTPException, AppError):
         await db.rollback()
+        logger.error("Error during signup", exc_info=True)
         raise
     except Exception:
         await db.rollback()
@@ -193,8 +194,10 @@ async def verify_email(
                 )
                 
     except (HTTPException, AppError):
+        logger.error("Error during email verification", exc_info=True)
         raise
     except Exception:
+        logger.error("Error during email verification", exc_info=True)
         raise 
     
     try:
@@ -229,10 +232,11 @@ async def verify_email(
         return ApiSuccessResponse[None](message="Email verified successfully")
     except (HTTPException, AppError):
         await db.rollback()
+        logger.error("Error during email verification", exc_info=True)
         raise
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error during email verification: {str(e)}")
+        logger.error("Error during email verification.", exc_info=True)
         raise 
 
 
@@ -262,6 +266,7 @@ async def resend_verification_email(
             message="If an account with that email exists, a verification email has been sent"
         )
     except (HTTPException, AppError):
+        logger.error("Error during resend verification email", exc_info=True)
         raise
     except Exception:
         logger.error("Error during resend verification email", exc_info=True)
