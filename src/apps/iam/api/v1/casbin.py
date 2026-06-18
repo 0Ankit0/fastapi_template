@@ -2,14 +2,16 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
-from src.apps.organizations.dependencies import get_current_org
 from src.apps.organizations.models.organization import Organization
-from src.apps.iam.dependencies import get_current_active_superuser, require_module_permission
 from src.apps.iam.models import User
 from src.apps.iam.services.policy_service import PolicyService
 from src.core.eums import RBACModule as Module
 from src.core.dependencies import (
     DB,
+    get_current_user,
+    get_current_org,
+    get_current_active_superuser,
+    require_module_permission,
 )
 from src.core.logging import get_logger
 from src.core.exceptions import NotFoundError, ConflictError
@@ -31,7 +33,7 @@ router = APIRouter(
     prefix="/organizations/{org}/rbac",
     tags=["RBAC"],
     dependencies=[
-        require_module_permission(Module.RBAC),
+        Depends(require_module_permission(Module.RBAC)),
         # Depends(get_current_active_superuser)
     ]
 )

@@ -14,8 +14,7 @@ from src.core import security
 from src.core.security import TokenType
 from src.core.cache import RedisCache
 from src.core.cookies import clear_auth_cookies, set_auth_cookies
-from src.core.dependencies import  get_session
-from src.apps.iam.dependencies import get_current_user
+from src.core.dependencies import  get_current_user
 from src.apps.iam.models.user import User
 from src.apps.iam.models import LoginAttempt
 from src.apps.iam.models.token_tracking import TokenTracking

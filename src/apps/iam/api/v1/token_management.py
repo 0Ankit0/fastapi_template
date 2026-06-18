@@ -3,8 +3,7 @@ from src.core.utils import decode_cursor, encode_cursor
 from src.db.query import col, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone
-from src.core.dependencies import DB
-from src.apps.iam.dependencies import get_current_user
+from src.core.dependencies import DB, get_current_user
 from src.apps.iam.models.user import User
 from src.apps.iam.models.token_tracking import TokenTracking
 from src.apps.iam.schemas.token_tracking import TokenTrackingResponse

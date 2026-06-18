@@ -6,13 +6,11 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Request
 from sqlalchemy.orm import selectinload
 from src.core.types import HashId
-from src.apps.organizations.dependencies import get_current_org
-from src.apps.iam.dependencies import get_current_user
 from src.apps.organizations.models.organization import Organization
 from src.core.eums import UserStatus
 from src.core.utils import decode_cursor, encode_cursor
 from src.db.query import col, func, or_, select
-from src.core.dependencies import DB
+from src.core.dependencies import DB, get_current_user, get_current_active_superuser, get_current_org
 from src.apps.iam.models.user import User
 from src.apps.iam.schemas.user import UserResponse, UserUpdate
 from src.core.schemas import CursorPage, CursorPagination
@@ -20,7 +18,6 @@ from src.core.cache import RedisCache
 from src.core.config import settings
 from src.apps.iam.models import UserProfile
 from src.apps.iam.services.policy_service import PolicyService
-from src.apps.iam.dependencies import get_current_active_superuser
 from src.core.storage import save_media_bytes, delete_media
 
 router = APIRouter(prefix="/users",tags=["Users"])

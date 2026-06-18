@@ -5,24 +5,22 @@ info:
 
 http:
   method: GET
-  url: /v1/organizations/{org}/members/?search=&limit=&cursor=
+  url: "{{BASE_URI}}/api/v1/organizations/:org/members/?limit=10"
   params:
     - name: search
       value: ""
       type: query
-      description: Search term to filter organization members by name or email
+      disabled: true
     - name: limit
-      value: ""
+      value: "10"
       type: query
-      description: undefined
     - name: cursor
       value: ""
       type: query
-      description: undefined
+      disabled: true
     - name: org
-      value: ""
+      value: testorg
       type: path
-      description: Organization slug
   body:
     type: json
     data: ""

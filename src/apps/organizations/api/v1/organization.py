@@ -3,23 +3,25 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from src.core.types import HashId
 from src.apps.iam.models.user import User
-from src.apps.iam.dependencies import get_current_active_superuser, get_current_user
-from src.apps.organizations.schemas import organization
 from src.core.exceptions import NotFoundError
-from src.apps.organizations.dependencies import get_current_org 
 from src.apps.organizations.models.organization import Organization
 from src.apps.organizations.schemas.organization import OrganizationPartialUpdate, OrganizationResponse, OrganizationCreate, OrganizationUpdate
-from src.db.session import get_session
 from src.db.query import select, or_
 from src.core.utils import decode_cursor, encode_cursor
-from src.core.dependencies import DB
+from src.core.dependencies import DB, get_current_active_superuser, require_module_permission
 from src.core.schemas import CursorPage, CursorPagination, ApiSuccessResponse
-from src.core.eums import OrganizationStatus
+from src.core.eums import OrganizationStatus, RBACModule
 from src.core.cache import RedisCache
 from slugify import slugify
 
 
-router = APIRouter(prefix="/organizations", tags=["Organizations"])
+router = APIRouter(
+    prefix="/organizations", 
+    tags=["Organizations"],
+    dependencies=[
+        Depends(require_module_permission(RBACModule.ORGANIZATIONS))
+    ]
+)
 
 async def _invalidate_org_cache(org_id: int):
    await RedisCache.delete(f"org:{org_id}")

@@ -14,8 +14,7 @@ from src.core.config import settings
 from src.core import security
 from src.core.security import TokenType
 from src.core.cookies import set_auth_cookies
-from src.core.dependencies import DB, get_session
-from src.apps.iam.dependencies import get_current_user
+from src.core.dependencies import DB, get_current_user
 from src.apps.iam.models.user import User
 from src.apps.iam.models.login_attempt import LoginAttempt
 from src.apps.iam.models.token_tracking import TokenTracking

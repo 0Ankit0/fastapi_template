@@ -10,23 +10,21 @@ from src.apps.organizations.schemas.organization_members import OrganizationMemb
 from src.core.utils import encode_cursor
 from src.core.exceptions import NotFoundError, ValidationError
 from src.core.cache import RedisCache
-from src.core.dependencies import DB
-from src.db.session import get_session
+from src.core.dependencies import DB, get_current_org, get_current_user, require_module_permission
 from src.core.eums import OrganizationMemberStatus, RBACModule
-from src.apps.organizations.dependencies import get_current_org
 from src.core.types import  HashId
 from src.core.schemas import ApiSuccessResponse, CursorPage, CursorPagination
 from src.db.query import select, or_, and_
 import src.core.security as security
-from src.apps.iam.dependencies import  get_current_user, require_module_permission
 from src.apps.organizations.models import OrganizationMember, Organization
 
-router = APIRouter(prefix="/organizations/{org}/members",
-        tags=["Organization Members"],
-        dependencies=[
-            require_module_permission(RBACModule.ORGANIZATION_MEMBERS)
-        ]
-    )
+router = APIRouter(
+    prefix="/organizations/{org}/members",
+    tags=["Organization Members"],
+    dependencies=[
+        Depends(require_module_permission(RBACModule.ORGANIZATION_MEMBERS))
+    ]
+)
 
 
 CurrentOrg = Annotated[Organization, Depends(get_current_org)]

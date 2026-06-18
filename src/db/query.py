@@ -1,5 +1,5 @@
 from sqlalchemy import and_, desc, func, or_, select, update
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 
 def col(attribute):
@@ -8,6 +8,7 @@ def col(attribute):
 
 __all__ = [
     "Session",
+    "selectinload",
     "and_",
     "col",
     "desc",
