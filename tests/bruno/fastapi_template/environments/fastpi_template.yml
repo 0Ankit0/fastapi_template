@@ -2,3 +2,5 @@ name: fastpi_template
 variables:
   - name: BASE_URI
     value: http://127.0.0.1:8000
+  - secret: true
+    name: access_token

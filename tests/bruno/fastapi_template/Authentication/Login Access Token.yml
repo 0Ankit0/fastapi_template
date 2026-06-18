@@ -24,9 +24,10 @@ runtime:
   scripts:
     - type: after-response
       code: |-
-        const data = res.getBody();
+        const body = res.getBody();
 
-        bru.setEnvVar("access_token", data.access);
+        // bru.setGlobalEnvVar('access_token', body.data.access)
+        bru.setEnvVar('access_token', body.data.access);
 
 settings:
   encodeUrl: true

@@ -5,24 +5,22 @@ info:
 
 http:
   method: GET
-  url: /v1/organizations/?search=&org_status=&limit=&cursor=
+  url: "{{BASE_URI}}/api/v1/organizations/?org_status=active&limit=10"
   params:
     - name: search
       value: ""
       type: query
-      description: Search term to filter organizations by name or description
+      disabled: true
     - name: org_status
-      value: ""
+      value: active
       type: query
-      description: Filter organizations by status
     - name: limit
-      value: ""
+      value: "10"
       type: query
-      description: undefined
     - name: cursor
       value: ""
       type: query
-      description: undefined
+      disabled: true
   body:
     type: json
     data: ""
@@ -33,3 +31,68 @@ settings:
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+
+examples:
+  - name: success
+    request:
+      url: "{{BASE_URI}}/api/v1/organizations/?org_status=active&limit=10"
+      method: GET
+      params:
+        - name: search
+          value: ""
+          type: query
+          disabled: true
+        - name: org_status
+          value: active
+          type: query
+        - name: limit
+          value: "10"
+          type: query
+        - name: cursor
+          value: ""
+          type: query
+          disabled: true
+      body:
+        type: json
+        data: ""
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: date
+          value: Thu, 18 Jun 2026 00:51:01 GMT
+        - name: server
+          value: uvicorn
+        - name: content-length
+          value: "358"
+        - name: content-type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "items": [
+              {
+                "name": "test",
+                "description": "this is test organization",
+                "id": "RQXPBOb6",
+                "slug": "test",
+                "status": "active"
+              },
+              {
+                "name": "test2",
+                "description": "this is test organization",
+                "id": "7Z3YDO6Y",
+                "slug": "test2",
+                "status": "active"
+              },
+              {
+                "name": "testOrg",
+                "description": "This is a test Organization",
+                "id": "GK3daXl8",
+                "slug": "testorg",
+                "status": "active"
+              }
+            ],
+            "next_cursor": null
+          }
