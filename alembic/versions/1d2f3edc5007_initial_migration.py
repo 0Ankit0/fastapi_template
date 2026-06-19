@@ -78,7 +78,7 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('user_id', sa.BigInteger(), nullable=True),
     sa.Column('token_jti', sa.String(length=255), nullable=False),
-    sa.Column('token_type', sa.Enum('ACCESS', 'REFRESH', 'PASSWORD_RESET', 'EMAIL_VERIFICATION', 'TEMP_AUTH', 'BEARER', name='tokentype'), nullable=False),
+    sa.Column('token_type', sa.Enum('ACCESS', 'REFRESH', 'PASSWORD_RESET', 'EMAIL_VERIFICATION', 'TEMP_AUTH', 'BEARER', 'ORGANIZATION_INVITATION', name='tokentype'), nullable=False),
     sa.Column('ip_address', sa.String(length=45), nullable=False),
     sa.Column('user_agent', sa.String(length=255), nullable=False),
     sa.Column('expires_at', sa.DateTime(), nullable=False),

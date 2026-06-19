@@ -16,7 +16,7 @@ from slugify import slugify
 
 
 router = APIRouter(
-    prefix="/organizations", 
+    prefix="/organizations/{org}", 
     tags=["Organizations"],
     dependencies=[
         Depends(require_module_permission(RBACModule.ORGANIZATIONS))

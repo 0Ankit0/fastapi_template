@@ -4,21 +4,18 @@ info:
   seq: 4
 
 http:
-  method: POST
-  url: /v1/organizations/{org}/members/{member_id}/resend-invite
+  method: GET
+  url: "{{BASE_URI}}/api/v1/organizations/:org/members/:member_id/resend-invite"
   params:
-    - name: org
-      value: ""
+    - name: member_id
+      value: RQXPBOb6
       type: path
-      description: Organization slug
+    - name: org
+      value: testorg
+      type: path
   body:
     type: json
-    data: |-
-      {
-      	"organization_id": 0,
-      	"member_id": 0,
-      	"role": ""
-      }
+    data: ""
   auth: inherit
 
 settings:
@@ -26,3 +23,43 @@ settings:
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+
+examples:
+  - name: success
+    request:
+      url: "{{BASE_URI}}/api/v1/organizations/:org/members/:member_id/resend-invite"
+      method: GET
+      params:
+        - name: member_id
+          value: RQXPBOb6
+          type: path
+        - name: org
+          value: testorg
+          type: path
+      body:
+        type: json
+        data: ""
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: date
+          value: Fri, 19 Jun 2026 11:56:40 GMT
+        - name: server
+          value: uvicorn
+        - name: content-length
+          value: "129"
+        - name: content-type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "message": "Invitation resent successfully",
+            "data": {
+              "user_id": "RQXPBOb6",
+              "organization_id": "GK3daXl8",
+              "id": "9mr4AOGR",
+              "role": []
+            }
+          }

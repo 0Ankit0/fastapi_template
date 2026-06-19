@@ -3,7 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Annotated
 from uuid import uuid4
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
+from src.apps.iam.services.policy_service import PolicyService
 from src.apps.iam.models.user import User
 from src.apps.iam.models.token_tracking import TokenTracking
 from src.apps.organizations.schemas.organization_members import OrganizationMemberResponse, OrganizationMembershipInvitationRequest
@@ -11,12 +12,15 @@ from src.core.utils import encode_cursor
 from src.core.exceptions import NotFoundError, ValidationError
 from src.core.cache import RedisCache
 from src.core.dependencies import DB, get_current_org, get_current_user, require_module_permission
-from src.core.eums import OrganizationMemberStatus, RBACModule
+from src.core.eums import OrganizationMemberStatus, RBACModule, RBACRole
 from src.core.types import  HashId
 from src.core.schemas import ApiSuccessResponse, CursorPage, CursorPagination
 from src.db.query import select, or_, and_
 import src.core.security as security
 from src.apps.organizations.models import OrganizationMember, Organization
+from src.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter(
     prefix="/organizations/{org}/members",
@@ -83,8 +87,15 @@ async def list_organization_members(
     if has_next_page:
         members = members[:pagination.limit]
 
+    role_map = PolicyService.get_org_roles(org.slug)
+
     items = [
-        OrganizationMemberResponse.model_validate(member)
+        OrganizationMemberResponse(
+            **OrganizationMemberResponse.model_validate(
+                member
+            ).model_dump(exclude={"role"}),
+            role=role_map.get(member.user_id, [])
+        )
         for member in members
     ]
     next_cursor = None
@@ -125,17 +136,22 @@ async def get_organization_member(
     
     query = select(OrganizationMember).where(
         OrganizationMember.organization_id == org.id,
-        OrganizationMember.id == member_id
+        OrganizationMember.user_id == member_id
     )
     result = await db.execute(query)
     member = result.scalar_one_or_none()
     if not member:
-        raise NotFoundError(message="Organization member not found")
+        raise NotFoundError(message=f"Organization member not found for org")
     
-    response = OrganizationMemberResponse.model_validate(member)
+    response = OrganizationMemberResponse(
+        **OrganizationMemberResponse.model_validate(member)
+        .model_dump(exclude={"role"}
+        )   
+    )
+    response.role = PolicyService.get_user_roles(member_id, org.slug)
     await RedisCache.set(
         cache_key, 
-        response.model_dump_json(),
+        response,
         ttl=120
     )
     return ApiSuccessResponse[OrganizationMemberResponse](
@@ -143,58 +159,11 @@ async def get_organization_member(
         data=response
     )
 
-@router.post("/{member_id}/resend-invite", status_code=status.HTTP_200_OK, response_model=ApiSuccessResponse[OrganizationMemberResponse])
-async def resend_invite(
-    invite_request: OrganizationMembershipInvitationRequest,
-    db: DB,
-    _: CurrentOrg,
-) -> ApiSuccessResponse[OrganizationMemberResponse]:
-    """
-    Resend an invitation email to a specific organization member by their ID.
-    """
-
-    query = select(OrganizationMember).where(
-        OrganizationMember.organization_id == invite_request.organization_id,
-        OrganizationMember.id == invite_request.member_id
-    )
-    result = await db.execute(query)
-    member = result.scalar_one_or_none()
-    if not member:
-        raise NotFoundError(message="Organization member not found")
-    
-    if member.status != OrganizationMemberStatus.INVITED:
-        raise ValidationError(message="Only invited members can be resent an invitation")
-    
-    from src.apps.organizations.services.email import OrganizationEmailService
-    invitation_token = security.create_organization_invitation_token(
-        subject=member.user.id,
-        Organization=str(member.organization_id)
-    )
-    await OrganizationEmailService.send_member_invitation_email(
-        member.user,
-        token=invitation_token,
-        organization_name=member.organization.name
-    )
-    invitation_token_tracking = TokenTracking(
-        user_id=member.user.id,
-        token_jti=str(uuid4()),
-        token_type=security.TokenType.ORGANIZATION_INVITATION.value,
-        expires_at=datetime.now(timezone.utc) + timedelta(hours=48)
-    )
-    db.add(invitation_token_tracking)
-    await db.commit()
-
-    response = OrganizationMemberResponse.model_validate(member)
-    return ApiSuccessResponse[OrganizationMemberResponse](
-        message="Invitation resent successfully",
-        data=response
-    )
-
-@router.get("/accept-invitation/", status_code=status.HTTP_200_OK, response_model=ApiSuccessResponse[OrganizationMemberResponse] | ApiSuccessResponse[None])
+@router.get("/accept-invitation/", name="accept_invitation", status_code=status.HTTP_200_OK, response_model= ApiSuccessResponse[None])
 async def accept_invitation(
     db: DB,
     t: str = Query(..., description="Invitation token to verify"),
-) -> ApiSuccessResponse[OrganizationMemberResponse] | ApiSuccessResponse[None]:
+) ->  ApiSuccessResponse[None]:
     """
     Verify the validity of an organization membership invitation token.
     """
@@ -204,22 +173,24 @@ async def accept_invitation(
         # Decrypt and verify the secure URL token
         try:
             token_data = security.verify_secure_url_token(t)
+            logger.info(f"Token data extracted: {token_data}")
         except Exception:
-            raise ValidationError("Invalid or expired reset token")
+            raise ValidationError(f"Invalid or expired accept invitation token.")
         
+        logger.error(f"Token data: {token_data}")
         user_id = token_data.get("user_id")
-        organization_id = token_data.get("organization_id")
+        org_slug = token_data.get("org_slug")
         paseto_token = token_data.get("token")
         purpose = token_data.get("purpose")
         
-        if not all([user_id, organization_id, paseto_token]) or purpose != "organization_invitation":
+        if not all([user_id, org_slug, paseto_token]) or purpose != "organization_invitation":
             raise ValidationError("Invalid invitation token data")
         
-        if not isinstance(paseto_token, str) or not isinstance(user_id, (str, int)) or not isinstance(organization_id, (str, int)):
+        if not isinstance(paseto_token, str) or not isinstance(user_id, (str, int)) or not isinstance(org_slug, (str, int)):
             raise ValidationError("Invalid token format")
 
         # Verify the embedded PASETO token
-        payload = security.verify_token( paseto_token, token_type=security.TokenType.PASSWORD_RESET)
+        payload = security.verify_token( paseto_token, token_type=security.TokenType.ORGANIZATION_INVITATION)
         token_jti = payload.get("jti")
         
         # Verify user_id matches
@@ -239,13 +210,17 @@ async def accept_invitation(
         raise
     except Exception:
         await db.rollback()
-        raise ValidationError("Invalid or expired invitation token")
+        raise 
     
     try:
+        organization_by_slug = await db.execute(select(Organization).where(Organization.slug == org_slug))
+        org = organization_by_slug.scalar_one_or_none()
+        if not org:
+            raise NotFoundError("Organization not found for this invitation token")
         result = await db.execute(select(OrganizationMember).where(
             and_(
                 OrganizationMember.user_id == int(user_id),
-                OrganizationMember.organization_id == int(organization_id),
+                OrganizationMember.organization_id == org.id,
                 OrganizationMember.status == OrganizationMemberStatus.INVITED
             )
         ))
@@ -270,15 +245,189 @@ async def accept_invitation(
         # Invalidate all related caches
         await _invalidate_org_members_cache(user.organization_id)
 
-        return ApiSuccessResponse[None](message="Password has been reset successfully")
+        return ApiSuccessResponse[None](message="Organization invitation accepted successfully")
     except HTTPException:
         raise
     except Exception:
         await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred during password reset"
+        raise 
+
+@router.get("/{member_id}/add", status_code=status.HTTP_200_OK, response_model=ApiSuccessResponse[None])
+async def add_member(
+    member_id: Annotated[HashId, Path(description="ID of the user to add as an organization member")],
+    db: DB,
+    current_user: CurrentUser,
+    org: CurrentOrg,
+    request: Request
+) -> ApiSuccessResponse[None]:
+    """
+    Add a specific user as an organization member by their ID.
+    """
+    query = select(OrganizationMember).where(
+        OrganizationMember.organization_id == org.id,
+        OrganizationMember.user_id == member_id
+    )
+    result = await db.execute(query)
+    member = result.scalar_one_or_none()
+    if member:
+        raise ValidationError(message="User is already a member of the organization")
+    
+    user_query = select(User).where(User.id == member_id)
+    result = await db.execute(user_query)
+    user = result.scalar_one_or_none()
+    if not user:
+        raise NotFoundError(message="User not found")
+
+    organization_member = OrganizationMember(
+        user_id=member_id,
+        organization_id=org.id,
+        status=OrganizationMemberStatus.INVITED,
+        invited_by=current_user.id,
+        joined_at=datetime.now(timezone.utc)
+    )
+    db.add(organization_member)
+    await db.commit()
+    await db.refresh(organization_member)
+
+    from src.apps.organizations.services.email import OrganizationEmailService
+    invitation_token = security.create_organization_invitation_token(
+        subject=member_id,
+        Organization=str(org.id)
+    )
+    await OrganizationEmailService.send_member_invitation_email(
+        user=user,
+        url= request.url_for("accept_invitation",org=org.slug),
+        email=user.email,
+        token=invitation_token,
+        org_slug=org.slug
+    )
+
+    invitation_token_tracking = TokenTracking(
+        user_id=user.id,
+        token_jti=str(uuid4()),
+        user_agent=request.headers.get("user-agent") or '',
+        ip_address=request.client.host if request.client else None,
+        token_type=security.TokenType.ORGANIZATION_INVITATION.value,
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=48)
+    )
+    db.add(invitation_token_tracking)
+    await db.commit()
+
+    return ApiSuccessResponse[None](
+        message="Organization member invited successfully",
+        data=None
+    )
+
+@router.get("/invite", status_code=status.HTTP_200_OK, response_model=ApiSuccessResponse[None])
+async def invite_member(
+    data: OrganizationMembershipInvitationRequest,
+    db: DB,
+    org: CurrentOrg,
+    request: Request
+) -> ApiSuccessResponse[None]:
+    """
+    Send an invitation email to an unknown user using their email address to join the organization as a member.
+    """
+    from src.apps.iam.models.user import User
+    result = await db.execute(select(User).where(User.email == data.email))
+    user = result.scalar_one_or_none()
+    
+    if user:
+        # If the user already exists, we can directly add them as a member
+        organization_member = OrganizationMember(
+            user_id=user.id,
+            organization_id=org.id,
+            role=data.role,
+            status=OrganizationMemberStatus.ACTIVE
         )
+        db.add(organization_member)
+        await db.commit()
+        # return ApiSuccessResponse[None](
+        #     message="Organization member added successfully",
+        #     data=None
+        # )
+    
+    # For new users, we create an invitation token and send an email
+    from src.apps.organizations.services.email import OrganizationEmailService
+    invitation_token = security.create_organization_invitation_token(
+        subject=data.email,
+        Organization=str(org.id)
+    )
+    await OrganizationEmailService.send_member_invitation_email(
+        user=None,
+        url= request.url_for("accept_invitation",org=org.slug),
+        email=data.email,
+        token=invitation_token,
+        org_slug=org.slug
+    )
+
+    invitation_token_tracking = TokenTracking(
+        user_id=None,
+        token_jti=str(uuid4()),
+        user_agent=request.headers.get("user-agent") or '',
+        ip_address=request.client.host if request.client else None,
+        token_type=security.TokenType.ORGANIZATION_INVITATION.value,
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=48)
+    )
+    db.add(invitation_token_tracking)
+    await db.commit()
+
+    return ApiSuccessResponse[None](
+        message="Organization member invited successfully",
+        data=None
+    )
+
+@router.get("/{member_id}/resend-invite", status_code=status.HTTP_200_OK, response_model=ApiSuccessResponse[OrganizationMemberResponse])
+async def resend_invite(
+    member_id: Annotated[HashId, Path(description="ID of the organization member to resend the invitation to")],
+    db: DB,
+    org: CurrentOrg,
+    request: Request
+) -> ApiSuccessResponse[OrganizationMemberResponse]:
+    """
+    Resend an invitation email to a specific organization member by their ID.
+    """
+
+    query = select(OrganizationMember).where(
+        OrganizationMember.organization_id == org.id,
+        OrganizationMember.user_id == member_id
+    )
+    result = await db.execute(query)
+    member = result.scalar_one_or_none()
+    if not member:
+        raise NotFoundError(message="Organization member not found")
+    
+    if member.status != OrganizationMemberStatus.INVITED:
+        raise ValidationError(message="Only invited members can be resent an invitation")
+    
+    from src.apps.organizations.services.email import OrganizationEmailService
+    invitation_token = security.create_organization_invitation_token(
+        subject=member.user.id,
+        Organization=str(member.organization_id)
+    )
+    await OrganizationEmailService.send_member_invitation_email(
+        user=member.user,
+        url=request.url_for("accept_invitation",org=org.slug),
+        email=None,
+        token=invitation_token,
+        org_slug=member.organization.slug
+    )
+    invitation_token_tracking = TokenTracking(
+        user_id=member.user.id,
+        token_jti=str(uuid4()),
+        user_agent=request.headers.get("user-agent") or '',
+        ip_address=request.client.host if request.client else None,
+        token_type=security.TokenType.ORGANIZATION_INVITATION.value,
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=48)
+    )
+    db.add(invitation_token_tracking)
+    await db.commit()
+
+    response = OrganizationMemberResponse.model_validate(member)
+    return ApiSuccessResponse[OrganizationMemberResponse](
+        message="Invitation resent successfully",
+        data=response
+    )
 
 @router.delete("/{member_id}", status_code=status.HTTP_200_OK, response_model=ApiSuccessResponse[None])
 async def remove_organization_member(
@@ -292,14 +441,18 @@ async def remove_organization_member(
     
     query = select(OrganizationMember).where(
         OrganizationMember.organization_id == org.id,
-        OrganizationMember.id == member_id
+        OrganizationMember.user_id == member_id
     )
     result = await db.execute(query)
     member = result.scalar_one_or_none()
     if not member:
         raise NotFoundError(message="Organization member not found")
     
-    # TODO: For the user and organization remove it from the cache as well as the casbin rules
+    PolicyService.remove_user_with_roles(
+        member_id,
+        org.slug,
+    )
+    
     await _invalidate_org_members_cache(org.id)
     await db.delete(member)
     await db.commit()

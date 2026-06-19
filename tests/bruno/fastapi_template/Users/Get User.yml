@@ -5,12 +5,11 @@ info:
 
 http:
   method: GET
-  url: /api/v1/users/{user_id}
+  url: "{{BASE_URI}}/api/v1/users/:user_id"
   params:
     - name: user_id
-      value: ""
+      value: RQXPBOb6
       type: path
-      description: undefined
   body:
     type: json
     data: ""
@@ -21,3 +20,47 @@ settings:
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+
+examples:
+  - name: success
+    request:
+      url: "{{BASE_URI}}/api/v1/users/:user_id"
+      method: GET
+      params:
+        - name: user_id
+          value: RQXPBOb6
+          type: path
+      body:
+        type: json
+        data: ""
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: date
+          value: Fri, 19 Jun 2026 00:21:43 GMT
+        - name: server
+          value: uvicorn
+        - name: content-length
+          value: "260"
+        - name: content-type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "id": "RQXPBOb6",
+            "username": "user",
+            "email": "user@example.com",
+            "is_active": true,
+            "is_superuser": true,
+            "is_confirmed": true,
+            "otp_enabled": false,
+            "otp_verified": false,
+            "first_name": "ram",
+            "last_name": "string",
+            "phone": "0000000000",
+            "image_url": null,
+            "bio": null,
+            "roles": []
+          }

@@ -5,16 +5,14 @@ info:
 
 http:
   method: GET
-  url: /v1/organizations/{org}/members/{member_id}
+  url: "{{BASE_URI}}/api/v1/organizations/:org/members/:member_id"
   params:
     - name: member_id
-      value: ""
+      value: RQXPBOb6
       type: path
-      description: undefined
     - name: org
-      value: ""
+      value: testorg
       type: path
-      description: Organization slug
   body:
     type: json
     data: ""
@@ -25,3 +23,43 @@ settings:
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+
+examples:
+  - name: success
+    request:
+      url: "{{BASE_URI}}/api/v1/organizations/:org/members/:member_id"
+      method: GET
+      params:
+        - name: member_id
+          value: RQXPBOb6
+          type: path
+        - name: org
+          value: testorg
+          type: path
+      body:
+        type: json
+        data: ""
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: date
+          value: Fri, 19 Jun 2026 01:14:24 GMT
+        - name: server
+          value: uvicorn
+        - name: content-length
+          value: "141"
+        - name: content-type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "message": "Organization member retrieved successfully",
+            "data": {
+              "user_id": "RQXPBOb6",
+              "organization_id": "GK3daXl8",
+              "id": "0gOg1X9Z",
+              "role": []
+            }
+          }

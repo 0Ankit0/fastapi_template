@@ -134,8 +134,11 @@ async def get_current_org(
     try:
         if not org:
             raise NotFoundError("Organization slug is required")
-
+        
         if current_user.is_superuser:
+            if org == "global":
+                return None
+            
             result = await db.execute(
                 select(Organization).where(Organization.slug == org)
             )

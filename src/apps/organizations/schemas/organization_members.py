@@ -1,6 +1,8 @@
 from __future__ import annotations
 from typing import List
 
+from pydantic import EmailStr
+
 from src.core.eums import RBACRole
 from src.core.types import HashId
 from src.core.schemas import BaseSchema
@@ -13,10 +15,9 @@ class OrganizationMemberCreate(OrganizationMemberBase):
     pass
 
 class OrganizationMembershipInvitationRequest(BaseSchema):
-    organization_id: HashId
-    member_id: HashId
+    email: EmailStr
     role: RBACRole
 
 class OrganizationMemberResponse(OrganizationMemberBase):
     id: HashId
-    role: RBACRole
+    role: List[RBACRole] = []

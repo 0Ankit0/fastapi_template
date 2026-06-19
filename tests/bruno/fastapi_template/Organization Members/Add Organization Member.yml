@@ -1,11 +1,11 @@
 info:
-  name: Remove Organization Member
+  name: Add Organization Member
   type: http
-  seq: 3
+  seq: 6
 
 http:
-  method: DELETE
-  url: "{{BASE_URI}}/api/v1/organizations/:org/members/:member_id"
+  method: GET
+  url: "{{BASE_URI}}/api/v1/organizations/:org/members/:member_id/add"
   params:
     - name: member_id
       value: RQXPBOb6
@@ -13,9 +13,6 @@ http:
     - name: org
       value: testorg
       type: path
-  body:
-    type: json
-    data: ""
   auth: inherit
 
 settings:
@@ -27,8 +24,8 @@ settings:
 examples:
   - name: success
     request:
-      url: "{{BASE_URI}}/api/v1/organizations/:org/members/:member_id"
-      method: DELETE
+      url: "{{BASE_URI}}/api/v1/organizations/:org/members/:member_id/add"
+      method: GET
       params:
         - name: member_id
           value: RQXPBOb6
@@ -36,15 +33,12 @@ examples:
         - name: org
           value: testorg
           type: path
-      body:
-        type: json
-        data: ""
     response:
       status: 200
       statusText: OK
       headers:
         - name: date
-          value: Fri, 19 Jun 2026 01:36:53 GMT
+          value: Thu, 18 Jun 2026 07:59:19 GMT
         - name: server
           value: uvicorn
         - name: content-length
@@ -55,6 +49,6 @@ examples:
         type: json
         data: |-
           {
-            "message": "Organization member removed successfully",
+            "message": "Organization member invited successfully",
             "data": null
           }

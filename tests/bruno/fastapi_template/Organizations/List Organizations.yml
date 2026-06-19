@@ -5,8 +5,14 @@ info:
 
 http:
   method: GET
-  url: "{{BASE_URI}}/api/v1/organizations/?org_status=active&limit=10"
+  url: "{{BASE_URI}}/api/v1/organizations/:org/?limit=10"
   params:
+    - name: limit
+      value: "10"
+      type: query
+    - name: org
+      value: global
+      type: path
     - name: search
       value: ""
       type: query
@@ -14,9 +20,7 @@ http:
     - name: org_status
       value: active
       type: query
-    - name: limit
-      value: "10"
-      type: query
+      disabled: true
     - name: cursor
       value: ""
       type: query
@@ -79,6 +83,66 @@ examples:
                 "slug": "test",
                 "status": "active"
               },
+              {
+                "name": "test2",
+                "description": "this is test organization",
+                "id": "7Z3YDO6Y",
+                "slug": "test2",
+                "status": "active"
+              },
+              {
+                "name": "testOrg",
+                "description": "This is a test Organization",
+                "id": "GK3daXl8",
+                "slug": "testorg",
+                "status": "active"
+              }
+            ],
+            "next_cursor": null
+          }
+  - name: success
+    request:
+      url: "{{BASE_URI}}/api/v1/organizations/:org/?limit=10"
+      method: GET
+      params:
+        - name: limit
+          value: "10"
+          type: query
+        - name: org
+          value: global
+          type: path
+        - name: search
+          value: ""
+          type: query
+          disabled: true
+        - name: org_status
+          value: active
+          type: query
+          disabled: true
+        - name: cursor
+          value: ""
+          type: query
+          disabled: true
+      body:
+        type: json
+        data: ""
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: date
+          value: Thu, 18 Jun 2026 07:51:36 GMT
+        - name: server
+          value: uvicorn
+        - name: content-length
+          value: "252"
+        - name: content-type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "items": [
               {
                 "name": "test2",
                 "description": "this is test organization",

@@ -34,3 +34,44 @@ settings:
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+
+examples:
+  - name: success
+    request:
+      url: "{{BASE_URI}}/api/v1/auth/login/?set_cookie=false"
+      method: POST
+      params:
+        - name: set_cookie
+          value: "false"
+          type: query
+      body:
+        type: json
+        data: |-
+          {
+            "organization": "global",
+            "username": "user",
+            "password": "User@123"
+          }
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: date
+          value: Fri, 19 Jun 2026 00:20:02 GMT
+        - name: server
+          value: uvicorn
+        - name: content-length
+          value: "648"
+        - name: content-type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "message": "Logged in successfully",
+            "data": {
+              "access": "v4.local.FLpAoYKi5vJozztRhD2E2rTNm9BIAOPnZbyYSSP-SFdFGDdPw3eWs2H4hJuNCnvZXgaeb7LlofGAeKKp6vJekAE4CNxvGKAEnb7lX9AzCtuJn8drYry4R8t_Qp1lTid5D0e3242oyDl6E9nTG4ix40gTiqBfshjNqHz14UKBLYfwDpZg8TKH0eFJGyVVjTVpMIy97yKmEo47GHd0Y4eaAVyO3biGdbnATl22XkRG-5pguiu8E_8wyyKNKlRw-X5EUz5SmLXZFiAj",
+              "refresh": "v4.local.jDSBFCzKkLwAr09eWGmzxJqOgJRgC6etk2iJfaAIA_edjkVDoUF-qXhVVdDFNCTGOgU7tYZqobHZJB0tMcMCksrostDrBWe16c9DFLru-CGRqEDfVO-llTrA2w43ZgyvQbbwF4DiEmcO93__Bq64H2QruJo7uGubNcIkj9Djtc5gC5QvuMND7YtkJh0w2RW6qzana4Zxit5lou6WBEjVRbLjs7dikB-Rsm_SiGLSLeRSrO5GMb2t_DUEhRkPNQBHMecGaC6Jjcpqjw",
+              "token_type": "bearer"
+            }
+          }
