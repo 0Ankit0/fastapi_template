@@ -5,12 +5,11 @@ info:
 
 http:
   method: POST
-  url: /api/v1/token-management/revoke/{token_id}
+  url: "{{BASE_URI}}/api/v1/token-management/revoke/:token_id"
   params:
     - name: token_id
-      value: ""
+      value: 9mr4LArG
       type: path
-      description: undefined
   body:
     type: json
     data: ""
@@ -21,3 +20,34 @@ settings:
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+
+examples:
+  - name: success
+    request:
+      url: "{{BASE_URI}}/api/v1/token-management/revoke/:token_id"
+      method: POST
+      params:
+        - name: token_id
+          value: 9mr4LArG
+          type: path
+      body:
+        type: json
+        data: ""
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: date
+          value: Sat, 20 Jun 2026 09:40:40 GMT
+        - name: server
+          value: uvicorn
+        - name: content-length
+          value: "40"
+        - name: content-type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "message": "Token revoked successfully"
+          }

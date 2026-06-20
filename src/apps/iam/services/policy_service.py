@@ -60,7 +60,7 @@ class PolicyService:
     ) -> bool:
         # TODO: Validate that the user belongs to the organization and that the role exists
         return enforcer.add_grouping_policy(
-            user_id,
+            str(user_id),
             role,
             org_slug,
         )
@@ -72,7 +72,7 @@ class PolicyService:
         org_slug: str,
     ) -> bool:
         return enforcer.remove_grouping_policy(
-            user_id,
+            str(user_id),
             role,
             org_slug,
         )
@@ -83,7 +83,7 @@ class PolicyService:
         org_slug: str,
     ):
         return enforcer.get_roles_for_user_in_domain(
-            user_id,
+            str(user_id),
             org_slug,
         )
     
@@ -93,11 +93,11 @@ class PolicyService:
         org_slug: str,
     ):
         roles = enforcer.get_roles_for_user_in_domain(
-            user_id,
+            str(user_id),
             org_slug,
         )
         return enforcer.delete_roles_for_user_in_domain(
-            user_id,
+            str(user_id),
             roles,
             org_slug,
         )
@@ -146,7 +146,7 @@ class PolicyService:
             return True
         
         return enforcer.enforce(
-            user.id,
+            str(user.id),
             org_slug,
             module,
             action,
@@ -175,6 +175,6 @@ class PolicyService:
         role_map: dict[int, list[RBACRole]] = {}
 
         for user_id, role, _org in policies:
-            role_map.setdefault(user_id, []).append(role)
+            role_map.setdefault(int(user_id), []).append(role)
 
         return role_map
