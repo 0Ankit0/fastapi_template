@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from src.core.types import HashId
 from src.core.utils import decode_cursor, encode_cursor
 from src.db.query import col, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -84,14 +85,11 @@ async def list_active_tokens(
         )
 
     except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred fetching active tokens",
-        )
+        raise 
 
 @router.post("/revoke/{token_id}")
 async def revoke_token(
-    token_id: str,
+    token_id: HashId,
     request: Request,
     db: DB,
     current_user: User = Depends(get_current_user),
@@ -133,10 +131,7 @@ async def revoke_token(
         raise
     except Exception:
         await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred revoking token"
-        )
+        raise 
 
 
 @router.post("/revoke-all")

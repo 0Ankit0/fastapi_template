@@ -57,7 +57,7 @@ async def add_permission(
 ):
     success = PolicyService.add_permission(
         role=payload.role,
-        org=str(org.id),
+        org_slug=str(org.id),
         module=payload.module,
         action=payload.action,
     )
@@ -86,7 +86,7 @@ async def remove_permission(
 ):
     success = PolicyService.remove_permission(
         role=payload.role,
-        org=str(org.id),
+        org_slug=str(org.id),
         module=payload.module,
         action=payload.action,
     )
@@ -141,9 +141,9 @@ async def assign_role(
         raise NotFoundError(message="User not found.")
 
     success = PolicyService.assign_role(
-        user=user,
+        user_id=user.id,
         role=payload.role,
-        org=str(org.id),
+        org_slug=str(org.id),
     )
 
     logger.info(
@@ -174,9 +174,9 @@ async def revoke_role(
         raise NotFoundError(message="User not found.")
 
     success = PolicyService.revoke_role(
-        user=user,
+        user_id=user.id,
         role=payload.role,
-        org=str(org.id),
+        org_slug=str(org.id),
     )
 
     logger.info(
@@ -207,8 +207,8 @@ async def get_user_roles(
         raise NotFoundError(message="User not found.")
 
     roles = PolicyService.get_user_roles(
-        user=user,
-        org=str(org.id),
+        user_id=user.id,
+        org_slug=str(org.id),
     )
 
     return ApiSuccessResponse(
@@ -232,7 +232,7 @@ async def inherit_role(
     success = PolicyService.inherit_role(
         role=payload.role,
         parent_role=payload.parent_role,
-        org=str(org.id),
+        org_slug=str(org.id),
     )
 
     logger.info(
@@ -259,7 +259,7 @@ async def remove_role_inheritance(
     success = PolicyService.remove_role_inheritance(
         role=payload.role,
         parent_role=payload.parent_role,
-        org=str(org.id),
+        org_slug=str(org.id),
     )
 
     logger.info(
@@ -290,7 +290,7 @@ async def check_my_permission(
 ):
     allowed = PolicyService.has_permission(
         user=current_user,
-        org=str(org.id),
+        org_slug=str(org.id),
         module=module,
         action=action,
     )
@@ -315,7 +315,7 @@ async def check_user_permission(
 
     allowed = PolicyService.has_permission(
         user=user,
-        org=str(org.id),
+        org_slug=str(org.id),
         module=payload.module,
         action=payload.action,
     )
