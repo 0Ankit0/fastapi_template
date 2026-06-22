@@ -5,19 +5,18 @@ info:
 
 http:
   method: POST
-  url: /api/v1/organizations/{org}/rbac/permissions
+  url: "{{BASE_URI}}/api/v1/organizations/:org/rbac/permissions"
   params:
     - name: org
-      value: ""
+      value: testorg
       type: path
-      description: Organization slug
   body:
     type: json
     data: |-
       {
-      	"role": "",
-      	"module": "",
-      	"action": ""
+        "role": "member",
+        "module": "organizations",
+        "action": "read"
       }
   auth: inherit
 
@@ -26,3 +25,40 @@ settings:
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+
+examples:
+  - name: success
+    request:
+      url: "{{BASE_URI}}/api/v1/organizations/:org/rbac/permissions"
+      method: POST
+      params:
+        - name: org
+          value: testorg
+          type: path
+      body:
+        type: json
+        data: |-
+          {
+          	"role": "member",
+          	"module": "organizations",
+          	"action": "read"
+          }
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: date
+          value: Mon, 22 Jun 2026 04:29:44 GMT
+        - name: server
+          value: uvicorn
+        - name: content-length
+          value: "56"
+        - name: content-type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "message": "Permission added successfully.",
+            "data": null
+          }

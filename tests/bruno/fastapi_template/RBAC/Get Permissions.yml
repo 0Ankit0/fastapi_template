@@ -5,16 +5,14 @@ info:
 
 http:
   method: GET
-  url: /api/v1/organizations/{org}/rbac/roles/{role}/permissions
+  url: "{{BASE_URI}}/api/v1/organizations/:org/rbac/roles/:role/permissions"
   params:
     - name: role
-      value: ""
+      value: admin
       type: path
-      description: undefined
     - name: org
-      value: ""
+      value: testorg
       type: path
-      description: Organization slug
   body:
     type: json
     data: ""
@@ -25,3 +23,45 @@ settings:
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+
+examples:
+  - name: success
+    request:
+      url: "{{BASE_URI}}/api/v1/organizations/:org/rbac/roles/:role/permissions"
+      method: GET
+      params:
+        - name: role
+          value: member
+          type: path
+        - name: org
+          value: testorg
+          type: path
+      body:
+        type: json
+        data: ""
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: date
+          value: Mon, 22 Jun 2026 07:39:23 GMT
+        - name: server
+          value: uvicorn
+        - name: content-length
+          value: "135"
+        - name: content-type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "message": "Permissions retrieved successfully.",
+            "data": [
+              {
+                "role": "member",
+                "org": "testorg",
+                "resource": "organizations",
+                "action": "read"
+              }
+            ]
+          }

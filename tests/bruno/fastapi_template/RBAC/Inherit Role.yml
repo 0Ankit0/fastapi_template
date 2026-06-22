@@ -1,22 +1,21 @@
 info:
   name: Inherit Role
   type: http
-  seq: 7
+  seq: 8
 
 http:
   method: POST
-  url: /api/v1/organizations/{org}/rbac/role-inheritance
+  url: "{{BASE_URI}}/api/v1/organizations/:org/rbac/role-inheritance"
   params:
     - name: org
-      value: ""
+      value: testorg
       type: path
-      description: Organization slug
   body:
     type: json
     data: |-
       {
-      	"role": "",
-      	"parent_role": ""
+        "role": "admin",
+        "parent_role": "member"
       }
   auth: inherit
 
@@ -25,3 +24,39 @@ settings:
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+
+examples:
+  - name: success
+    request:
+      url: "{{BASE_URI}}/api/v1/organizations/:org/rbac/role-inheritance"
+      method: POST
+      params:
+        - name: org
+          value: testorg
+          type: path
+      body:
+        type: json
+        data: |-
+          {
+          	"role": "admin",
+          	"parent_role": "member"
+          }
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: date
+          value: Mon, 22 Jun 2026 04:30:22 GMT
+        - name: server
+          value: uvicorn
+        - name: content-length
+          value: "62"
+        - name: content-type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "message": "Role inheritance added successfully.",
+            "data": null
+          }

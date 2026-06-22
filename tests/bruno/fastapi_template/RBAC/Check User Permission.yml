@@ -1,23 +1,22 @@
 info:
   name: Check User Permission
   type: http
-  seq: 10
+  seq: 11
 
 http:
   method: POST
-  url: /api/v1/organizations/{org}/rbac/permissions/check
+  url: "{{BASE_URI}}/api/v1/organizations/:org/rbac/permissions/check"
   params:
     - name: org
-      value: ""
+      value: testorg
       type: path
-      description: Organization slug
   body:
     type: json
     data: |-
       {
-      	"user_id": 0,
-      	"module": "",
-      	"action": ""
+        "user_id": "RQXPBOb6",
+        "module": "organizations",
+        "action": "read"
       }
   auth: inherit
 
@@ -26,3 +25,39 @@ settings:
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+
+examples:
+  - name: success
+    request:
+      url: "{{BASE_URI}}/api/v1/organizations/:org/rbac/permissions/check"
+      method: POST
+      params:
+        - name: org
+          value: testorg
+          type: path
+      body:
+        type: json
+        data: |-
+          {
+          	"user_id": "RQXPBOb6",
+          	"module": "organizations",
+          	"action": "read"
+          }
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: date
+          value: Mon, 22 Jun 2026 04:35:33 GMT
+        - name: server
+          value: uvicorn
+        - name: content-length
+          value: "16"
+        - name: content-type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "allowed": true
+          }
