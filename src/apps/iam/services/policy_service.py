@@ -54,26 +54,32 @@ class PolicyService:
 
     @staticmethod
     def assign_role(
-        user_id: int,
-        role: str,
+        user: User,
+        role: RBACRole,
         org_slug: str,
     ) -> bool:
-        # TODO: Validate that the user belongs to the organization and that the role exists
+        is_organization_member = PolicyService.is_org_member(
+            user=user,
+            org_slug=org_slug,
+        )
+        if not is_organization_member:
+            return False
+
         return enforcer.add_grouping_policy(
-            str(user_id),
-            role,
+            str(user.id),
+            role.value,
             org_slug,
         )
 
     @staticmethod
     def revoke_role(
         user_id: int,
-        role: str,
+        role: RBACRole,
         org_slug: str,
     ) -> bool:
         return enforcer.remove_grouping_policy(
             str(user_id),
-            role,
+            role.value,
             org_slug,
         )
 
@@ -153,10 +159,9 @@ class PolicyService:
         )
     
     # ==========================
-    # Organization Roles
+    # Organization Management
     # ==========================
 
-    @staticmethod
     @staticmethod
     def get_org_roles(org_slug: str) -> dict[int, list[RBACRole]]:
         """
@@ -178,3 +183,32 @@ class PolicyService:
             role_map.setdefault(int(user_id), []).append(role)
 
         return role_map
+    
+    @staticmethod
+    def is_org_member(user: User, org_slug: str) -> bool:
+        if user.is_superuser:
+            return True
+        
+        user_roles = enforcer.get_roles_for_user_in_domain(
+            str(user.id),
+            org_slug,
+        )
+
+        return len(user_roles) > 0
+    
+    @staticmethod
+    def can_access_org_role(
+        user: User,
+        org_slug: str,
+        required_role: RBACRole,
+    ) -> bool:
+        if user.is_superuser:
+            return True
+        
+        user_roles = enforcer.get_roles_for_user_in_domain(
+            str(user.id),
+            org_slug,
+        )
+
+        # Check if any of the user's roles match the required role
+        return required_role.value in user_roles

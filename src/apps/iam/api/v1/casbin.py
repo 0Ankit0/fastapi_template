@@ -141,7 +141,7 @@ async def assign_role(
         raise NotFoundError(message="User not found.")
 
     success = PolicyService.assign_role(
-        user_id=user.id,
+        user=user,
         role=payload.role,
         org_slug=str(org.id),
     )
