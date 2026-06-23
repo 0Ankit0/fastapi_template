@@ -19,6 +19,9 @@ from src.core.config import settings
 from src.apps.iam.models import UserProfile
 from src.apps.iam.services.policy_service import PolicyService
 from src.core.storage import save_media_bytes, delete_media
+from src.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/users",tags=["Users"])
 
@@ -50,7 +53,7 @@ async def _invalidate_user_cache(user_id: int) -> None:
     # await RedisCache.clear_pattern(f"permission:check:{user_id}:*")
 
 
-@router.get("/", response_model=CursorPage[UserResponse])
+@router.get("/{org}", response_model=CursorPage[UserResponse])
 async def list_users(
     db: DB,
     current_user: Annotated[User, Depends(get_current_active_superuser)],
@@ -87,9 +90,11 @@ async def list_users(
             selectinload(User.profile),
         )
     )
-    if current_org:
-        roles = await PolicyService.get_user_roles(current_user,current_org.slug)
-
+    if not current_org:
+        raise ValidationError("Current organization not found")
+    
+    role_map = PolicyService.get_org_roles(current_org.slug)
+        
     if search:
         search_filter = or_(
             col(User.email).ilike(f"%{search}%"),
@@ -127,9 +132,13 @@ async def list_users(
         users = users[: pagination.limit]
 
     items = [
-        UserResponse.model_validate(user)
+        UserResponse(
+            **UserResponse.model_validate(user).model_dump(exclude={"roles"}),
+            roles=role_map.get(user.id, [])
+        ) 
         for user in users
     ]
+    
 
     next_cursor = None
 
