@@ -19,10 +19,13 @@ COPY src ./src
 COPY alembic ./alembic
 COPY alembic.ini ./
 
+COPY infra/entrypoint.sh ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh
+
 # Create non-root user
 RUN groupadd --system app && useradd --system --gid app app && chown -R app:app /app
 USER app
 
 EXPOSE 8000
 
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["./entrypoint.sh"]

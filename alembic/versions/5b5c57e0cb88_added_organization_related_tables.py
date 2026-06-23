@@ -42,7 +42,7 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_organization_members_organization_id'), 'organization_members', ['organization_id'], unique=False)
     op.create_index(op.f('ix_organization_members_user_id'), 'organization_members', ['user_id'], unique=False)
-    op.drop_table('casbin_rule')
+    op.drop_table('casbin_rule', if_exists=True)
     op.add_column('user_profiles', sa.Column('first_name', sa.String(length=50), nullable=True))
     op.add_column('user_profiles', sa.Column('last_name', sa.String(length=50), nullable=True))
     # ### end Alembic commands ###
@@ -66,5 +66,5 @@ def downgrade() -> None:
     )
     op.drop_index(op.f('ix_organization_members_user_id'), table_name='organization_members')
     op.drop_index(op.f('ix_organization_members_organization_id'), table_name='organization_members')
-    op.drop_table('organization_members')
+    op.drop_table('organization_members', if_exists=True)
     # ### end Alembic commands ###
