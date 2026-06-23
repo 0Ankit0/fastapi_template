@@ -22,3 +22,15 @@ class PermissionCheckRequest(BaseSchema):
     user_id: HashId
     module: str
     action: str
+
+class PermissionResponse(BaseSchema):
+    role: str
+    org: str
+    resource: str
+    action: str
+
+class RoleResponse(BaseSchema):
+    roles: list[str]
+    org: str
+
+

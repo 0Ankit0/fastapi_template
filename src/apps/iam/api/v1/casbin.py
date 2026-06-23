@@ -21,6 +21,8 @@ from src.core.types import (
 )
 from src.apps.iam.schemas.casbin import (
     PermissionRequest,
+    PermissionResponse,
+    RoleResponse,
     UserRoleRequest,
     RoleInheritanceRequest,
     PermissionCheckRequest,
@@ -57,7 +59,7 @@ async def add_permission(
 ):
     success = PolicyService.add_permission(
         role=payload.role,
-        org_slug=str(org.id),
+        org_slug=str(org.slug),
         module=payload.module,
         action=payload.action,
     )
@@ -65,7 +67,7 @@ async def add_permission(
     logger.info(
         "Add permission: role=%s, org=%s, module=%s, action=%s, success=%s",
         payload.role,
-        org.id,
+        org.slug,
         payload.module,
         payload.action,
         success,
@@ -86,7 +88,7 @@ async def remove_permission(
 ):
     success = PolicyService.remove_permission(
         role=payload.role,
-        org_slug=str(org.id),
+        org_slug=str(org.slug),
         module=payload.module,
         action=payload.action,
     )
@@ -94,7 +96,7 @@ async def remove_permission(
     logger.info(
         "Remove permission: role=%s, org=%s, module=%s, action=%s, success=%s",
         payload.role,
-        org.id,
+        org.slug,
         payload.module,
         payload.action,
         success,
@@ -107,15 +109,21 @@ async def remove_permission(
 
 @router.get(
     "/roles/{role}/permissions",
-    response_model=ApiSuccessResponse[list[list[str]]],
+    response_model=ApiSuccessResponse[list[PermissionResponse]],
 )
 async def get_permissions(
     role: str,
     org: CurrentOrg,
 ):
-    permissions = PolicyService.get_permissions(role, str(org.id))
+    permissions = PolicyService.get_permissions(role, str(org.slug))
+    permissions = [PermissionResponse.model_validate({
+        "role": policy[0],
+        "org": policy[1],
+        "resource": policy[2],
+        "action": policy[3],
+    }) for policy in permissions]
 
-    return ApiSuccessResponse(
+    return ApiSuccessResponse[list[PermissionResponse]](
         message="Permissions retrieved successfully.",
         data=permissions,
     )
@@ -143,14 +151,14 @@ async def assign_role(
     success = PolicyService.assign_role(
         user=user,
         role=payload.role,
-        org_slug=str(org.id),
+        org_slug=str(org.slug),
     )
 
     logger.info(
         "Assign role: user_id=%s, role=%s, org=%s, success=%s",
         payload.user_id,
         payload.role,
-        org.id,
+        org.slug,
         success,
     )
     if not success:
@@ -176,14 +184,14 @@ async def revoke_role(
     success = PolicyService.revoke_role(
         user_id=user.id,
         role=payload.role,
-        org_slug=str(org.id),
+        org_slug=str(org.slug),
     )
 
     logger.info(
         "Revoke role: user_id=%s, role=%s, org=%s, success=%s",
         payload.user_id,
         payload.role,
-        org.id,
+        org.slug,
         success,
     )
     if not success:
@@ -194,7 +202,7 @@ async def revoke_role(
 
 @router.get(
     "/users/{user_id}/roles",
-    response_model=ApiSuccessResponse[list[str]],
+    response_model=ApiSuccessResponse[list[RoleResponse]],
 )
 async def get_user_roles(
     user_id: HashId,
@@ -208,14 +216,48 @@ async def get_user_roles(
 
     roles = PolicyService.get_user_roles(
         user_id=user.id,
-        org_slug=str(org.id),
+        org_slug=str(org.slug),
     )
+    roles = [RoleResponse.model_validate({
+        "roles": roles,
+        "org": str(org.slug),
+    })]
 
-    return ApiSuccessResponse(
+    return ApiSuccessResponse[list[RoleResponse]](
         message="Roles retrieved successfully.",
         data=roles,
     )
 
+
+@router.get(
+    "/users/{user_id}/permissions",
+    response_model=ApiSuccessResponse[list[PermissionResponse]],
+)
+async def get_user_permissions(
+    user_id: HashId,
+    db: DB,
+    org: CurrentOrg,
+):
+    user =await db.get(User, user_id)
+
+    if not user:
+        raise NotFoundError(message="User not found.")
+
+    permissions = PolicyService.get_user_permissions(
+        user_id=user.id,
+        org_slug=str(org.slug),
+    )
+    permissions = [PermissionResponse.model_validate({
+        "role": policy[0],
+        "org": policy[1],
+        "resource": policy[2],
+        "action": policy[3],
+    }) for policy in permissions]
+
+    return ApiSuccessResponse[list[PermissionResponse]](
+        message="Permissions retrieved successfully.",
+        data=permissions,
+    )
 
 # =====================================================
 # Role Inheritance
@@ -232,14 +274,14 @@ async def inherit_role(
     success = PolicyService.inherit_role(
         role=payload.role,
         parent_role=payload.parent_role,
-        org_slug=str(org.id),
+        org_slug=str(org.slug),
     )
 
     logger.info(
         "Inherit role: role=%s, parent_role=%s, org=%s, success=%s",
         payload.role,
         payload.parent_role,
-        org.id,
+        org.slug,
         success,
     )
     if not success:
@@ -259,14 +301,14 @@ async def remove_role_inheritance(
     success = PolicyService.remove_role_inheritance(
         role=payload.role,
         parent_role=payload.parent_role,
-        org_slug=str(org.id),
+        org_slug=str(org.slug),
     )
 
     logger.info(
         "Remove role inheritance: role=%s, parent_role=%s, org=%s, success=%s",
         payload.role,
         payload.parent_role,
-        org.id,
+        org.slug,
         success,
     )
     if not success:
@@ -290,7 +332,7 @@ async def check_my_permission(
 ):
     allowed = PolicyService.has_permission(
         user=current_user,
-        org_slug=str(org.id),
+        org_slug=str(org.slug),
         module=module,
         action=action,
     )
@@ -315,7 +357,7 @@ async def check_user_permission(
 
     allowed = PolicyService.has_permission(
         user=user,
-        org_slug=str(org.id),
+        org_slug=str(org.slug),
         module=payload.module,
         action=payload.action,
     )

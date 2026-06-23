@@ -42,7 +42,7 @@ class PolicyService:
 
     @staticmethod
     def get_permissions(role: str,org_slug: str):
-        return enforcer.get_filtered_policy(
+        return enforcer.get_filtered_policy( # Only gets the direct permissions assigned to the role, not inherited ones
             0,
             role,
             org_slug
@@ -58,16 +58,16 @@ class PolicyService:
         role: RBACRole,
         org_slug: str,
     ) -> bool:
-        is_organization_member = PolicyService.is_org_member(
-            user=user,
-            org_slug=org_slug,
-        )
-        if not is_organization_member:
-            return False
+        # is_organization_member = PolicyService.is_org_member(
+        #     user=user,
+        #     org_slug=org_slug,
+        # )
+        # if not is_organization_member:
+        #     return False
 
         return enforcer.add_grouping_policy(
             str(user.id),
-            role.value,
+            role,
             org_slug,
         )
 
@@ -79,7 +79,7 @@ class PolicyService:
     ) -> bool:
         return enforcer.remove_grouping_policy(
             str(user_id),
-            role.value,
+            role,
             org_slug,
         )
 
@@ -89,6 +89,16 @@ class PolicyService:
         org_slug: str,
     ):
         return enforcer.get_roles_for_user_in_domain(
+            str(user_id),
+            org_slug,
+        )
+    
+    @staticmethod
+    def get_user_permissions(
+        user_id: int,
+        org_slug: str,
+    ):
+        return enforcer.get_implicit_permissions_for_user(
             str(user_id),
             org_slug,
         )
