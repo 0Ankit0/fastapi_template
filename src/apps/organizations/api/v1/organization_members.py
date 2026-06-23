@@ -19,7 +19,10 @@ from src.db.query import select, or_, and_
 import src.core.security as security
 from src.apps.organizations.models import OrganizationMember, Organization
 from src.core.logging import get_logger
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
+limiter = Limiter(key_func=get_remote_address)
 logger = get_logger(__name__)
 
 router = APIRouter(
@@ -30,7 +33,7 @@ router = APIRouter(
     ]
 )
 
-
+ORGANIZATION_MEMBERS_RATE_LIMIT = limiter.limit("10/minute")
 CurrentOrg = Annotated[Organization, Depends(get_current_org)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
@@ -39,6 +42,7 @@ async def _invalidate_org_members_cache(org_id: int):
     await RedisCache.clear_pattern(f"org:{org_id}:member:*")
 
 @router.get("/", status_code=status.HTTP_200_OK, response_model=CursorPage[OrganizationMemberResponse])
+@ORGANIZATION_MEMBERS_RATE_LIMIT
 async def list_organization_members(
     db: DB,
     org: CurrentOrg,
@@ -117,6 +121,7 @@ async def list_organization_members(
     return response
 
 @router.get("/{member_id}", status_code=status.HTTP_200_OK, response_model=ApiSuccessResponse[OrganizationMemberResponse])
+@ORGANIZATION_MEMBERS_RATE_LIMIT
 async def get_organization_member(
     db: DB,
     member_id: HashId,
@@ -160,6 +165,7 @@ async def get_organization_member(
     )
 
 @router.get("/{member_id}/add", status_code=status.HTTP_200_OK, response_model=ApiSuccessResponse[None])
+@ORGANIZATION_MEMBERS_RATE_LIMIT
 async def add_member(
     member_id: Annotated[HashId, Path(description="ID of the user to add as an organization member")],
     db: DB,
@@ -226,6 +232,7 @@ async def add_member(
     )
 
 @router.get("/invite", status_code=status.HTTP_200_OK, response_model=ApiSuccessResponse[None])
+@ORGANIZATION_MEMBERS_RATE_LIMIT
 async def invite_member(
     data: OrganizationMembershipInvitationRequest,
     db: DB,
@@ -285,6 +292,7 @@ async def invite_member(
     )
 
 @router.get("/{member_id}/resend-invite", status_code=status.HTTP_200_OK, response_model=ApiSuccessResponse[OrganizationMemberResponse])
+@ORGANIZATION_MEMBERS_RATE_LIMIT
 async def resend_invite(
     member_id: Annotated[HashId, Path(description="ID of the organization member to resend the invitation to")],
     db: DB,
@@ -337,6 +345,7 @@ async def resend_invite(
     )
 
 @router.delete("/{member_id}", status_code=status.HTTP_200_OK, response_model=ApiSuccessResponse[None])
+@ORGANIZATION_MEMBERS_RATE_LIMIT
 async def remove_organization_member(
     member_id: HashId,
     db: DB,

@@ -26,9 +26,10 @@ logger = get_logger(__name__)
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
+PASSWORD_RESET_RATE_LIMIT = limiter.limit(lambda: settings.RATE_LIMIT_PASSWORD_RESET)
 
 @router.post("/password-reset-request/", response_model=ApiSuccessResponse[None])
-@limiter.limit(lambda: settings.RATE_LIMIT_PASSWORD_RESET)
+@PASSWORD_RESET_RATE_LIMIT
 async def request_password_reset(
     request: Request,
     reset_data: ResetPasswordRequest,
@@ -63,6 +64,7 @@ async def request_password_reset(
 
 
 @router.post("/password-reset-confirm/", response_model=ApiSuccessResponse[None])
+@PASSWORD_RESET_RATE_LIMIT
 async def confirm_password_reset(
     body: ResetPasswordConfirm,
     db: DB,
@@ -163,6 +165,7 @@ async def confirm_password_reset(
 
 
 @router.post("/change-password/", response_model=ApiSuccessResponse[None])
+@PASSWORD_RESET_RATE_LIMIT
 async def change_password(
     password_data: ChangePasswordRequest,
     db: DB,

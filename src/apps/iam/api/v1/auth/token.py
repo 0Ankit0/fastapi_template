@@ -1,28 +1,32 @@
 from datetime import timedelta, datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status, Body
+from fastapi import APIRouter, HTTPException, Request, Response, status, Body
 from src.core.schemas import ApiSuccessResponse
 from src.core.eums import UserStatus
 from src.core.exceptions import AuthorizationError
 from src.db.query import select
-from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.config import settings
 from src.core import security
 from src.core.security import TokenType
 from src.core.cache import RedisCache
 from src.core.cookies import set_auth_cookies
-from src.core.dependencies import DB, get_current_user
+from src.core.dependencies import DB
 from src.apps.iam.models.user import User
 from src.apps.iam.models.token_tracking import TokenTracking
 from src.apps.iam.schemas.token import Token
 from src.apps.iam.utils.ip_access import revoke_tokens_for_ip, get_client_ip
 from src.core.logging import get_logger
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
+limiter = Limiter(key_func=get_remote_address)
 logger = get_logger(__name__)
 
 router = APIRouter()
 
+TOKEN_REFRESH_RATE_LIMIT = limiter.limit("5/minute") 
 
 @router.post("/refresh/", response_model=ApiSuccessResponse[Token] | ApiSuccessResponse[None])
+@TOKEN_REFRESH_RATE_LIMIT
 async def refresh_token(
     response: Response,
     request: Request,

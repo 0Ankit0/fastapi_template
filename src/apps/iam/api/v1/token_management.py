@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from src.core.types import HashId
 from src.core.utils import decode_cursor, encode_cursor
 from src.db.query import col, desc, func, select
-from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone
 from src.core.dependencies import DB, get_current_user
 from src.apps.iam.models.user import User
@@ -11,14 +10,19 @@ from src.apps.iam.schemas.token_tracking import TokenTrackingResponse
 from src.core.schemas import CursorPage, CursorPagination
 from src.core.cache import RedisCache
 from src.db.query import or_, and_
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 router = APIRouter(prefix="/token-management", tags=["Token Management"])
+limiter = Limiter(key_func=get_remote_address)
 
+TOKEN_MANAGEMENT_RATE_LIMIT = limiter.limit("10/minute")
 
 @router.get(
     "/",
     response_model=CursorPage[TokenTrackingResponse],
 )
+@TOKEN_MANAGEMENT_RATE_LIMIT
 async def list_active_tokens(
     db: DB,
     pagination: CursorPagination = Depends(),
@@ -88,6 +92,7 @@ async def list_active_tokens(
         raise 
 
 @router.post("/revoke/{token_id}")
+@TOKEN_MANAGEMENT_RATE_LIMIT
 async def revoke_token(
     token_id: HashId,
     request: Request,
@@ -135,6 +140,7 @@ async def revoke_token(
 
 
 @router.post("/revoke-all")
+@TOKEN_MANAGEMENT_RATE_LIMIT
 async def revoke_all_tokens(
     db: DB,
     request: Request,

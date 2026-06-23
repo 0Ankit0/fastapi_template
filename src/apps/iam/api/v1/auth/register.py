@@ -25,9 +25,10 @@ from src.apps.iam.utils.ip_access import revoke_tokens_for_ip, get_client_ip
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
+SIGNUP_RATE_LIMIT = limiter.limit(lambda: settings.RATE_LIMIT_SIGNUP)
 
 @router.post("/signup/", response_model = ApiSuccessResponse[Token])
-@limiter.limit(lambda: settings.RATE_LIMIT_SIGNUP)
+@SIGNUP_RATE_LIMIT
 async def signup(
     request: Request,
     response: Response,
@@ -142,6 +143,7 @@ async def signup(
 
 
 @router.post("/verify-email/", response_model=ApiSuccessResponse[None])
+@SIGNUP_RATE_LIMIT
 async def verify_email(
     t: str,
     request: Request,
@@ -239,6 +241,7 @@ async def verify_email(
 
 
 @router.post("/resend-verification/", response_model=ApiSuccessResponse[None])
+@SIGNUP_RATE_LIMIT
 async def resend_verification_email(
     data: EmailVerificationRequest,
     db: DB,

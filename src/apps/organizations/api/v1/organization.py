@@ -13,8 +13,10 @@ from src.core.schemas import CursorPage, CursorPagination, ApiSuccessResponse
 from src.core.eums import OrganizationStatus, RBACModule
 from src.core.cache import RedisCache
 from slugify import slugify
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
-
+limiter = Limiter(key_func=get_remote_address)
 router = APIRouter(
     prefix="/organizations/{org}", 
     tags=["Organizations"],
@@ -22,6 +24,7 @@ router = APIRouter(
         Depends(require_module_permission(RBACModule.ORGANIZATIONS))
     ]
 )
+ORGANIZATION_RATE_LIMIT = limiter.limit("10/minute")
 
 async def _invalidate_org_cache(org_id: int):
    await RedisCache.delete(f"org:{org_id}")
@@ -29,6 +32,7 @@ async def _invalidate_org_cache(org_id: int):
 
 
 @router.get("/", response_model=CursorPage[OrganizationResponse])
+@ORGANIZATION_RATE_LIMIT
 async def list_organizations(
    db: DB,
    pagination: CursorPagination = Depends(),
@@ -110,6 +114,7 @@ async def list_organizations(
     return response
 
 @router.get("/{org_id}", response_model=ApiSuccessResponse[OrganizationResponse])
+@ORGANIZATION_RATE_LIMIT
 async def get_organization(
    org_id: HashId,
    db: DB 
@@ -144,6 +149,7 @@ async def get_organization(
     )
 
 @router.post("/", response_model=ApiSuccessResponse[OrganizationResponse])
+@ORGANIZATION_RATE_LIMIT
 async def create_organization(
    org_data: OrganizationCreate,
    db: DB,
@@ -173,6 +179,7 @@ async def create_organization(
     )
 
 @router.put("/{org_id}", response_model=ApiSuccessResponse[OrganizationResponse])
+@ORGANIZATION_RATE_LIMIT
 async def update_organization(
    org_id: HashId,
    org_data: OrganizationUpdate,
@@ -202,6 +209,7 @@ async def update_organization(
     )
 
 @router.patch("/{org_id}", response_model=ApiSuccessResponse[OrganizationResponse])
+@ORGANIZATION_RATE_LIMIT
 async def partial_update_organization(
    org_id: HashId,
    org_data: OrganizationPartialUpdate,
@@ -231,6 +239,7 @@ async def partial_update_organization(
    )
 
 @router.delete("/{org_id}", response_model=ApiSuccessResponse[None])
+@ORGANIZATION_RATE_LIMIT
 async def delete_organization(
    org_id: HashId,
    db: DB ,

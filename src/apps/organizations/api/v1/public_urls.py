@@ -20,18 +20,21 @@ from src.db.query import select, or_, and_
 import src.core.security as security
 from src.apps.organizations.models import OrganizationMember, Organization
 from src.core.logging import get_logger
-
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 logger = get_logger(__name__)
-
+limiter = Limiter(key_func=get_remote_address)
 router = APIRouter()
 
 router = APIRouter(
     prefix="/organizations/members",
     tags=["Organization Members"],
 )
+PUBLIC_ORG_MEMBERS_RATE_LIMIT = limiter.limit("10/minute")
 
 @router.get("/accept-invitation/", name="accept_invitation", status_code=status.HTTP_200_OK, response_model= ApiSuccessResponse[None])
+@PUBLIC_ORG_MEMBERS_RATE_LIMIT
 async def accept_invitation(
     db: DB,
     t: str = Query(..., description="Invitation token to verify"),

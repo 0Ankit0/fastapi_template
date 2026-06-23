@@ -23,13 +23,18 @@ from src.apps.iam.schemas.user import VerifyOTPRequest, DisableOTPRequest
 from src.core.cache import RedisCache
 from src.apps.iam.utils.ip_access import revoke_tokens_for_ip, get_client_ip
 from src.core.logging import get_logger
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
+limiter = Limiter(key_func=get_remote_address)
 logger = get_logger(__name__)
 
 router = APIRouter()
 
+OTP_RATE_LIMIT = limiter.limit("1/second")
 
 @router.post("/otp/enable/", response_model=ApiSuccessResponse[OtpEnableResponse])
+@OTP_RATE_LIMIT
 async def enable_otp(
     db: DB,
     current_user: User = Depends(get_current_user),
@@ -87,6 +92,7 @@ async def enable_otp(
 
 
 @router.post("/otp/verify/", response_model=ApiSuccessResponse[None])
+@OTP_RATE_LIMIT
 async def verify_otp(
     otp_data: VerifyOTPRequest,
     db: DB,
@@ -125,6 +131,7 @@ async def verify_otp(
 
 
 @router.post("/otp/disable/", response_model=ApiSuccessResponse[None])
+@OTP_RATE_LIMIT
 async def disable_otp(
     otp_data: DisableOTPRequest,
     db: DB,
@@ -165,6 +172,7 @@ async def disable_otp(
 
 
 @router.post("/otp/validate/", response_model=ApiSuccessResponse[Token] | ApiSuccessResponse[None])
+@OTP_RATE_LIMIT
 async def validate_otp_login(
     otp_data: VerifyOTPRequest,
     request: Request,

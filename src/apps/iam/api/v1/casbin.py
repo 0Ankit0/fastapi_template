@@ -8,7 +8,6 @@ from src.apps.iam.services.policy_service import PolicyService
 from src.core.eums import RBACModule as Module
 from src.core.dependencies import (
     DB,
-    get_current_user,
     get_current_org,
     get_current_active_superuser,
     require_module_permission,
@@ -27,7 +26,10 @@ from src.apps.iam.schemas.casbin import (
     RoleInheritanceRequest,
     PermissionCheckRequest,
 )
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
+limiter = Limiter(key_func=get_remote_address)
 CurrentOrg = Annotated[Organization, Depends(get_current_org)]
 CurrentUser = Annotated[User, Depends(get_current_active_superuser)]
 
@@ -42,8 +44,8 @@ router = APIRouter(
 
 logger = get_logger(__name__)
 
-
-
+CASBIN_RATE_LIMIT = limiter.limit("10/minute")
+AUTHORIZATION_CHECK_RATE_LIMIT = limiter.limit("20/minute")
 
 # =====================================================
 # Permission Policies
@@ -53,6 +55,7 @@ logger = get_logger(__name__)
     "/permissions",
     response_model=ApiSuccessResponse[None],
 )
+@CASBIN_RATE_LIMIT
 async def add_permission(
     payload: PermissionRequest,
     org: CurrentOrg,
@@ -82,6 +85,7 @@ async def add_permission(
     "/permissions",
     response_model=ApiSuccessResponse[None],
 )
+@CASBIN_RATE_LIMIT
 async def remove_permission(
     payload: PermissionRequest,
     org: CurrentOrg,
@@ -111,6 +115,7 @@ async def remove_permission(
     "/roles/{role}/permissions",
     response_model=ApiSuccessResponse[list[PermissionResponse]],
 )
+@CASBIN_RATE_LIMIT
 async def get_permissions(
     role: str,
     org: CurrentOrg,
@@ -137,6 +142,7 @@ async def get_permissions(
     "/users/roles",
     response_model=ApiSuccessResponse[None],
 )
+@CASBIN_RATE_LIMIT
 async def assign_role(
     payload: UserRoleRequest,
     db: DB,
@@ -171,6 +177,7 @@ async def assign_role(
     "/users/roles",
     response_model=ApiSuccessResponse[None],
 )
+@CASBIN_RATE_LIMIT
 async def revoke_role(
     payload: UserRoleRequest,
     db: DB,
@@ -204,6 +211,7 @@ async def revoke_role(
     "/users/{user_id}/roles",
     response_model=ApiSuccessResponse[list[RoleResponse]],
 )
+@CASBIN_RATE_LIMIT
 async def get_user_roles(
     user_id: HashId,
     db: DB,
@@ -233,6 +241,7 @@ async def get_user_roles(
     "/users/{user_id}/permissions",
     response_model=ApiSuccessResponse[list[PermissionResponse]],
 )
+@CASBIN_RATE_LIMIT
 async def get_user_permissions(
     user_id: HashId,
     db: DB,
@@ -267,6 +276,7 @@ async def get_user_permissions(
     "/role-inheritance",
     response_model=ApiSuccessResponse[None],
 )
+@CASBIN_RATE_LIMIT
 async def inherit_role(
     payload: RoleInheritanceRequest,
     org: CurrentOrg,
@@ -294,6 +304,7 @@ async def inherit_role(
     "/role-inheritance",
     response_model=ApiSuccessResponse[None],
 )
+@CASBIN_RATE_LIMIT
 async def remove_role_inheritance(
     payload: RoleInheritanceRequest,
     org: CurrentOrg,
@@ -324,6 +335,7 @@ async def remove_role_inheritance(
 @router.get(
     "/permissions/check",
 )
+@AUTHORIZATION_CHECK_RATE_LIMIT
 async def check_my_permission(
     module: str,
     action: str,
@@ -345,6 +357,7 @@ async def check_my_permission(
 @router.post(
     "/permissions/check",
 )
+@AUTHORIZATION_CHECK_RATE_LIMIT
 async def check_user_permission(
     payload: PermissionCheckRequest,
     db: DB,

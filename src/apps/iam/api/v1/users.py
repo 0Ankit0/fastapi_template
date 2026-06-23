@@ -20,9 +20,13 @@ from src.apps.iam.models import UserProfile
 from src.apps.iam.services.policy_service import PolicyService
 from src.core.storage import save_media_bytes, delete_media
 from src.core.logging import get_logger
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
+limiter = Limiter(key_func=get_remote_address)
 logger = get_logger(__name__)
 
+USER_RATE_LIMIT = limiter.limit("10/minute")
 router = APIRouter(prefix="/users",tags=["Users"])
 
 def _serialize_user_response(user: User) -> dict[str, object]:
@@ -54,6 +58,7 @@ async def _invalidate_user_cache(user_id: int) -> None:
 
 
 @router.get("/{org}", response_model=CursorPage[UserResponse])
+@USER_RATE_LIMIT
 async def list_users(
     db: DB,
     current_user: Annotated[User, Depends(get_current_active_superuser)],
@@ -161,6 +166,7 @@ async def list_users(
     return response
 
 @router.get("/me", response_model=UserResponse)
+@USER_RATE_LIMIT
 async def get_current_user_profile(
     current_user: User = Depends(get_current_user)
 ):
@@ -182,6 +188,7 @@ async def get_current_user_profile(
 
 
 @router.post("/me/avatar", response_model=UserResponse)
+@USER_RATE_LIMIT
 async def upload_avatar(
     db: DB,
     file: UploadFile = File(...),
@@ -237,6 +244,7 @@ async def upload_avatar(
 
 
 @router.get("/{user_id}", response_model=UserResponse)
+@USER_RATE_LIMIT
 async def get_user(
     user_id: HashId,
     db: DB,
@@ -273,6 +281,7 @@ async def get_user(
 
 
 @router.patch("/me", response_model=UserResponse)
+@USER_RATE_LIMIT
 async def update_current_user(
     user_update: UserUpdate,
     db: DB,
@@ -323,6 +332,7 @@ async def update_current_user(
 
 
 @router.patch("/{user_id}", response_model=UserResponse)
+@USER_RATE_LIMIT
 async def update_user(
     user_id: HashId,
     user_update: UserUpdate,
@@ -408,6 +418,7 @@ async def update_user(
 
 
 @router.delete("/{user_id}")
+@USER_RATE_LIMIT
 async def delete_user(
     user_id: HashId,
     db: DB,
