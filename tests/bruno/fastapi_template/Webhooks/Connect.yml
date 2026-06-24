@@ -1,0 +1,15 @@
+info:
+  name: Connect
+  type: websocket
+  seq: 1
+
+websocket:
+  url: "{{BASE_URI}}/api/v1/ws/testorg/connect?token={{access_token}}"
+  message:
+    type: json
+    data: "{}"
+  auth: inherit
+
+settings:
+  timeout: 0
+  keepAliveInterval: 0

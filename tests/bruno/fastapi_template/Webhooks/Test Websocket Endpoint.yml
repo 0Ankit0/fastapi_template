@@ -1,0 +1,54 @@
+info:
+  name: Test Websocket Endpoint
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{BASE_URI}}/api/v1/ws/test_user/:user_id"
+  params:
+    - name: user_id
+      value: RQXPBOb6
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: success
+    request:
+      url: "{{BASE_URI}}/api/v1/ws/test_user/:user_id"
+      method: POST
+      params:
+        - name: user_id
+          value: RQXPBOb6
+          type: path
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: date
+          value: Wed, 24 Jun 2026 04:31:48 GMT
+        - name: server
+          value: uvicorn
+        - name: content-length
+          value: "108"
+        - name: content-type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "message": "Message sent to user 2",
+            "data": {
+              "user_id": 2,
+              "payload": {
+                "type": "test",
+                "message": "Hello user 2"
+              }
+            }
+          }
