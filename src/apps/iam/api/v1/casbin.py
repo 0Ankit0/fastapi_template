@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from src.apps.organizations.models.organization import Organization
 from src.apps.iam.models import User
 from src.apps.iam.services.policy_service import PolicyService
@@ -59,6 +59,7 @@ AUTHORIZATION_CHECK_RATE_LIMIT = limiter.limit("20/minute")
 async def add_permission(
     payload: PermissionRequest,
     org: CurrentOrg,
+    request: Request,
 ):
     success = PolicyService.add_permission(
         role=payload.role,
@@ -89,6 +90,7 @@ async def add_permission(
 async def remove_permission(
     payload: PermissionRequest,
     org: CurrentOrg,
+    request: Request
 ):
     success = PolicyService.remove_permission(
         role=payload.role,
@@ -119,6 +121,7 @@ async def remove_permission(
 async def get_permissions(
     role: str,
     org: CurrentOrg,
+    request: Request
 ):
     permissions = PolicyService.get_permissions(role, str(org.slug))
     permissions = [PermissionResponse.model_validate({
@@ -146,6 +149,7 @@ async def get_permissions(
 async def assign_role(
     payload: UserRoleRequest,
     db: DB,
+    request: Request,
     org: CurrentOrg,
 ):
     
@@ -181,6 +185,7 @@ async def assign_role(
 async def revoke_role(
     payload: UserRoleRequest,
     db: DB,
+    request: Request,
     org: CurrentOrg,
 ):
     user = await db.get(User, payload.user_id)
@@ -216,6 +221,7 @@ async def get_user_roles(
     user_id: HashId,
     db: DB,
     org: CurrentOrg,
+    request: Request
 ):
     user =await db.get(User, user_id)
 
@@ -246,6 +252,7 @@ async def get_user_permissions(
     user_id: HashId,
     db: DB,
     org: CurrentOrg,
+    request: Request
 ):
     user =await db.get(User, user_id)
 
@@ -280,6 +287,7 @@ async def get_user_permissions(
 async def inherit_role(
     payload: RoleInheritanceRequest,
     org: CurrentOrg,
+    request: Request
 ):
     success = PolicyService.inherit_role(
         role=payload.role,
@@ -308,6 +316,7 @@ async def inherit_role(
 async def remove_role_inheritance(
     payload: RoleInheritanceRequest,
     org: CurrentOrg,
+    request: Request
 ):
     success = PolicyService.remove_role_inheritance(
         role=payload.role,
@@ -341,6 +350,7 @@ async def check_my_permission(
     action: str,
     current_user: CurrentUser,
     org: CurrentOrg,
+    request: Request
 ):
     allowed = PolicyService.has_permission(
         user=current_user,
@@ -362,6 +372,7 @@ async def check_user_permission(
     payload: PermissionCheckRequest,
     db: DB,
     org: CurrentOrg,
+    request: Request
 ):
     user = await db.get(User, payload.user_id)
 

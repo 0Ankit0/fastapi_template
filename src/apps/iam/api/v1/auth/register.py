@@ -245,6 +245,7 @@ async def verify_email(
 async def resend_verification_email(
     data: EmailVerificationRequest,
     db: DB,
+    request: Request
 ) -> ApiSuccessResponse[None]:
     """
     Resend email verification link

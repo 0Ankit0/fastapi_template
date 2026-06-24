@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from src.core.types import HashId
 from src.apps.iam.models.user import User
 from src.core.exceptions import NotFoundError
@@ -35,6 +35,7 @@ async def _invalidate_org_cache(org_id: int):
 @ORGANIZATION_RATE_LIMIT
 async def list_organizations(
    db: DB,
+   request: Request,
    pagination: CursorPagination = Depends(),
    search: str | None = Query(
       default=None,
@@ -117,6 +118,7 @@ async def list_organizations(
 @ORGANIZATION_RATE_LIMIT
 async def get_organization(
    org_id: HashId,
+   request: Request,
    db: DB 
 ):
     """
@@ -153,6 +155,7 @@ async def get_organization(
 async def create_organization(
    org_data: OrganizationCreate,
    db: DB,
+   request: Request,
    current_user:Annotated[User, Depends(get_current_active_superuser)],
 ):
     """
@@ -182,6 +185,7 @@ async def create_organization(
 @ORGANIZATION_RATE_LIMIT
 async def update_organization(
    org_id: HashId,
+   request: Request,
    org_data: OrganizationUpdate,
    db: DB 
 ):
@@ -212,6 +216,7 @@ async def update_organization(
 @ORGANIZATION_RATE_LIMIT
 async def partial_update_organization(
    org_id: HashId,
+   request: Request,
    org_data: OrganizationPartialUpdate,
    db: DB
 ):
@@ -242,6 +247,7 @@ async def partial_update_organization(
 @ORGANIZATION_RATE_LIMIT
 async def delete_organization(
    org_id: HashId,
+   request: Request,
    db: DB ,
    _ = Depends(get_current_active_superuser)
 ):

@@ -68,6 +68,7 @@ async def request_password_reset(
 async def confirm_password_reset(
     body: ResetPasswordConfirm,
     db: DB,
+    request: Request
 ) -> ApiSuccessResponse[None]:
     """
     Confirm password reset. Pass the token and new password in the request body.
@@ -163,12 +164,12 @@ async def confirm_password_reset(
         await db.rollback()
         raise 
 
-
 @router.post("/change-password/", response_model=ApiSuccessResponse[None])
 @PASSWORD_RESET_RATE_LIMIT
 async def change_password(
     password_data: ChangePasswordRequest,
     db: DB,
+    request: Request,
     current_user: User = Depends(get_current_user),
 ) -> ApiSuccessResponse[None]:
     """

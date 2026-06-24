@@ -45,6 +45,7 @@ async def _invalidate_org_members_cache(org_id: int):
 @ORGANIZATION_MEMBERS_RATE_LIMIT
 async def list_organization_members(
     db: DB,
+    request: Request,
     org: CurrentOrg,
     pagination: CursorPagination = Depends(),
     search: str | None = Query(
@@ -124,6 +125,7 @@ async def list_organization_members(
 @ORGANIZATION_MEMBERS_RATE_LIMIT
 async def get_organization_member(
     db: DB,
+    request: Request,
     member_id: HashId,
     org: CurrentOrg,
 ) -> ApiSuccessResponse[OrganizationMemberResponse]:
@@ -349,6 +351,7 @@ async def resend_invite(
 async def remove_organization_member(
     member_id: HashId,
     db: DB,
+    request: Request,
     org: CurrentOrg,
 ) -> ApiSuccessResponse[None]:
     """

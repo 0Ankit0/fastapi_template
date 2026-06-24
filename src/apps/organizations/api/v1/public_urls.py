@@ -37,6 +37,7 @@ PUBLIC_ORG_MEMBERS_RATE_LIMIT = limiter.limit("10/minute")
 @PUBLIC_ORG_MEMBERS_RATE_LIMIT
 async def accept_invitation(
     db: DB,
+    request: Request,
     t: str = Query(..., description="Invitation token to verify"),
 ) ->  ApiSuccessResponse[None]:
     """

@@ -24,6 +24,7 @@ TOKEN_MANAGEMENT_RATE_LIMIT = limiter.limit("10/minute")
 )
 @TOKEN_MANAGEMENT_RATE_LIMIT
 async def list_active_tokens(
+    request: Request,
     db: DB,
     pagination: CursorPagination = Depends(),
     current_user: User = Depends(get_current_user),

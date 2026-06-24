@@ -37,6 +37,7 @@ OTP_RATE_LIMIT = limiter.limit("1/second")
 @OTP_RATE_LIMIT
 async def enable_otp(
     db: DB,
+    request: Request,
     current_user: User = Depends(get_current_user),
 ) -> ApiSuccessResponse[OtpEnableResponse]:
     """
@@ -96,6 +97,7 @@ async def enable_otp(
 async def verify_otp(
     otp_data: VerifyOTPRequest,
     db: DB,
+    request: Request,
     current_user: User = Depends(get_current_user),
 ) -> ApiSuccessResponse[None]:
     """
@@ -135,6 +137,7 @@ async def verify_otp(
 async def disable_otp(
     otp_data: DisableOTPRequest,
     db: DB,
+    request: Request,
     current_user: User = Depends(get_current_user),
 ) -> ApiSuccessResponse[None]:
     """

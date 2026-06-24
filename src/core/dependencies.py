@@ -42,39 +42,20 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 # "Authorize" button and lock icons on protected endpoints.
 _bearer_scheme = HTTPBearer(auto_error=False)
 
+async def authenticate_token(
+    token: str,
+    db: DB,
+) -> User:
+    payload = security.decode_token(token)
+    token_data = TokenPayload(**payload)
 
-async def get_current_user(
-    request: Request,
-    credentials: Annotated[Optional[HTTPAuthorizationCredentials], Depends(_bearer_scheme)],
-    db: DB 
-    ) -> User:
-    # Prefer the Authorization: Bearer header (captured by HTTPBearer above),
-    # fall back to the access_token cookie for browser-based clients.
-    token: Optional[str] = credentials.credentials if credentials else None
-    if not token:
-        token = request.cookies.get(settings.ACCESS_TOKEN_COOKIE_NAME)
-
-    if not token:
-        raise AuthenticationError(
-            message="Not authenticated.",
-            headers={"WWW-Authenticate": "Bearer"}
-        )
-    
-    try:
-        payload = security.decode_token(token)
-        token_data = TokenPayload(**payload)
-    except (security.TokenValidationError, ValidationError):
-        raise AuthorizationError(
-            message="Could not validate credentials",
-        )
-    
     if not token_data.sub:
         raise AuthorizationError(
-            message="Token payload missing subject",
+            message="Token payload missing subject"
         )
-    
-    # Check if token is tracked and active
+
     jti = payload.get("jti")
+
     if jti:
         token_result = await db.execute(
             select(TokenTracking).where(
@@ -82,14 +63,15 @@ async def get_current_user(
                 TokenTracking.is_active
             )
         )
+
         token_tracking = token_result.scalars().first()
-        
+
         if not token_tracking:
             raise AuthenticationError(
                 message="Token is invalid or has been revoked",
                 headers={"WWW-Authenticate": "Bearer"}
             )
-    
+
     result = await db.execute(
         select(User)
         .options(
@@ -97,20 +79,52 @@ async def get_current_user(
         )
         .where(User.id == int(token_data.sub))
     )
+
     user = result.scalars().first()
 
     if not user:
         raise AuthenticationError(
             message="User not found"
         )
-    
+
     if user.status != UserStatus.ACTIVE:
         raise AuthenticationError(
             message="User account is inactive"
         )
 
-    request.state.current_user_id = user.id
     return user
+
+async def get_current_user(
+    request: Request,
+    credentials: Annotated[
+        Optional[HTTPAuthorizationCredentials],
+        Depends(_bearer_scheme)
+    ],
+    db: DB,
+) -> User:
+
+    token = credentials.credentials if credentials else None
+
+    if not token:
+        token = request.cookies.get(
+            settings.ACCESS_TOKEN_COOKIE_NAME
+        )
+
+    if not token:
+        raise AuthenticationError(
+            message="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    user = await authenticate_token(
+        token=token,
+        db=db,
+    )
+
+    request.state.current_user_id = user.id
+
+    return user  
+   
 
 async def get_current_active_superuser(
 current_user: Annotated[User, Depends(get_current_user)]

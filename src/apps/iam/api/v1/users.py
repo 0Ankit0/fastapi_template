@@ -61,6 +61,7 @@ async def _invalidate_user_cache(user_id: int) -> None:
 @USER_RATE_LIMIT
 async def list_users(
     db: DB,
+    request: Request,
     current_user: Annotated[User, Depends(get_current_active_superuser)],
     current_org: Annotated[Organization, Depends(get_current_org)],
     pagination: CursorPagination = Depends(),
@@ -168,7 +169,8 @@ async def list_users(
 @router.get("/me", response_model=UserResponse)
 @USER_RATE_LIMIT
 async def get_current_user_profile(
-    current_user: User = Depends(get_current_user)
+    request: Request,
+    current_user: User = Depends(get_current_user),
 ):
     """
     Get current user's profile
@@ -186,11 +188,11 @@ async def get_current_user_profile(
     
     return current_user
 
-
 @router.post("/me/avatar", response_model=UserResponse)
 @USER_RATE_LIMIT
 async def upload_avatar(
     db: DB,
+    request: Request,
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
 ):
@@ -242,12 +244,12 @@ async def upload_avatar(
 
     return current_user
 
-
 @router.get("/{user_id}", response_model=UserResponse)
 @USER_RATE_LIMIT
 async def get_user(
     user_id: HashId,
     db: DB,
+    request: Request,
     current_user: User = Depends(get_current_active_superuser)
 ):
     """
@@ -279,12 +281,12 @@ async def get_user(
     
     return user
 
-
 @router.patch("/me", response_model=UserResponse)
 @USER_RATE_LIMIT
 async def update_current_user(
     user_update: UserUpdate,
     db: DB,
+    request: Request,
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -329,7 +331,6 @@ async def update_current_user(
     updated_fields = user_update.model_dump(exclude_unset=True)
 
     return current_user
-
 
 @router.patch("/{user_id}", response_model=UserResponse)
 @USER_RATE_LIMIT
@@ -416,12 +417,12 @@ async def update_user(
 
     return user
 
-
 @router.delete("/{user_id}")
 @USER_RATE_LIMIT
 async def delete_user(
     user_id: HashId,
     db: DB,
+    request: Request,
     current_user: User = Depends(get_current_active_superuser),
 ):
     """
