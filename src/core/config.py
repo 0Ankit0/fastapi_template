@@ -26,6 +26,25 @@ class Settings(BaseSettings):
     S3_USE_PATH_STYLE: bool = False
     MAX_AVATAR_SIZE_MB: int = 5
 
+    PUSH_SERVICE_ENABLED: bool = False
+    PUSH_ENABLED: bool = False
+    PUSH_PROVIDER: str = "fcm"
+    FCM_SERVER_KEY: str = ""
+    FCM_PROJECT_ID: str = ""
+    FCM_SERVICE_ACCOUNT_JSON: str = ""
+    FCM_SERVICE_ACCOUNT_FILE: str = ""
+    FCM_WEB_VAPID_KEY: str = ""
+    FCM_STORAGE_BUCKET: str = ""
+    FCM_API_KEY: str = ""
+    FCM_APP_ID: str = ""
+    FCM_MESSAGING_SENDER_ID: str = ""
+    FCM_AUTH_DOMAIN: str = ""
+    FCM_MEASUREMENT_ID: str = ""
+
+    HTTP_TIMEOUT_SECONDS: float = 10.0
+    HTTP_RETRY_COUNT: int = 3
+    HTTP_BACKOFF_SECONDS: float = 1.0
+
     AWS_ACCESS_KEY_ID: str = ""
     AWS_SECRET_ACCESS_KEY: SecretStr = SecretStr("")
 

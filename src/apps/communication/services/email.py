@@ -10,15 +10,20 @@ from fastapi_mail import (
     MessageType,
     NameEmail,
 )
-from jinja2 import Environment, FileSystemLoader, select_autoescape
+from jinja2 import (
+    Environment,
+    FileSystemLoader,
+    select_autoescape,
+)
 
 from src.core.config import settings
 from src.core.logging import get_logger
-from .schemas import DeliveryResult
+
+from ..schemas import DeliveryResult
 
 logger = get_logger(__name__)
 
-TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "apps"
+TEMPLATES_DIR = Path(__file__).resolve().parents[2] 
 
 email_templates = Environment(
     loader=FileSystemLoader(str(TEMPLATES_DIR)),
@@ -51,6 +56,15 @@ class EmailService:
             )
         )
 
+    def render_template(
+        self,
+        template_name: str,
+        context: dict[str, Any],
+    ) -> str:
+        return email_templates.get_template(
+            template_name
+        ).render(**context)
+
     async def send(
         self,
         *,
@@ -81,68 +95,6 @@ class EmailService:
             provider="smtp",
             success=True,
         )
-
-    async def send_email(
-        self,
-        *,
-        subject: str,
-        recipients: list[dict[str, str]],
-        template_name: str,
-        context: dict[str, Any],
-        inline_template: bool = False,
-    ) -> DeliveryResult:
-        try:
-            if inline_template:
-                html_body = str(context.get("html_body", ""))
-            else:
-                html_body = email_templates.get_template(
-                    template_name
-                ).render(**context)
-
-            text_body = (
-                str(context["text_body"])
-                if context.get("text_body") is not None
-                else None
-            )
-            if not settings.EMAIL_SERVICE_ENABLED and settings.DEBUG:
-                logger.info(
-                    "DEV EMAIL (not sent) template=%s recipients=%s",
-                    template_name,
-                    [r["email"] for r in recipients],
-                )
-                return DeliveryResult(
-                    channel="email",
-                    provider="dev",
-                    success=True,
-                )
-
-            result = await self.send(
-                subject=subject,
-                recipients=recipients,
-                html_body=html_body,
-                text_body=text_body,
-            )
-
-            logger.info(
-                "email_delivery provider=%s success=%s",
-                settings.EMAIL_PROVIDER,
-                result.success,
-            )
-
-            return result
-
-        except Exception as exc:
-            logger.exception(
-                "email_delivery_failed provider=%s",
-                settings.EMAIL_PROVIDER,
-            )
-
-            return DeliveryResult(
-                channel="email",
-                provider=settings.EMAIL_PROVIDER,
-                success=False,
-                error=str(exc),
-            )
 
 
 email_service = EmailService()

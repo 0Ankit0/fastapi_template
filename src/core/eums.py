@@ -39,6 +39,13 @@ class RBACModule(str, Enum):
     ORGANIZATIONS = "organizations"
     ORGANIZATION_MEMBERS = "organization_members"
 
+class EmailProvider(str, Enum):
+    SMTP = "smtp"
+
+class PushProvider(str, Enum):
+    FCM = "fcm"
+
+
 def enum_values(enum_cls: type[Enum]) -> list[str]:
     """Return the string values for a Python enum."""
 
