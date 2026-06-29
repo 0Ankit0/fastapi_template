@@ -19,4 +19,4 @@ ENV_FILE ?= .env
 compose-up:
 	docker-compose --env-file $(ENV_FILE) --project-directory . -f infra/docker-compose.yml up -d --build
 compose-down:
-	docker-compose -f infra/docker-compose.yml down
+	docker-compose --project-directory . -f infra/docker-compose.yml down
