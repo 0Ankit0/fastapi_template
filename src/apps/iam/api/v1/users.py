@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile
 from sqlalchemy.orm import selectinload
 from src.core.types import HashId
 from src.apps.organizations.models.organization import Organization
-from src.core.eums import UserStatus
+from src.core.enums import UserStatus
 from src.core.utils import decode_cursor, encode_cursor
 from src.db.query import col, func, or_, select
 from src.core.dependencies import DB, get_current_user, get_current_active_superuser, get_current_org

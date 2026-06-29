@@ -7,7 +7,7 @@ from src.db.base import Base
 from sqlalchemy import BigInteger, Text, ForeignKey, Enum as SQLEnum
 from src.db.types import CITEXT_TYPE
 from src.db.mixins import TimestampMixin
-from src.core.eums import OrganizationStatus, enum_values
+from src.core.enums import OrganizationStatus, enum_values
 
 if TYPE_CHECKING:
     from iam.models import User

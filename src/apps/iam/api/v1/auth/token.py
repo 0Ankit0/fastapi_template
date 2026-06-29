@@ -1,7 +1,7 @@
 from datetime import timedelta, datetime, timezone
 from fastapi import APIRouter, HTTPException, Request, Response, status, Body
 from src.core.schemas import ApiSuccessResponse
-from src.core.eums import UserStatus
+from src.core.enums import UserStatus
 from src.core.exceptions import AuthorizationError
 from src.db.query import select
 from src.core.config import settings

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import timedelta
 from types import SimpleNamespace
 
-from src.core.eums import UserStatus
+from src.core.enums import UserStatus
 
 from conftest import FakeDB, FakeExecuteResult
 

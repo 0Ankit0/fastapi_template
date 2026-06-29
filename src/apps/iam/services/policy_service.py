@@ -1,6 +1,6 @@
 # app/services/policy_service.py
 
-from src.core.eums import RBACRole
+from src.core.enums import RBACRole
 
 from ..casbin import enforcer
 from src.apps.iam.models import User

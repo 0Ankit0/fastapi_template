@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.db.types import JSONB_TYPE
-from src.core.eums import OrganizationMemberStatus, enum_values
+from src.core.enums import OrganizationMemberStatus, enum_values
 from src.db.base import Base
 from sqlalchemy import BigInteger, DateTime, ForeignKey,Enum as SQLEnum, Index, UniqueConstraint
 from src.db.mixins import TimestampMixin

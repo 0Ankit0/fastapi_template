@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from src.core.types import HashId
 from src.core.schemas import BaseSchema
-from src.core.eums import OrganizationStatus
+from src.core.enums import OrganizationStatus
 
 class OrganizationBase(BaseSchema):
     name: str

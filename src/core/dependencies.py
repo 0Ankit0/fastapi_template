@@ -17,7 +17,7 @@ from src.apps.organizations.models.organization import Organization
 from src.core.exceptions import NotFoundError
 from src.db.session import get_session 
 from src.apps.iam.casbin import enforcer
-from src.core.eums import RBACAction as Action, RBACModule as Module, UserStatus
+from src.core.enums import RBACAction as Action, RBACModule as Module, UserStatus
 
 DB = Annotated[AsyncSession, Depends(get_session)]
 

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from src.apps.organizations.models.organization import Organization
 from src.apps.iam.models import User
 from src.apps.iam.services.policy_service import PolicyService
-from src.core.eums import RBACModule as Module
+from src.core.enums import RBACModule as Module
 from src.core.dependencies import (
     DB,
     get_current_org,

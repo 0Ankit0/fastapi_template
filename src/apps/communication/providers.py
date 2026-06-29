@@ -13,7 +13,7 @@ from src.core.http import default_timeout, retry_sync
 
 from .interfaces import EmailProviderBase, PushProviderBase
 from .schemas import DeliveryResult
-from src.core.eums import EmailProvider, PushProvider
+from src.core.enums import EmailProvider, PushProvider
 
 logger = logging.getLogger(__name__)
 

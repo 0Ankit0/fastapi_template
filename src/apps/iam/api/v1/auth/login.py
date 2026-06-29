@@ -2,7 +2,7 @@ from datetime import timedelta, datetime, timezone
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from src.core.dependencies import DB
-from src.core.eums import UserStatus
+from src.core.enums import UserStatus
 from src.core.exceptions import AppError, AuthorizationError, RateLimitError, ValidationError
 from src.core.schemas import ApiSuccessResponse
 from src.db.query import col, select

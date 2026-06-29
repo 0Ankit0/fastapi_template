@@ -10,7 +10,7 @@ from src.db.query import select, or_
 from src.core.utils import decode_cursor, encode_cursor
 from src.core.dependencies import DB, get_current_active_superuser, require_module_permission
 from src.core.schemas import CursorPage, CursorPagination, ApiSuccessResponse
-from src.core.eums import OrganizationStatus, RBACModule
+from src.core.enums import OrganizationStatus, RBACModule
 from src.core.cache import RedisCache
 from slugify import slugify
 from slowapi import Limiter

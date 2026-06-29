@@ -1,6 +1,6 @@
 from typing import Optional, List
 from pydantic import  EmailStr, field_serializer, field_validator, model_validator, ValidationInfo
-from src.core.eums import RBACRole
+from src.core.enums import RBACRole
 from src.core.schemas import BaseSchema
 from src.core.types import HashId
 from src.core.security import validate_password_strength

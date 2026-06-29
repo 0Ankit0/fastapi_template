@@ -12,7 +12,7 @@ from src.core.utils import encode_cursor
 from src.core.exceptions import NotFoundError, ValidationError
 from src.core.cache import RedisCache
 from src.core.dependencies import DB, get_current_org, get_current_user, require_module_permission
-from src.core.eums import OrganizationMemberStatus, RBACModule, RBACRole
+from src.core.enums import OrganizationMemberStatus, RBACModule, RBACRole
 from src.core.types import  HashId
 from src.core.schemas import ApiSuccessResponse, CursorPage, CursorPagination
 from src.db.query import select, or_, and_
