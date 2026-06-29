@@ -8,7 +8,7 @@ from apps.iam.models.user import User
 
 
 def test_core_email_task_returns_bool_in_dev_mode() -> None:
-    from src.core.tasks import send_email_task
+    from src.apps.communication.tasks import send_email_task
 
     result = send_email_task(
         subject="Hello",

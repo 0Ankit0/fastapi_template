@@ -5,12 +5,12 @@ info:
 
 http:
   method: POST
-  url: /api/v1/auth/resend-verification/
+  url: "{{BASE_URI}}/api/v1/auth/resend-verification/"
   body:
     type: json
     data: |-
       {
-      	"email": ""
+        "email": "user@gmail.com"
       }
   auth: inherit
 
@@ -19,3 +19,34 @@ settings:
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+
+examples:
+  - name: success
+    request:
+      url: "{{BASE_URI}}/api/v1/auth/resend-verification/"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+          	"email": "user@gmail.com"
+          }
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: date
+          value: Mon, 29 Jun 2026 01:12:28 GMT
+        - name: server
+          value: uvicorn
+        - name: content-length
+          value: "98"
+        - name: content-type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "message": "If an account with that email exists, a verification email has been sent",
+            "data": null
+          }

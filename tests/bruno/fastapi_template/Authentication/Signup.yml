@@ -5,25 +5,24 @@ info:
 
 http:
   method: POST
-  url: /api/v1/auth/signup/?set_cookie=
+  url: "{{BASE_URI}}/api/v1/auth/signup/?set_cookie=false"
   params:
     - name: set_cookie
-      value: ""
+      value: "false"
       type: query
-      description: undefined
   body:
     type: json
     data: |-
       {
-      	"username": "",
-      	"email": "",
-      	"is_active": true,
-      	"is_superuser": "",
-      	"first_name": "",
-      	"last_name": "",
-      	"phone": "",
-      	"password": "",
-      	"confirm_password": ""
+        "username": "user",
+        "email": "user@gmail.com",
+        "is_active": true,
+        "is_superuser": true,
+        "first_name": "super",
+        "last_name": "user",
+        "phone": "",
+        "password": "User@123",
+        "confirm_password": "User@123"
       }
   auth: inherit
 
@@ -32,3 +31,93 @@ settings:
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+
+examples:
+  - name: already exists
+    request:
+      url: "{{BASE_URI}}/api/v1/auth/signup/?set_cookie=false"
+      method: POST
+      params:
+        - name: set_cookie
+          value: "false"
+          type: query
+      body:
+        type: json
+        data: |-
+          {
+          	"username": "admin",
+          	"email": "admin@gmail.com",
+          	"is_active": true,
+          	"is_superuser": true,
+          	"first_name": "super",
+          	"last_name": "admin",
+          	"phone": "",
+          	"password": "Admin@123",
+          	"confirm_password": "Admin@123"
+          }
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: date
+          value: Mon, 29 Jun 2026 01:10:51 GMT
+        - name: server
+          value: uvicorn
+        - name: content-length
+          value: "80"
+        - name: content-type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "error": {
+              "code": "common.validation_error",
+              "message": "Username already exists"
+            }
+          }
+  - name: success
+    request:
+      url: "{{BASE_URI}}/api/v1/auth/signup/?set_cookie=false"
+      method: POST
+      params:
+        - name: set_cookie
+          value: "false"
+          type: query
+      body:
+        type: json
+        data: |-
+          {
+            "username": "user",
+            "email": "user@gmail.com",
+            "is_active": true,
+            "is_superuser": true,
+            "first_name": "super",
+            "last_name": "user",
+            "phone": "",
+            "password": "User@123",
+            "confirm_password": "User@123"
+          }
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: date
+          value: Mon, 29 Jun 2026 01:11:26 GMT
+        - name: server
+          value: uvicorn
+        - name: content-length
+          value: "654"
+        - name: content-type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "message": "Account created successfully",
+            "data": {
+              "access": "v4.local.YoWWIRDG8WLvnj-Ul1N0Ki8eiBMx63M50XHNrKeIJqKpDMcIXcM4-_1Y4DTgceXaTO6qxNgWjg_9CRIPFwOJyvRFzj72JQ7Lr242IvRlwj3zlH4lcNK_YVzw9KWsg95h_cPDHZLC3Q8Ux8hYBas5TGWOk6Kp5EU99kv6QHadDv2mTVqrIsGeFd4RgwsEFO70PI2sy3Z9KhtZvg3DgGEzW9CtcLB6QU2YfJe3GrQj54qxSUGpQ_8jLg766HEqIVfUOHlEfGX8DR9d",
+              "refresh": "v4.local.QHI1a-KqZhHr_HwBf_KBJtCz6ZRFy02bcb1_YmBYNkEBSVQmWGiN76Dx6PpmGp6E7XbY7aH4AMRie-hP7YRc6vIiFDH1VQUWIbXaNppOAMGqXjYCL-4p9uUycOE0xqx6bRSgf5y1IKZXsfr_hp-uTy6jImpjoaT0agNhZUFBfVNreiOwWxifWoI31cWy_bA87UvhtZgugB4ix6F7r1y8lWjIEN-lFKx8RSqzvR0T5bdrAfTHMMaXsT18CblvfEfuRI9EZQx3JG-bPg",
+              "token_type": "bearer"
+            }
+          }
