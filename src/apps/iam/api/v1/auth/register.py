@@ -1,5 +1,5 @@
-from datetime import timedelta, datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from datetime import timedelta
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from src.apps.iam.models.profile import UserProfile
 from src.core.schemas import ApiSuccessResponse
 from src.db.query import select
@@ -7,20 +7,19 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from src.core.config import settings
 from src.core import security
-from src.core.exceptions import AppError, ConflictError, ValidationError
+from src.core.exceptions import AppError, ValidationError
 from src.core.security import TokenType
 from src.core.cookies import set_auth_cookies
-from src.core.dependencies import DB, get_current_user
+from src.core.dependencies import DB
 from src.apps.iam.models import User, UserProfile
 from src.apps.iam.models.token_tracking import TokenTracking
 from src.apps.iam.schemas.token import Token
 from src.apps.iam.schemas.user import EmailVerificationRequest, UserCreate
 from src.core.cache import RedisCache
 from src.core.logging import get_logger
+from src.apps.iam.utils.ip_access import revoke_tokens_for_ip, get_client_ip
 
 logger = get_logger(__name__)
-
-from src.apps.iam.utils.ip_access import revoke_tokens_for_ip, get_client_ip
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)

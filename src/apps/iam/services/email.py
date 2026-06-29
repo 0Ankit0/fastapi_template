@@ -20,7 +20,7 @@ class AuthEmailService:
         template_name: str,
         context: dict[str, Any],
     ) -> None:
-        from src.core.tasks import send_email_task
+        from src.apps.communication.tasks import send_email_task
         task = cast(Task, send_email_task)
 
         task.delay(

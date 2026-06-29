@@ -1,10 +1,8 @@
 from datetime import datetime, timezone
-from typing import cast
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from src.core.schemas import ApiSuccessResponse
 from src.core.exceptions import ValidationError
 from src.db.query import select
-from sqlalchemy.ext.asyncio import AsyncSession
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from src.core.config import settings

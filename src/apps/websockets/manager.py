@@ -56,3 +56,5 @@ class ConnectionManager:
         connection_ids = list(self.org_connections.get(org_slug, set()))
         for connection_id in connection_ids:
             await self._safe_send(connection_id, payload)
+
+manager = ConnectionManager()

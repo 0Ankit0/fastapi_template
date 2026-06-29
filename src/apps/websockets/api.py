@@ -3,7 +3,7 @@ from uuid import uuid4
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 from src.core.schemas import ApiSuccessResponse
 from src.core.types import HashId
-from src.apps.websockets.manager import ConnectionManager
+from src.apps.websockets.manager import manager
 from src.apps.websockets.schemas import Connection
 from src.apps.websockets.auth import get_websocket_user
 from src.apps.iam.services.policy_service import PolicyService 
@@ -13,7 +13,6 @@ from src.core.exceptions import AuthenticationError
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/ws", tags=["WebSockets"])
 
-manager = ConnectionManager()
 
 @router.websocket("/{org_slug}/connect")
 async def websocket_endpoint(
