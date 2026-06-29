@@ -1,7 +1,11 @@
 # 1. Top-Level Anchors for Global Configuration
 x-api-env: &api-env
   DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@db:5432/${POSTGRES_DB:-app}"
-  OTEL_SERVICE_NAME: "${OTEL_SERVICE_NAME:-fastapi-api}"
+  # Celery Infrastructure Mappings
+  CELERY_BROKER_URL: "${CELERY_BROKER_URL:-amqp://guest:guest@rabbitmq:5672//}"
+  CELERY_RESULT_BACKEND: "${CELERY_RESULT_BACKEND:-rpc://}"
+  CELERY_TASK_ALWAYS_EAGER: "${CELERY_TASK_ALWAYS_EAGER:-false}"
+  # OpenTelemetry Endpoint Configuration
   OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
   OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
 
@@ -21,16 +25,50 @@ services:
     container_name: fastapi_api
     ports:
       - "${API_PORT:-8000}:8000"
-    # Using the anchor block for the API's core tracing and routing variables
-    environment: *api-env
-    # Points to the .env in the root context folder where you run Docker Compose
+    environment:
+      <<: *api-env
+      OTEL_SERVICE_NAME: "${OTEL_SERVICE_NAME:-fastapi-api}" # Unique name for Web API
     env_file:
       - .env
     depends_on:
       db:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
       otel-collector:
         condition: service_started
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile
+    container_name: celery_worker
+    command: ["uv", "run", "celery", "-A", "src.core.celery_app", "worker", "--loglevel=info"]
+    environment:
+      <<: *api-env
+      OTEL_SERVICE_NAME: "celery-worker" # Unique name for Tracing your Background Tasks
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: "guest"
+      RABBITMQ_DEFAULT_PASS: "guest"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
 
   db:
     image: postgres:16
@@ -64,7 +102,7 @@ services:
     container_name: otel_collector
     command: ["--config=/etc/otel-collector.yaml"]
     volumes:
-      - ./otel-collector.yaml:/etc/otel-collector.yaml
+      - ./infra/otel-collector.yaml:/etc/otel-collector.yaml
     depends_on:
       jaeger:
         condition: service_healthy

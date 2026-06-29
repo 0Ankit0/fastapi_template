@@ -23,7 +23,10 @@ COPY infra/entrypoint.sh ./entrypoint.sh
 RUN chmod +x ./entrypoint.sh
 
 # Create non-root user
-RUN groupadd --system app && useradd --system --gid app app && chown -R app:app /app
+RUN groupadd --system app && \
+    useradd --system --create-home --gid app app && \
+    chown -R app:app /app
+
 USER app
 
 EXPOSE 8000
