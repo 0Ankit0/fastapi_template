@@ -5,12 +5,13 @@ from typing import Annotated
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Request
 from sqlalchemy.orm import selectinload
+from src.core.exceptions import ValidationError
 from src.core.types import HashId
 from src.apps.organizations.models.organization import Organization
 from src.core.enums import UserStatus
 from src.core.utils import decode_cursor, encode_cursor
 from src.db.query import col, func, or_, select
-from src.core.dependencies import DB, get_current_user, get_current_active_superuser, get_current_org
+from src.core.dependencies import DB, CurrentUser, CurrentActiveSuperuser, CurrentOrg
 from src.apps.iam.models.user import User
 from src.apps.iam.schemas.user import UserResponse, UserUpdate
 from src.core.schemas import CursorPage, CursorPagination
@@ -56,14 +57,35 @@ async def _invalidate_user_cache(user_id: int) -> None:
     # await RedisCache.clear_pattern(f"casbin:permissions:{user_id}:*")
     # await RedisCache.clear_pattern(f"permission:check:{user_id}:*")
 
+@router.get("/me", response_model=UserResponse)
+@USER_RATE_LIMIT
+async def get_current_user_profile(
+    request: Request,
+    current_user: CurrentUser,
+):
+    """
+    Get current user's profile
+    """
+    cache_key = f"user:profile:{current_user.id}"
+    
+    # Try cache
+    cached = await RedisCache.get(cache_key)
+    if cached:
+        return UserResponse.model_validate(cached)
+    
+    cache_data = _serialize_user_response(current_user)
+    # Cache for 5 minutes
+    await RedisCache.set(cache_key, cache_data, ttl=300)
+    
+    return current_user
 
 @router.get("/{org}", response_model=CursorPage[UserResponse])
 @USER_RATE_LIMIT
 async def list_users(
     db: DB,
     request: Request,
-    current_user: Annotated[User, Depends(get_current_active_superuser)],
-    current_org: Annotated[Organization, Depends(get_current_org)],
+    current_user: CurrentActiveSuperuser,
+    current_org: CurrentOrg,
     pagination: CursorPagination = Depends(),
     search: str | None = Query(
         default=None,
@@ -166,35 +188,13 @@ async def list_users(
 
     return response
 
-@router.get("/me", response_model=UserResponse)
-@USER_RATE_LIMIT
-async def get_current_user_profile(
-    request: Request,
-    current_user: User = Depends(get_current_user),
-):
-    """
-    Get current user's profile
-    """
-    cache_key = f"user:profile:{current_user.id}"
-    
-    # Try cache
-    cached = await RedisCache.get(cache_key)
-    if cached:
-        return UserResponse.model_validate(cached)
-    
-    cache_data = _serialize_user_response(current_user)
-    # Cache for 5 minutes
-    await RedisCache.set(cache_key, cache_data, ttl=300)
-    
-    return current_user
-
 @router.post("/me/avatar", response_model=UserResponse)
 @USER_RATE_LIMIT
 async def upload_avatar(
     db: DB,
     request: Request,
+    current_user: CurrentUser,
     file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user),
 ):
     """Upload or replace the current user's avatar image."""
     ALLOWED_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
@@ -250,7 +250,7 @@ async def get_user(
     user_id: HashId,
     db: DB,
     request: Request,
-    current_user: User = Depends(get_current_active_superuser)
+    current_user: CurrentActiveSuperuser,
 ):
     """
     Get user by ID (admin only)
@@ -287,7 +287,7 @@ async def update_current_user(
     user_update: UserUpdate,
     db: DB,
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser,
 ):
     """
     Update current user's profile
@@ -339,7 +339,7 @@ async def update_user(
     user_update: UserUpdate,
     db: DB,
     request: Request,
-    current_user: User = Depends(get_current_active_superuser),
+    current_user: CurrentActiveSuperuser,
 ):
     """
     Update user by ID (admin only)
@@ -423,7 +423,7 @@ async def delete_user(
     user_id: HashId,
     db: DB,
     request: Request,
-    current_user: User = Depends(get_current_active_superuser),
+    current_user: CurrentActiveSuperuser,
 ):
     """
     Delete user by ID (admin only)

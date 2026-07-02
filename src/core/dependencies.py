@@ -136,6 +136,7 @@ current_user: Annotated[User, Depends(get_current_user)]
     return current_user
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+CurrentActiveSuperuser = Annotated[User, Depends(get_current_active_superuser)]
 
 async def get_current_org(
     db: DB,
@@ -177,7 +178,7 @@ async def get_current_org(
     except Exception:
         raise 
 
-CurrentOrg = Annotated[Organization, Depends(get_current_org)]
+CurrentOrg = Annotated[Organization | None, Depends(get_current_org)]
  
 def require_module_permission(module: Module):
     async def checker(
@@ -192,7 +193,7 @@ def require_module_permission(module: Module):
 
         allowed = enforcer.enforce(
             current_user.id,
-            org.id,
+            org.id if org else None,
             module.value,
             action.value,
         )
