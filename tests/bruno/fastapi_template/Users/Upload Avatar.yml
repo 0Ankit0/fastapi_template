@@ -5,14 +5,15 @@ info:
 
 http:
   method: POST
-  url: /api/v1/users/me/avatar
+  url: "{{BASE_URI}}/api/v1/users/me/avatar"
   body:
     type: multipart-form
     data:
       - name: file
-        type: text
-        value: ""
-        description: undefined
+        type: file
+        value:
+          - /Users/ankit/Downloads/DSC08783.jpeg
+        contentType: image/jpeg
   auth: inherit
 
 settings:
@@ -20,3 +21,48 @@ settings:
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+
+examples:
+  - name: success
+    request:
+      url: "{{BASE_URI}}/api/v1/users/me/avatar"
+      method: POST
+      body:
+        type: multipart-form
+        data:
+          - name: file
+            type: file
+            value:
+              - /Users/ankit/Downloads/DSC08783.jpeg
+            contentType: image/jpeg
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: date
+          value: Thu, 02 Jul 2026 00:51:43 GMT
+        - name: server
+          value: uvicorn
+        - name: content-length
+          value: "246"
+        - name: content-type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "id": "0gOg1X9Z",
+            "username": "user",
+            "email": "user@gmail.com",
+            "is_active": true,
+            "is_superuser": true,
+            "is_confirmed": false,
+            "otp_enabled": false,
+            "otp_verified": false,
+            "first_name": null,
+            "last_name": null,
+            "phone": null,
+            "image_url": null,
+            "bio": null,
+            "roles": []
+          }

@@ -8,10 +8,10 @@ http:
   url: "{{BASE_URI}}/api/v1/organizations/:org/rbac/users/:user_id/permissions"
   params:
     - name: user_id
-      value: RQXPBOb6
+      value: "{{TEST_USER_ID}}"
       type: path
     - name: org
-      value: testorg
+      value: "{{TEST_ORG}}"
       type: path
   body:
     type: json

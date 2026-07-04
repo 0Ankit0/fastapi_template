@@ -11,7 +11,7 @@ http:
       value: "10"
       type: query
     - name: org
-      value: global
+      value: "{{TEST_ORG}}"
       type: path
     - name: search
       value: ""

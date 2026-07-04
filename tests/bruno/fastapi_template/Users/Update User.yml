@@ -8,20 +8,20 @@ http:
   url: /api/v1/users/{user_id}
   params:
     - name: user_id
-      value: ""
+      value: "{{TEST_USER_ID}}"
       type: path
       description: undefined
   body:
     type: json
     data: |-
       {
-      	"email": "",
-      	"password": "",
-      	"first_name": "",
-      	"last_name": "",
-      	"phone": "",
-      	"is_active": "",
-      	"is_superuser": ""
+        "email": "",
+        "password": "",
+        "first_name": "",
+        "last_name": "",
+        "phone": "",
+        "is_active": "",
+        "is_superuser": ""
       }
   auth: inherit
 

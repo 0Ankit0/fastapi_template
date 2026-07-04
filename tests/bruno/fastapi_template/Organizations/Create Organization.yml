@@ -5,7 +5,11 @@ info:
 
 http:
   method: POST
-  url: "{{BASE_URI}}/api/v1/organizations/"
+  url: "{{BASE_URI}}/api/v1/organizations/:org"
+  params:
+    - name: org
+      value: ""
+      type: path
   body:
     type: json
     data: |-
@@ -30,6 +34,13 @@ runtime:
             `Invalid status '${body.status}'. Allowed values: ${allowedStatuses.join(", ")}`
           );
         }
+    - type: after-response
+      code: |-
+        const body = res.getBody();
+
+        // bru.setGlobalEnvVar('access_token', body.data.access)
+        bru.setEnvVar('TEST_ORG_ID', body.data.id);
+        bru.setEnvVar('TEST_ORG', body.data.slug)
 
 settings:
   encodeUrl: true

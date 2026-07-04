@@ -8,7 +8,7 @@ http:
   url: /api/v1/users/{user_id}
   params:
     - name: user_id
-      value: ""
+      value: "{{TEST_USER_ID}}"
       type: path
       description: undefined
   body:

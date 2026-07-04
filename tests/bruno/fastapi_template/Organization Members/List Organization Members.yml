@@ -19,7 +19,7 @@ http:
       type: query
       disabled: true
     - name: org
-      value: testorg
+      value: "{{TEST_ORG}}"
       type: path
   body:
     type: json

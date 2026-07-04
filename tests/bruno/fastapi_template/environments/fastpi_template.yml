@@ -4,3 +4,13 @@ variables:
     value: http://127.0.0.1:8000
   - secret: true
     name: access_token
+  - name: baseUrl
+    value: "{{BASE_URI}}"
+  - name: TEST_ORG
+    value: testOrg
+  - name: TEST_ORG_ID
+    value: 0gOg1X9Z
+  - name: TEST_USER_ID
+    value: 0gOg1X9Z
+  - name: token
+    value: "{{access_token}}"
