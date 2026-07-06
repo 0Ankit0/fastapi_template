@@ -1,0 +1,1 @@
+Confirm password reset. Pass the token and new password in the request body.

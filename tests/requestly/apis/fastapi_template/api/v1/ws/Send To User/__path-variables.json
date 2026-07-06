@@ -1,0 +1,7 @@
+[
+  {
+    "key": "user_id",
+    "value": "{{test_user_id}}",
+    "dataType": "string"
+  }
+]

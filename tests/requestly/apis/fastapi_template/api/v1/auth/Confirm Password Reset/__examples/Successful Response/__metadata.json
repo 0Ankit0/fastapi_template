@@ -1,0 +1,10 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.12.0/example-metadata.json",
+  "type": "example",
+  "entryType": "http",
+  "id": "5fec7864-d006-401b-8d73-6cb9d54fab6f",
+  "rank": "a0",
+  "url": "{{base_url}}/api/v1/auth/password-reset-confirm/",
+  "method": "POST",
+  "contentType": "json"
+}

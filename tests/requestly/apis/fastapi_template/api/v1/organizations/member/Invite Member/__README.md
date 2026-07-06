@@ -1,0 +1,1 @@
+Send an invitation email to an unknown user using their email address to join the organization as a member.

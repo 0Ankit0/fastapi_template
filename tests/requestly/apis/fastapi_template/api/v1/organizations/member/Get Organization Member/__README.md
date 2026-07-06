@@ -1,0 +1,1 @@
+Get details of a specific organization member by their ID.

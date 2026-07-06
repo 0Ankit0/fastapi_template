@@ -1,0 +1,28 @@
+[
+  {
+    "id": 0,
+    "key": "search",
+    "value": "string",
+    "isEnabled": true,
+    "description": "Search term to filter organizations by name or description"
+  },
+  {
+    "id": 1,
+    "key": "org_status",
+    "value": "active",
+    "isEnabled": true,
+    "description": "Filter organizations by status"
+  },
+  {
+    "id": 2,
+    "key": "limit",
+    "value": "50",
+    "isEnabled": true
+  },
+  {
+    "id": 3,
+    "key": "cursor",
+    "value": "string",
+    "isEnabled": true
+  }
+]

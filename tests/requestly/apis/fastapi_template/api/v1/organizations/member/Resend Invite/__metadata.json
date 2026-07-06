@@ -1,0 +1,10 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.12.0/metadata.json",
+  "type": "api",
+  "entryType": "http",
+  "id": "e8a8d1e1-875b-4b23-83a3-ad552a828fc3",
+  "rank": "a6",
+  "url": "{{base_url}}/api/v1/organizations/:org/members/:member_id/resend-invite",
+  "method": "GET",
+  "contentType": "none"
+}

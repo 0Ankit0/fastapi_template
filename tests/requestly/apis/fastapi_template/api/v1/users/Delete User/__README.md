@@ -1,0 +1,1 @@
+Delete user by ID (admin only)

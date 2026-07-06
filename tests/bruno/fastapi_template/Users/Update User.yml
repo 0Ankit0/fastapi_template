@@ -20,8 +20,7 @@ http:
         "first_name": "",
         "last_name": "",
         "phone": "",
-        "is_active": "",
-        "is_superuser": ""
+        "is_active": ""
       }
   auth: inherit
 

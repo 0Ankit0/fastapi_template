@@ -1,0 +1,1 @@
+Logout user by clearing cookies and revoking current session token only

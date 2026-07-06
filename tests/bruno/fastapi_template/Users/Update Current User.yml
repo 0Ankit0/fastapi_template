@@ -15,8 +15,7 @@ http:
         "first_name": "",
         "last_name": "",
         "phone": "",
-        "is_active": true,
-        "is_superuser": true
+        "is_active": true
       }
   auth: inherit
 
@@ -40,8 +39,7 @@ examples:
           	"first_name": "",
           	"last_name": "",
           	"phone": "",
-          	"is_active": true,
-          	"is_superuser": true
+          	"is_active": true
           }
     response:
       status: 200

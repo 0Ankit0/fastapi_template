@@ -1,0 +1,14 @@
+[
+  {
+    "id": 0,
+    "key": "module",
+    "value": "string",
+    "isEnabled": true
+  },
+  {
+    "id": 1,
+    "key": "action",
+    "value": "string",
+    "isEnabled": true
+  }
+]

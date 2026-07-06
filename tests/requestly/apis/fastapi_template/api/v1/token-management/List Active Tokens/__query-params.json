@@ -1,0 +1,14 @@
+[
+  {
+    "id": 0,
+    "key": "limit",
+    "value": "50",
+    "isEnabled": true
+  },
+  {
+    "id": 1,
+    "key": "cursor",
+    "value": "string",
+    "isEnabled": true
+  }
+]

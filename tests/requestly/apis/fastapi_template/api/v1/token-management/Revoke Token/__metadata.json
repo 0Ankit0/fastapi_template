@@ -1,0 +1,10 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.12.0/metadata.json",
+  "type": "api",
+  "entryType": "http",
+  "id": "94f00b7d-6c40-4b4d-9eef-4d4a23763326",
+  "rank": "a3",
+  "url": "{{base_url}}/api/v1/token-management/revoke/:token_id",
+  "method": "POST",
+  "contentType": "none"
+}

@@ -1,0 +1,1 @@
+Revoke all active tokens for the current user

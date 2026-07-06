@@ -1,0 +1,12 @@
+[
+  {
+    "key": "org",
+    "value": "{{test_org_id}}",
+    "dataType": "string"
+  },
+  {
+    "key": "member_id",
+    "value": "{{test_member_id}}",
+    "dataType": "string"
+  }
+]

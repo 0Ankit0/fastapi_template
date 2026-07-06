@@ -1,0 +1,10 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.12.0/example-metadata.json",
+  "type": "example",
+  "entryType": "http",
+  "id": "c1f17e2d-522c-4e3e-a998-16324f95dfa2",
+  "rank": "a1",
+  "url": "{{base_url}}/api/v1/organizations/:org/rbac/users/:user_id/permissions",
+  "method": "GET",
+  "contentType": "none"
+}

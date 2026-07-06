@@ -1,0 +1,9 @@
+[
+  {
+    "id": 0,
+    "key": "t",
+    "value": "string",
+    "isEnabled": true,
+    "description": "Invitation token to verify"
+  }
+]

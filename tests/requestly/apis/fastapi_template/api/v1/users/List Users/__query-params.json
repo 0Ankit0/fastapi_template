@@ -1,0 +1,28 @@
+[
+  {
+    "id": 0,
+    "key": "search",
+    "value": "string",
+    "isEnabled": true,
+    "description": "Search by email or name"
+  },
+  {
+    "id": 1,
+    "key": "is_active",
+    "value": "false",
+    "isEnabled": true,
+    "description": "Filter by active status"
+  },
+  {
+    "id": 2,
+    "key": "limit",
+    "value": "50",
+    "isEnabled": true
+  },
+  {
+    "id": 3,
+    "key": "cursor",
+    "value": "string",
+    "isEnabled": true
+  }
+]

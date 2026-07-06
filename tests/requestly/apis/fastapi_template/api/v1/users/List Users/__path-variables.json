@@ -1,0 +1,8 @@
+[
+  {
+    "key": "org",
+    "value": "{{test_org_slug}}",
+    "description": "Organization slug",
+    "dataType": "string"
+  }
+]

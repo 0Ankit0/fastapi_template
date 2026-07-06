@@ -1,0 +1,11 @@
+[
+  {
+    "key": "org",
+    "value": "string",
+    "description": "Organization slug"
+  },
+  {
+    "key": "user_id",
+    "value": "0"
+  }
+]

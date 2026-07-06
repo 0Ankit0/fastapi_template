@@ -1,0 +1,10 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.12.0/example-metadata.json",
+  "type": "example",
+  "entryType": "http",
+  "id": "7a889672-ffd6-4f8b-9c10-0b0019b066fe",
+  "rank": "a1",
+  "url": "{{base_url}}/api/v1/users/me",
+  "method": "PATCH",
+  "contentType": "json"
+}

@@ -9,8 +9,6 @@ from src.core.security import validate_password_strength
 class UserBase(BaseSchema):
     username: str
     email: EmailStr
-    is_active: Optional[bool] = True
-    is_superuser: Optional[bool] = False
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     phone: Optional[str] = None
@@ -39,7 +37,6 @@ class UserUpdate(BaseSchema):
     last_name: Optional[str] = None
     phone: Optional[str] = None
     is_active: Optional[bool] = None
-    is_superuser: Optional[bool] = None
 
 
 class LoginRequest(BaseSchema):

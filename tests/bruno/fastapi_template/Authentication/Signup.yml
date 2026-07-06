@@ -16,8 +16,6 @@ http:
       {
         "username": "user",
         "email": "user@gmail.com",
-        "is_active": true,
-        "is_superuser": true,
         "first_name": "super",
         "last_name": "user",
         "phone": "",
@@ -47,8 +45,6 @@ examples:
           {
           	"username": "admin",
           	"email": "admin@gmail.com",
-          	"is_active": true,
-          	"is_superuser": true,
           	"first_name": "super",
           	"last_name": "admin",
           	"phone": "",
@@ -90,8 +86,6 @@ examples:
           {
             "username": "user",
             "email": "user@gmail.com",
-            "is_active": true,
-            "is_superuser": true,
             "first_name": "super",
             "last_name": "user",
             "phone": "",

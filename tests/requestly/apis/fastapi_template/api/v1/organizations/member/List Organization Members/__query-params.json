@@ -1,0 +1,21 @@
+[
+  {
+    "id": 0,
+    "key": "search",
+    "value": "string",
+    "isEnabled": true,
+    "description": "Search term to filter organization members by name or email"
+  },
+  {
+    "id": 1,
+    "key": "limit",
+    "value": "50",
+    "isEnabled": true
+  },
+  {
+    "id": 2,
+    "key": "cursor",
+    "value": "string",
+    "isEnabled": true
+  }
+]

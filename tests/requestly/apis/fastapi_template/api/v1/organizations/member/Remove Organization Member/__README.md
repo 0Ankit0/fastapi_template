@@ -1,0 +1,1 @@
+Remove a specific organization member by their ID.

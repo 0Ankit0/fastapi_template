@@ -1,0 +1,10 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.12.0/example-metadata.json",
+  "type": "example",
+  "entryType": "http",
+  "id": "fb1776f1-3f3c-44e8-901a-fd6753965384",
+  "rank": "a0",
+  "url": "{{base_url}}/api/v1/organizations/:org/rbac/users/roles",
+  "method": "DELETE",
+  "contentType": "json"
+}

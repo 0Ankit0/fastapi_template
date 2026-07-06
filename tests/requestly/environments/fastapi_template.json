@@ -1,0 +1,55 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.12.0/environment.json",
+  "id": "fcbfa029-9832-41f6-a137-819d0a9a3413",
+  "variables": {
+    "base_url": {
+      "id": "14faee92-0e20-414c-8618-603444500c94",
+      "syncValue": "http://127.0.0.1:8000",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "hmr72l50s"
+    },
+    "access_token": {
+      "id": "75c59133-6dbb-4ba8-8dbb-173c9eaa710d",
+      "syncValue": "test",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "hmr72q879"
+    },
+    "refresh_token": {
+      "id": "2e98a22c-93f3-4108-a9fd-7bc1d5690a18",
+      "syncValue": "",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "hmr72xpgi"
+    },
+    "test_user_id": {
+      "id": "ca3b7b75-d96f-4ea4-9f68-faf932a5e227",
+      "syncValue": "test_user_id",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "hmr8ht4ex"
+    },
+    "test_org_id": {
+      "id": "fe59710a-528d-4db8-a090-cb589d02bc7a",
+      "syncValue": "test_org_id",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "hmr8htplk"
+    },
+    "test_org_slug": {
+      "id": "a8f7be85-ac94-4124-9a9b-13e2c0178978",
+      "syncValue": "test_org_slug",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "hmr8hue7z"
+    },
+    "test_member_id": {
+      "id": "f03860a8-1742-40c1-9efc-a7de25ea7e92",
+      "syncValue": "test_member_id",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "hmr8hzj6j"
+    }
+  }
+}

@@ -1,0 +1,1 @@
+Upload or replace the current user's avatar image.

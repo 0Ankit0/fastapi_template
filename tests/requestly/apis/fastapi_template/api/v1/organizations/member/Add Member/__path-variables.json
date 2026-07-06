@@ -1,0 +1,12 @@
+[
+  {
+    "key": "org",
+    "value": "string",
+    "description": "Organization slug"
+  },
+  {
+    "key": "member_id",
+    "value": "0",
+    "description": "ID of the user to add as an organization member"
+  }
+]

@@ -1,0 +1,10 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.12.0/metadata.json",
+  "type": "api",
+  "entryType": "http",
+  "id": "7f0d3501-9894-4eaf-833e-9d15d095222f",
+  "rank": "a4",
+  "url": "{{base_url}}/api/v1/organizations/members/accept-invitation/",
+  "method": "GET",
+  "contentType": "none"
+}

@@ -1,0 +1,1 @@
+Verify the validity of an organization membership invitation token.

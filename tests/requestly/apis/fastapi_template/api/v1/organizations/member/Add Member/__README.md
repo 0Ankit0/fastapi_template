@@ -1,0 +1,1 @@
+Add a specific user as an organization member by their ID.
