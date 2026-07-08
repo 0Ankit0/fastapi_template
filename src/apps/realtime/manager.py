@@ -56,17 +56,23 @@ class ConnectionManager:
             if not self.org_sse_connections[org_slug]:
                 self.org_sse_connections.pop(org_slug, None)
 
-    async def _safe_send(self, connection_id: str, payload: dict):
-        """Helper to send data safely and clean up if the socket is dead."""
+    async def _safe_send(self, connection_id: str, payload: dict) -> bool:
+        """Send a WebSocket payload; return True only if delivery succeeded."""
         connection = self.connections.get(connection_id)
         if not connection:
-            return
-        
+            return False
+
         try:
             await connection.websocket.send_json(payload)
+            return True
         except (WebSocketDisconnect, RuntimeError) as e:
-            logger.warning(f"Failed sending to connection {connection_id}, cleaning up: {e}")
+            logger.warning(
+                "Failed sending to connection %s, cleaning up: %s",
+                connection_id,
+                e,
+            )
             self.disconnect(connection_id)
+            return False
 
     def _safe_queue_sse(self, connection_id: str, payload: dict) -> bool:
         connection = self.sse_connections.get(connection_id)
@@ -81,13 +87,13 @@ class ConnectionManager:
             self.disconnect(connection_id)
             return False
 
-    async def send_to_user(self, user_id: int, payload: dict):
+    async def send_to_user(self, user_id: int, payload: dict) -> int:
         delivered = 0
 
         connection_ids = list(self.user_connections.get(user_id, set()))
         for connection_id in connection_ids:
-            await self._safe_send(connection_id, payload)
-            delivered += 1
+            if await self._safe_send(connection_id, payload):
+                delivered += 1
 
         for connection_id in list(self.user_sse_connections.get(user_id, set())):
             if self._safe_queue_sse(connection_id, payload):
@@ -95,13 +101,13 @@ class ConnectionManager:
 
         return delivered
 
-    async def send_to_org(self, org_slug: str, payload: dict):
+    async def send_to_org(self, org_slug: str, payload: dict) -> int:
         delivered = 0
 
         connection_ids = list(self.org_connections.get(org_slug, set()))
         for connection_id in connection_ids:
-            await self._safe_send(connection_id, payload)
-            delivered += 1
+            if await self._safe_send(connection_id, payload):
+                delivered += 1
 
         for connection_id in list(self.org_sse_connections.get(org_slug, set())):
             if self._safe_queue_sse(connection_id, payload):
