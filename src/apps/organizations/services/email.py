@@ -20,6 +20,7 @@ class OrganizationEmailService:
         org_slug: str,
         url: URL,
     ) -> None:
+        """Queue organization invitation email with secure invitation link."""
         from src.apps.organizations.tasks import send_organization_member_invitation_email_task
         from src.core.security import create_secure_url_token
 
