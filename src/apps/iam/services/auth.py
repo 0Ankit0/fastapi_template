@@ -120,6 +120,7 @@ class AuthService:
             success=True,
             failure_reason="",
         )
+        await iam_repository.commit(db)
 
         access_token = security.create_access_token(
             user.id,
@@ -132,6 +133,7 @@ class AuthService:
         refresh_payload = security.decode_token(refresh_token)
 
         await revoke_tokens_for_ip(db, user.id, ip_address)
+        await iam_repository.commit(db)
         await iam_repository.create_token_tracking(
             db,
             user_id=user.id,
@@ -149,6 +151,15 @@ class AuthService:
             ip_address=ip_address,
             user_agent=user_agent,
             expires_at=security.payload_expiration(refresh_payload),
+        )
+        await iam_repository.create_login_attempt(
+            db,
+            user_id=user.id,
+            ip_address=ip_address,
+            attempted_username=login_data.username,
+            user_agent=user_agent,
+            success=True,
+            failure_reason="Session issued",
         )
         await iam_repository.commit(db)
 

@@ -11,9 +11,8 @@ class IAMRepository(
     UsedTokenRepository,
     UserRepository
 ):
-    
-    def commit(self, db):
+    async def commit(self, db):
         """Commit the current transaction."""
-        return db.commit()
+        return await db.commit()
     
 iam_repository = IAMRepository()
