@@ -33,6 +33,7 @@ email_templates = Environment(
 
 class EmailService:
     def __init__(self) -> None:
+        """Create SMTP mail configuration from application settings."""
         self.conf = ConnectionConfig(
             MAIL_USERNAME=settings.EMAIL_HOST_USER,
             MAIL_PASSWORD=settings.EMAIL_HOST_PASSWORD,
@@ -47,6 +48,7 @@ class EmailService:
         )
 
     def is_configured(self) -> bool:
+        """Return whether email sending is enabled and minimally configured."""
         return settings.EMAIL_ENABLED and all(
             (
                 settings.EMAIL_HOST,
@@ -61,6 +63,7 @@ class EmailService:
         template_name: str,
         context: dict[str, Any],
     ) -> str:
+        """Render an email template with the provided context."""
         return email_templates.get_template(
             template_name
         ).render(**context)
@@ -73,6 +76,7 @@ class EmailService:
         html_body: str,
         text_body: str | None = None,
     ) -> DeliveryResult:
+        """Send an SMTP email and return a normalized delivery result."""
         recipient_objects = [
             NameEmail(
                 name=item.get("name", ""),

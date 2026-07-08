@@ -18,6 +18,7 @@ logger = get_logger(__name__)
 
 class CommunicationsService:
     def __init__(self) -> None:
+        """Initialize communication channel providers and adapters."""
         self._email_service = email_service
 
         self._push_providers = {
@@ -33,6 +34,7 @@ class CommunicationsService:
         context: dict[str, Any],
         inline_template: bool = False,
     ) -> DeliveryResult:
+        """Send an email using configured provider or dev fallback logging."""
         try:
             if inline_template:
                 html_body = str(context.get("html_body", ""))
@@ -108,6 +110,7 @@ class CommunicationsService:
         self,
         payload: dict[str, Any],
     ) -> DeliveryResult:
+        """Send a push notification through the selected push provider."""
         target_provider = str(
             payload.get("provider") or settings.PUSH_PROVIDER
         )
@@ -155,6 +158,7 @@ class CommunicationsService:
             )
 
     def get_capabilities(self) -> CapabilitySummary:
+        """Return active communication channel capability configuration."""
         return CapabilitySummary(
             active_providers={
                 "email": (
@@ -169,6 +173,7 @@ class CommunicationsService:
         )
 
     def get_provider_statuses(self) -> list[ProviderStatus]:
+        """Return health/configuration status for each communication provider."""
         statuses: list[ProviderStatus] = []
 
         statuses.append(
