@@ -20,6 +20,7 @@ class AuthEmailService:
         template_name: str,
         context: dict[str, Any],
     ) -> None:
+        """Queue a generic IAM email task for asynchronous delivery."""
         from src.apps.communication.tasks import send_email_task
         task = cast(Task, send_email_task)
 
@@ -38,6 +39,7 @@ class AuthEmailService:
 
     @staticmethod
     async def send_welcome_email(user: Any) -> None:
+        """Queue a welcome email task for a newly registered user."""
         from src.apps.iam.tasks import send_welcome_email_task
         task = cast(Task, send_welcome_email_task)
 
@@ -61,6 +63,7 @@ class AuthEmailService:
         user: Any,
         token: str,
     ) -> None:
+        """Queue password reset email with secure frontend reset URL."""
         from src.core import security
         from src.apps.iam.tasks import send_password_reset_email_task
 
@@ -99,6 +102,7 @@ class AuthEmailService:
         user: User,
         token: str,
     ) -> None:
+        """Queue email verification mail with signed verification URL."""
         from src.core import security
         from src.apps.iam.tasks import send_verification_email_task
 

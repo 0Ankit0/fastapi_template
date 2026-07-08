@@ -13,6 +13,7 @@ from src.db.mixins import TimestampMixin
 if TYPE_CHECKING:
     from apps.iam.models import UserProfile, TokenTracking, LoginAttempt, UsedToken
     from apps.organizations.models import Organization, OrganizationMember
+    from src.apps.notification.models import Notification, NotificationPreference
 
 
 class User(Base, TimestampMixin):
@@ -90,5 +91,16 @@ class User(Base, TimestampMixin):
         "OrganizationMember",
         back_populates="user",
         foreign_keys="OrganizationMember.user_id",
+        cascade="all, delete-orphan",
+    )
+    notifications: Mapped[list["Notification"]] = relationship(
+        "Notification",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    notification_preference: Mapped["NotificationPreference"] = relationship(
+        "NotificationPreference",
+        back_populates="user",
+        uselist=False,
         cascade="all, delete-orphan",
     )

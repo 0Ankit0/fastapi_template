@@ -1,5 +1,5 @@
 from typing import Optional, List
-from pydantic import  EmailStr, field_serializer, field_validator, model_validator, ValidationInfo
+from pydantic import  EmailStr, field_serializer, field_validator, model_validator, ValidationInfo, ConfigDict
 from src.core.enums import RBACRole
 from src.core.schemas import BaseSchema
 from src.core.types import HashId
@@ -40,6 +40,7 @@ class UserUpdate(BaseSchema):
 
 
 class LoginRequest(BaseSchema):
+    model_config = ConfigDict(extra="forbid")
     organization: Optional[str] = None
     username: str
     password: str
@@ -117,15 +118,28 @@ class UserResponse(BaseSchema):
         """Flatten eager-loaded profile and user_roles onto the response dict."""
         if isinstance(data, dict):
             return data
-        result = dict(data.__dict__)
-        profile = result.get('profile')
+        profile = getattr(data, "profile", None)
+        user_roles = getattr(data, "user_roles", []) or []
+        status = getattr(data, "status", None)
+        result = {
+            "id": getattr(data, "id", None),
+            "username": getattr(data, "username", None),
+            "email": getattr(data, "email", None),
+            "is_active": getattr(status, "value", status) == "active",
+            "is_superuser": getattr(data, "is_superuser", False),
+            "is_confirmed": getattr(data, "is_confirmed", False),
+            "otp_enabled": getattr(data, "otp_enabled", False),
+            "otp_verified": getattr(data, "otp_verified", False),
+        }
         if profile:
-            result['first_name'] = profile.first_name or None
-            result['last_name'] = profile.last_name or None
-            result['phone'] = profile.phone or None
-            result['avatar_url'] = profile.avatar_url or None
-            result['bio'] = profile.bio or None
-        result['roles'] = [
-            ur.role.name for ur in (result.get('user_roles') or []) if ur.role
+            result["first_name"] = getattr(profile, "first_name", None) or None
+            result["last_name"] = getattr(profile, "last_name", None) or None
+            result["phone"] = getattr(profile, "phone", None) or None
+            result["image_url"] = getattr(profile, "avatar_url", None) or None
+            result["bio"] = getattr(profile, "bio", None) or None
+        result["roles"] = [
+            getattr(getattr(ur, "role", None), "name", None)
+            for ur in user_roles
+            if getattr(ur, "role", None)
         ]
         return result
