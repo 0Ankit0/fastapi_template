@@ -27,16 +27,14 @@ def encode_cursor(
     ).decode()
 
 
-def decode_cursor(
-    cursor: str,
-) -> tuple[datetime | None, str]:
-    payload: CursorData = json.loads(
+def decode_cursor(cursor: str) -> tuple[str, datetime | None]:
+    payload = json.loads(
         base64.urlsafe_b64decode(cursor.encode()).decode()
     )
 
     return (
+        payload["id"],
         datetime.fromisoformat(payload["created_at"])
         if payload["created_at"]
         else None,
-        payload["id"],
     )

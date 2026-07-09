@@ -14,12 +14,10 @@ from src.apps.iam.services.policy_service import PolicyService
 from src.core.cache import RedisCache
 from src.core.config import settings
 from src.core.enums import UserStatus
-from src.core.exceptions import ValidationError
-from src.core.pagination import CursorSortDirection
+from src.core.pagination import CursorSortDirection, apply_id_cursor_filter, apply_id_ordering, build_id_cursor, to_cursor_page
 from src.core.schemas import ApiSuccessResponse, CursorPage, CursorPagination
 from src.core.storage import delete_media, save_media_bytes
 from src.core.types import HashId
-from src.core.utils import decode_cursor, encode_cursor
 
 
 class UserService:
@@ -92,34 +90,40 @@ class UserService:
         if cached:
             return CursorPage[UserResponse].model_validate(cached)
 
-        cursor_id: int | None = None
-        if pagination.cursor:
-            try:
-                _, cursor_id_str = decode_cursor(pagination.cursor)
-                cursor_id = int(cursor_id_str)
-            except (ValueError, TypeError):
-                raise ValidationError(message="Invalid cursor. Please use next_cursor from a previous response.")
+        def apply_filter(query):
+            """Apply cursor filtering to the user-list query."""
+            return apply_id_cursor_filter(
+                query,
+                pagination,
+                id_column=User.id,
+                direction=sort_direction,
+            )
+
+        def apply_order(query):
+            """Apply stable id ordering for user pagination."""
+            return apply_id_ordering(
+                query,
+                id_column=User.id,
+                direction=sort_direction,
+            )
 
         rows = await iam_repository.list_users_with_profile(
             db,
             search=search,
             is_active=is_active,
-            cursor_id=cursor_id,
-            limit=pagination.limit,
-            sort_desc=sort_direction == CursorSortDirection.DESC,
+            query_filter_fn=apply_filter,
+            query_order_fn=apply_order,
+            limit=pagination.limit + 1,
         )
 
-        has_next = len(rows) > pagination.limit
-        page_rows = rows[: pagination.limit] if has_next else rows
-
         role_map = PolicyService.get_org_members_map(org_slug)
-        items = [
-            self._serialize_user_response(user, role_map.get(user.id, []))
-            for user in page_rows
-        ]
-        next_cursor = encode_cursor(page_rows[-1].id) if has_next and page_rows else None
 
-        response = CursorPage[UserResponse](items=items, next_cursor=next_cursor)
+        response = to_cursor_page(
+            rows,
+            pagination,
+            serializer=lambda user: self._serialize_user_response(user, role_map.get(user.id, [])),
+            next_cursor_builder=build_id_cursor,
+        )
         await RedisCache.set(cache_key, response.model_dump(mode="json"), ttl=120)
         return response
 

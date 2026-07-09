@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Callable
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlalchemy.sql import Select
 
 from src.apps.iam.models import User, UserProfile
 from src.core.enums import UserStatus
-from src.db.query import func, or_, select
+from src.db.query import func, select, or_
 
 
 class UserRepository:
@@ -34,16 +36,16 @@ class UserRepository:
             .where(User.id == user_id)
         )
         return result.scalars().first()
-
+    
     async def list_users_with_profile(
         self,
         db: AsyncSession,
         *,
         search: str | None,
         is_active: bool | None,
-        cursor_id: int | None,
+        query_filter_fn: Callable[[Select], Select],
+        query_order_fn: Callable[[Select], Select],
         limit: int,
-        sort_desc: bool,
     ) -> Sequence[User]:
         """Return a cursor-paginated user list with optional search and active filters."""
         query = select(User).options(selectinload(User.profile))
@@ -62,18 +64,9 @@ class UserRepository:
             else:
                 query = query.where(User.status != UserStatus.ACTIVE)
 
-        if cursor_id is not None:
-            if sort_desc:
-                query = query.where(User.id < cursor_id)
-            else:
-                query = query.where(User.id > cursor_id)
-
-        if sort_desc:
-            query = query.order_by(User.id.desc())
-        else:
-            query = query.order_by(User.id.asc())
-
-        query = query.limit(limit + 1)
+        query = query_filter_fn(query)
+        query = query_order_fn(query)
+        query = query.limit(limit)
         result = await db.execute(query)
         return result.scalars().all()
 
@@ -171,40 +164,39 @@ class UserRepository:
         return user
 
     async def update_user_with_profile_fields(
-        self,
-        db: AsyncSession,
-        *,
-        user: User,
-        email: str | None,
-        first_name: str | None,
-        last_name: str | None,
-        phone: str | None,
+    self,
+    db: AsyncSession,
+    *,
+    user: User,
+    email: str | None,
+    first_name: str | None,
+    last_name: str | None,
+    phone: str | None,
     ) -> User:
-        """Update an arbitrary user and upsert profile fields in one transaction."""
+        """Update a user and create or update profile fields in one transaction."""
+        user_data = await self.get_user_with_profile(db, user.id)
+        if user_data is None:
+            raise ValueError(f"User {user.id} does not exist")
+
         if email is not None:
-            user.email = email
+            user_data.email = email
 
-        profile = await self.get_profile_by_user_id(db, user.id)
-        if profile:
+        profile_fields_provided = any(
+            value is not None for value in (first_name, last_name, phone)
+        )
+
+        if profile_fields_provided:
+            if user_data.profile is None:
+                user_data.profile = UserProfile(user_id=user_data.id)
+
             if first_name is not None:
-                profile.first_name = first_name
+                user_data.profile.first_name = first_name
             if last_name is not None:
-                profile.last_name = last_name
+                user_data.profile.last_name = last_name
             if phone is not None:
-                profile.phone = phone
-            db.add(profile)
-        elif any(value is not None for value in [first_name, last_name, phone]):
-            profile = UserProfile(
-                user_id=user.id,
-                first_name=first_name,
-                last_name=last_name,
-                phone=phone,
-            )
-            db.add(profile)
+                user_data.profile.phone = phone
 
-        db.add(user)
         await db.commit()
-        if profile:
-            await db.refresh(profile)
-            user.profile = profile
-        return user
+        await db.refresh(user_data, attribute_names=["profile"])
+
+        return user_data

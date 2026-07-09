@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from enum import Enum
 from typing import Callable, Sequence, TypeVar
 
@@ -30,7 +31,7 @@ def apply_id_cursor_filter(
     if not pagination.cursor:
         return query
 
-    _, cursor_id = _safe_decode_cursor(pagination.cursor)
+    cursor_id,_  = _safe_decode_cursor(pagination.cursor)
 
     if direction == CursorSortDirection.DESC:
         return query.where(id_column < cursor_id)
@@ -49,7 +50,7 @@ def apply_datetime_id_cursor_filter(
     if not pagination.cursor:
         return query
 
-    cursor_datetime, cursor_id = _safe_decode_cursor(pagination.cursor)
+    cursor_id, cursor_datetime = _safe_decode_cursor(pagination.cursor)
     if cursor_datetime is None:
         raise ValidationError(message="Invalid cursor. Missing created_at field.")
 
@@ -107,9 +108,9 @@ def build_datetime_id_cursor(row, id_attr: str = "id", created_at_attr: str = "c
     return encode_cursor(getattr(row, id_attr), getattr(row, created_at_attr))
 
 
-def _safe_decode_cursor(cursor: str) -> tuple[object | None, int]:
+def _safe_decode_cursor(cursor: str) -> tuple[int, datetime | None]:
     try:
-        cursor_datetime, cursor_id = decode_cursor(cursor)
-        return cursor_datetime, int(cursor_id)
+        cursor_id, cursor_datetime = decode_cursor(cursor)
+        return int(cursor_id), cursor_datetime
     except (ValueError, TypeError):
         raise ValidationError(message="Invalid cursor. Please use next_cursor from a previous response.")
